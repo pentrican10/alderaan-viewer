@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Right Section</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+
+    <div class="split-container">
+        <div class="left-pane">
+            <h2>Add Comments:</h2>
+            <form id="comment_form" method="POST" action="/star/{{ koi_id }}/save_comment">
+                <textarea name="comment" rows="4" cols="50" placeholder="Type your comment here..."></textarea>
+                <br>
+                <input type="submit" value="Submit Comment" onclick="setAction('append')">
+                <!--hidden input to hold action value-->
+                <input type="hidden" name="action" id="action_input" value="">
+            </form>
+            <!-- <div id="file_content_container"></div> -->
+        </div>
+
+        <div class="right-pane">
+            <h2>Comment Section</h2>
+            <!--comment file displayed-->
+            
+            <div class="comment-content">
+                <div id="file_content_container"></div>
+                <button id="editButton" style="display: none;">Edit Comment File</button>
+                <textarea id="editTextarea" name="content" style="display: none;" rows="20" cols="35">{{ file_content }}</textarea>
+                <button id="saveChangesButton" style="display: none;">Save Changes</button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    
+    <script>
+        // Global variable to store the selected KOI_ID
+        let selectedKoiId = null;
+
+        //function to set action value
+        function setAction(action) {
+            const actionInput = document.getElementById("action_input");
+            if (!selectedKoiId){
+                actionInput.value="overwrite";
+            }else {
+                actionInput.value=action;
+    
+            }
+        }
+
+        // Function to handle the "Submit Comment" button click event
+        function handleSubmitComment(event) {
+            event.preventDefault();
+            const commentForm = document.getElementById("comment_form");
+            const commentInput = commentForm.elements["comment"];
+            const comment = commentInput.value.trim();
+            const actionInput = document.getElementById("action_input");
+            const action = actionInput.value
+
+            if (!selectedKoiId) {
+                // If no KOI_ID link is selected, display a pop-up warning
+                alert("Please click a KOI_ID link before submitting a comment.");
+            } else {
+                // Submit the comment and add it to the associated comment file
+                //const comment = commentInput.value.trim();
+                // Perform the necessary actions to add the comment to the comment file associated with selectedKoiId
+                if(comment) {
+                    const formData = new FormData();
+                    formData.append("comment",comment);
+                    formData.append("action", action);
+
+                    fetch(`/star/${selectedKoiId}/save_comment`,{
+                        method: "POST",
+                        body: formData,
+                    })
+                        .then(response =>response.text())
+                        .then(data => {
+                            //handle response?
+                            console.log(data);
+                            //fetch and display comment file again after submitting comment
+                            displayCommentFile(selectedKoiId);
+                            //reset form after submitting comment
+                            commentForm.reset();
+                        })
+                        .catch(error => {
+                            console.error("Error adding comment:", error);
+                        });
+                    
+                } else {
+                    alert("Please enter a comment before submitting");
+                }
+
+                
+            }
+            
+        }
+
+        // Event listener for submitting the comment
+        const commentForm = document.getElementById("comment_form");
+        commentForm.addEventListener("submit", handleSubmitComment);
+
+
+        // Function to handle the "Edit Comment File" button click event
+        function handleEditButtonClick() {
+            fetch(`/star/${selectedKoiId}`)
+                .then(response => response.text())
+                .then(data => {
+                    const fileContentContainer = document.getElementById("file_content_container");
+                    const editTextarea = document.getElementById("editTextarea");
+                    const saveChangesButton = document.getElementById("saveChangesButton");
+                    editTextarea.value = data.replace(/\r\n/g, '\n');
+                    // Display the content in a textarea
+                    editTextarea.value = data;
+                    fileContentContainer.style.display = "none";
+                    editTextarea.style.display = "block";
+                    saveChangesButton.style.display = "block";
+                })
+                .catch(error => {
+                    console.error("Error fetching comment file content:", error);
+                });
+        }
+
+
+        // Function to handle the "Save Changes" button click event
+        function handleSaveChangesButtonClick() {
+            const editTextarea = document.getElementById("editTextarea");
+            let newFileContent = editTextarea.value.trim();
+            // Normalize line endings (replace Windows-style with Unix-style)
+            newFileContent = newFileContent.replace(/\r\n/g, '\n');
+
+            // Display a confirmation dialog before saving
+            const confirmSave = confirm("Are you sure you want to alter this file?");
+            if (!confirmSave) {
+                return;
+            }
+
+
+            const formData = new FormData();
+            formData.append("content", newFileContent); 
+            formData.append("action", "overwrite"); // Always overwrite the entire file
+
+            fetch(`/star/${selectedKoiId}/edit_file`, {
+                method: "POST",
+                body: formData,
+            })
+                .then(response => response.text())
+                .then(data => {
+                    // Display the updated content in the container
+                    const fileContentContainer = document.getElementById("file_content_container");
+                    fileContentContainer.innerHTML = `<pre>${newFileContent}</pre>`;
+                
+                    // Hide the textarea and "Save Changes" button
+                    const editTextarea = document.getElementById("editTextarea");
+                    const saveChangesButton = document.getElementById("saveChangesButton");
+                    editTextarea.style.display = "none";
+                    saveChangesButton.style.display = "none";
+                    fileContentContainer.style.display = "block";
+                })
+                .catch(error => {
+                    console.error("Error saving comment file changes:", error);
+                });
+        }
+
+        // Event listener for the "Edit Comment File" button
+        const editButton = document.getElementById("editButton");
+        editButton.addEventListener("click", handleEditButtonClick);
+
+        // Event listener for the "Save Changes" button
+        const saveChangesButton = document.getElementById("saveChangesButton");
+        saveChangesButton.addEventListener("click", handleSaveChangesButtonClick);
+
+
+
+
+
+    </script>
+</body>
+</html>
+

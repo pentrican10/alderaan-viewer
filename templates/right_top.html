@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Right Section</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <h1>Star Information Display</h1>
+    
+    <div id="koi_id_container">
+        <!-- The selected "koi_id" will be displayed here -->
+    </div>
+
+    <!--checkboxes -->
+    <div id="checkbox_container" style="display:none;">
+        <input type="checkbox" id="plotCheckbox1" onchange="togglePlotVisibilityDetrendedLightCurve()" checked/> 
+        <label for="plotCheckbox1">Detrended Light Curve</label>
+
+        <input type="checkbox" id="plotCheckbox2" onchange="togglePlotVisibility2()"/>
+        <label for="plotCheckbox2">Plot 2</label>
+        <!-- read in same photometry data, plot using dif color, 
+            write new python function
+            plot folded transit and also look at individual transits and flip through them
+            focus: how to make forward and back button for flipping through
+            start by plotting time=0->time=200, forward makes it t=200->t=400
+            forward and back button focus
+            box to enter quarter/segment number and jump to that section - 7 segments
+            clean and generalizable !!!
+            not rerendering when not necessary, want to be fast
+            look into plotly auto scaling on axis - might be faster to hardcode axis - low priority
+
+           -->
+
+
+    </div>
+    
+
+    <div id="graphTitle1" style="display:none;">
+        <h3>Kepler Detrended Light Curve:</h3>
+    </div>
+    <div id="graph1" data-koi-id="{{ koi_id }}" style="display:none;">
+        <!-- detrended light curve will display here -->
+    </div>
+
+    <div id="graphTitle2" style="display:none;">
+        <h3>Plot 2:</h3>
+    </div>
+    <div id="graph2" data-koi-id="{{ koiId }}" style="display:none;">
+        <!-- plot with forward and backward buttons -->
+    </div>
+    <div id="axisAdjustment" style="display:none;">
+        <!-- Add Forward and Backward buttons for Plot2 -->
+        <div id="currentTransit">
+            <!-- current transit number and center time should appear here-->
+        </div>
+        <br>
+        <div id="transitInputContainer">
+            <input type="number" id="transitNumber" placeholder="Enter transit number...">
+            <button onclick="displayTransit()">Display Transit</button>
+        </div>
+        <br>
+        <button onclick="movePlotBackward()">&#x2190;</button> <!--previous transit-->
+        <button onclick="movePlotForward()">&#x2192;</button> <!--next transit -->
+        <!-- possibly add button to jump by 10 -->
+
+        
+    </div>
+
+    <script>
+        function generatePlotDetrendedLightCurve(koiId) {
+            const plotContainerDetrendedLightCurve = document.getElementById("graph1");
+            // Fetch the Plotly figure data from the server
+            fetch(`/generate_plot/${koiId}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Received data:", data); // Log the received data
+                    if(data.error_message){ 
+                        // Display the error message in the plot container
+                        const plotContainerDetrendedLightCurve = document.getElementById("graph1");
+                        plotContainerDetrendedLightCurve.innerHTML = `<p>${data.error_message}</p>`;
+                    } else { 
+                        // Clear any existing error message
+                        const plotContainerDetrendedLightCurve = document.getElementById("graph1");
+                        plotContainerDetrendedLightCurve.innerHTML = "";
+                        //display plot
+                        const parsedData = JSON.parse(data);
+                        Plotly.newPlot(plotContainerDetrendedLightCurve, parsedData);
+                    }
+                })
+                .catch(error => {
+                    plotContainerDetrendedLightCurve.innerHTML = "<p>Error loading plot data.</p>";
+                    console.error(error);
+                });
+        }
+
+        // Function to toggle plot visibility based on the checkbox
+        function togglePlotVisibilityDetrendedLightCurve() {
+            const plotContainerDetrendedLightCurve = document.getElementById("graph1");
+            const plotCheckbox = document.getElementById("plotCheckbox1");
+            const plotTitle1 = document.getElementById("graphTitle1");
+            
+            if (plotCheckbox.checked) {
+                plotTitle1.style.display = "block";
+                plotContainerDetrendedLightCurve.style.display = "block";  // Show the plot
+            } else {
+                plotTitle1.style.display = "none";
+                plotContainerDetrendedLightCurve.style.display = "none";   // Hide the plot
+            }
+        }
+
+
+        //plot 2
+
+        let lineNumber = 0; // lineNumber - index number is the true transit
+
+        function movePlotBackward() {
+            lineNumber -= 1;
+            if (lineNumber <0) {
+                lineNumber = 0;
+            }
+            plot2(selectedKoiId, lineNumber);
+
+        }
+
+        function movePlotForward() {
+           lineNumber += 1;
+
+           plot2(selectedKoiId, lineNumber);
+        }
+
+/*
+        function displayTransit() {
+            //get transit number
+            const transitNumberInput = document.getElementById('transitNumber');
+            const transitNumber = parseInt(transitNumberInput.value);
+
+            if (!isNaN(transitNumber)) {
+                transitNumberInput.value='';
+                lineNumber=transitNumber;
+                plot2(selectedKoiId, lineNumber);
+                
+            } else {
+                //not valid number
+                alert("Please enter a valid transit number.");
+            }
+
+        }
+    */
+
+
+        //plot center transit line as vertical line !!!!!!!!!!!!!!!!
+        // check- holding lightcurve data in memory for star, not re reading data
+        // when pressing forward buttons dont access the data from the file
+        // maybe have a load data function for 
+
+
+        // LINKING THE TRANSIT INDEX NUMBER TO THE TRUE TRANSIT NUMBER
+        function plot2(koiId, lineNumber){ //currentStartTime, currentEndTime){
+            const plotContainerPlot2 = document.getElementById("graph2");
+            // Fetch the Plotly figure data from the server
+            fetch(`/plot2/${koiId}/${lineNumber}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Received data:", data); // Log the received data
+                    if(data.error2){ 
+                        // Display the error message in the plot container
+                        const plotContainerPlot2 = document.getElementById("graph2");
+                        plotContainerPlot2.innerHTML = `<p>${data.error2}</p>`;
+                    } else { 
+                        // Clear any existing error message
+                        const plotContainerPlot2 = document.getElementById("graph2");
+                        plotContainerPlot2.innerHTML = "";
+
+                        const trueTransitNumber = data.transit_number;
+                        displayTransitNumber(trueTransitNumber);
+                        //display plot
+                        const parsedData = JSON.parse(data.graphJSON);
+                        Plotly.newPlot(plotContainerPlot2, parsedData);
+                    }
+                })
+                .catch(error => {
+                    console.error("error loading plot data: ", error);
+                    plotContainerPlot2.innerHTML = "<p>Error loading plot data.</p>";
+                    
+                });
+        }
+
+        function displayTransitNumber(trueTransitNumber){
+            const transitInfo = document.getElementById("currentTransit");
+            transitInfo.innerHTML = `<p>Current transit: Number ${trueTransitNumber}</p>`;
+        }
+
+        //toggle plot 2
+        function togglePlotVisibility2() {
+            const plotContainerPlot2 = document.getElementById("graph2");
+            const plotCheckbox = document.getElementById("plotCheckbox2");
+            const plotTitle2 = document.getElementById("graphTitle2");
+            const axisButtons = document.getElementById("axisAdjustment");
+        
+            if (plotCheckbox.checked) {
+                plotTitle2.style.display = "block";
+                plotContainerPlot2.style.display = "block";  // Show the plot
+                axisButtons.style.display = "block";
+                plot2(selectedKoiId, lineNumber);
+            } else {
+                plotTitle2.style.display = "none";
+                plotContainerPlot2.style.display = "none";   // Hide the plot
+                axisButtons.style.display = "none";
+            }
+        }
+
+    </script>    
+
+    
+    
+</body>
+</html>
+

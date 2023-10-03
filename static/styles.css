@@ -1,0 +1,80 @@
+/* styles.css */
+/*<style>*/
+    /* Add some padding and margin to create separation between the sections */
+    body {
+        margin: 0;
+        padding: 0;
+    }
+    .split-container {
+        display: flex;
+        padding: 30px; /* Adjust the padding as needed */
+    }
+    .left-section {
+        width: 35%;
+        padding-left: 20px;
+        padding-right: 20px;
+        background-color:  #f1f1f1;
+    }
+    .right-section {
+        width: 65%;
+        padding-left: 20px;
+        padding-right: 20px;
+        background-color: #f9f9f9ec;
+    }
+    .right-top-section {
+        /* Add styles for the top section on the right side */
+        padding: 10px;
+        background-color: #fff;
+    }
+    .right-bottom-section {
+        /* Add styles for the bottom section on the right side */
+        padding: 10px;
+        background-color: #f9f9f9;
+    }
+    .right-pane {
+        width: 400px;
+        padding: 10px;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    .left-pane{
+        padding: 0;
+    }
+    .comment-content{
+        max-width:400px;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+
+    .logout-button{
+        background-color: #b0d5ed
+    }
+
+/*</style>*/
+#axisAdjustment{
+    text-align: center;
+}
+
+
+table {
+    font-family: Arial, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+  }
+  
+  table, th, td {
+    border: 1px solid #ccc;
+  }
+  
+  th, td {
+    padding: 8px;
+  }
+  
+  tr:nth-child(even) {
+    background-color: #f2f2f2;
+  }
+  
+  th {
+    background-color: #f0f0f0;
+  }
+  

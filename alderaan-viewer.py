@@ -8,9 +8,6 @@ import pandas as pd
 import json
 import plotly.utils
 import numpy as np
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-
 
 
 app = Flask(__name__)
@@ -70,6 +67,61 @@ def display_comment_file(koi_id):
         file_content = f'Comment file for {koi_id} not found.'
     return file_content
 
+
+# DATA 
+def read_data_from_fits(file_path):
+    with fits.open(file_path) as fits_file:
+        time = np.array(fits_file[1].data, dtype=float)
+        flux = np.array(fits_file[2].data, dtype=float)
+        df = pd.DataFrame(dict(
+            TIME=time,
+            FLUX=flux
+        ))
+    return df
+
+def fetch_data(koi_id, line_number):
+    star_id = koi_id.replace("K","S")
+    file_name = star_id + '_lc_detrended.fits'
+    file_path = os.path.join('C:\\Users\\Paige\\Projects','miniflask','kepler_lightcurves_for_paige',file_name)
+    #get data and create detrended light curve
+    if os.path.isfile(file_path):
+        photometry_data = read_data_from_fits(file_path) #descriptive names
+        transit_values, center_time_values = read_center_time_values_from_file(koi_id)
+        if line_number < len(transit_values):
+            center_time = center_time_values[line_number]
+            transit_number = transit_values[line_number]
+        
+            start_time = float(center_time) - 0.25
+            end_time= float(center_time) + 0.25
+
+            use = (photometry_data['TIME'] > start_time) & (photometry_data['TIME'] < end_time)
+            filtered_data = photometry_data[use]
+            return filtered_data, transit_number
+    else:
+        return None, None
+    
+
+def read_center_time_values_from_file(koi_id): #read_ct_and_transit_number_from_file(koi_id)
+    star_id = koi_id.replace("K","S")
+    file_name = star_id + '_00_quick.ttvs'
+    file_path = os.path.join('C:\\Users\\Paige\\Projects','miniflask','quick_ttvs_for_paige',file_name)
+
+    center_time_values=[] 
+    transit_value =[]
+    # Open the file for reading
+    with open(file_path, 'r') as file:
+        # Iterate through each line in the file
+        for line in file:
+            # Split the line into columns based on the delimiter
+            columns = line.strip().split('\t')
+
+            center_time_values.append(columns[1])
+            transit_value.append(columns[0])
+        
+    print(center_time_values)
+    return transit_value, center_time_values
+    
+
 @app.route('/star/<koi_id>/save_comment', methods=['POST'])
 def save_comment(koi_id):
     file_path = os.path.join('C:\\Users\\Paige\\Projects','miniflask','comment_files',f'{koi_id}_comments.txt')
@@ -81,6 +133,7 @@ def save_comment(koi_id):
         file.write(f"User: {username}\n")
         file.write(f"Comment: {comment}\n")
     return display_comment_file(koi_id)
+
 
 @app.route('/star/<koi_id>/edit_file', methods=['POST'])
 def save_file(koi_id):
@@ -112,44 +165,8 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         error_message = f'No data found for {koi_id}'
         return jsonify(error_message=error_message)
         
-# maybe move this to code that happens when koi_id link is first clicked
-def read_data_from_fits(file_path):
-    with fits.open(file_path) as fits_file:
-        time = np.array(fits_file[1].data, dtype=float)
-        flux = np.array(fits_file[2].data, dtype=float)
-        df = pd.DataFrame(dict(
-            TIME=time,
-            FLUX=flux
-        ))
-    return df
-"""
-#plot 2, same as plot 1 but add the forward and backward buttons
-@app.route('/plot2/<koi_id>/<int:transit_number>')#<int:start_time>/<int:end_time>')
-def plot2(koi_id, transit_number): #start_time, end_time):
-    star_id = koi_id.replace("K","S")
-    file_name = star_id + '_lc_detrended.fits'
-    file_path = os.path.join('C:\\Users\\Paige\\Projects','miniflask','kepler_lightcurves_for_paige',file_name)
-    #get data and create detrended light curve
-    if os.path.isfile(file_path):
-        data = read_data_from_fits(file_path)  # remove this and add local storage of data when koi_id is clicked
-        fig = px.scatter(data, x="TIME", y="FLUX") #only want to plot data within selected time window
-        fig.update_traces(marker=dict(
-            color='red'))
-        
-        center_time_values = read_center_time_values_from_file(koi_id)
-        center_time = center_time_values[transit_number]
-        
-        start_time = float(center_time) + 0.25
-        end_time= float(center_time) - 0.25
-        fig.update_layout(xaxis_range=[start_time,end_time]) #bbuilt into figure, not updating figure
-        graph2JSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
-        return jsonify(graph2JSON)
-    else:
-        error2 = f'No data found for {koi_id}'
-        return jsonify(error2=error2)
-"""
 
-#"""
+# function that generates plot 2, individual transits
 @app.route('/plot2/<koi_id>/<int:line_number>')#<int:start_time>/<int:end_time>')
 def plot2(koi_id, line_number): 
     if (fetch_data(koi_id, line_number)):
@@ -159,7 +176,6 @@ def plot2(koi_id, line_number):
         #fig.update_traces(marker=dict(
         #        color='red'))
         graph2JSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
-        #return jsonify(graph2JSON, transit_number=true_transit_number)
         response_data = {
             'graphJSON': graph2JSON,
             'transit_number': true_transit_number
@@ -169,67 +185,6 @@ def plot2(koi_id, line_number):
     else: 
         error2 = f'No data found for {koi_id}'
         return jsonify(error2=error2)
-
-
-@app.route('/home')
-def fetch_data(koi_id, line_number):
-    star_id = koi_id.replace("K","S")
-    file_name = star_id + '_lc_detrended.fits'
-    file_path = os.path.join('C:\\Users\\Paige\\Projects','miniflask','kepler_lightcurves_for_paige',file_name)
-    #get data and create detrended light curve
-    if os.path.isfile(file_path):
-        photometry_data = read_data_from_fits(file_path) #descriptive names
-        
-        #return data
-        #transit_and_center_time = read_center_time_values_from_file(koi_id)
-        transit_values, center_time_values = read_center_time_values_from_file(koi_id)
-
-        #if line_number < len(transit_and_center_time):
-        if line_number < len(transit_values):
-            center_time = center_time_values[line_number]
-            transit_number = transit_values[line_number]
-            #row = transit_and_center_time.iloc[line_number]
-            #center_time = float(row['Center Time Values'])
-            #true_transit_number = row['Transit Value']
-        
-            start_time = float(center_time) - 0.25
-            end_time= float(center_time) + 0.25
-
-            use = (photometry_data['TIME'] > start_time) & (photometry_data['TIME'] < end_time)
-            filtered_data = photometry_data[use]
-            return filtered_data, transit_number
-    else:
-        #return None
-        return None, None
-    
-# possibly move this to where koi_id is first clicked to save time and rendering
-# make sure you are only plotting points that are in field of view
-#render
-
-#"""
-def read_center_time_values_from_file(koi_id): #read_ct_and_transit_number_from_file(koi_id)
-    star_id = koi_id.replace("K","S")
-    file_name = star_id + '_00_quick.ttvs'
-    file_path = os.path.join('C:\\Users\\Paige\\Projects','miniflask','quick_ttvs_for_paige',file_name)
-
-    center_time_values=[] 
-    transit_value =[]
-    # Open the file for reading
-    with open(file_path, 'r') as file:
-        # Iterate through each line in the file
-        for line in file:
-            # Split the line into columns based on the delimiter
-            columns = line.strip().split('\t')
-            #if len(columns) > 1: #can remove if statement, txt file should be perfect, maybe check if not 5 columns
-             # pop up error
-            # Extract the values from columns and append it to the lists
-            center_time_values.append(columns[1])
-            transit_value.append(columns[0])
-        
-    print(center_time_values)
-    return transit_value, center_time_values
-    #df = pd.DataFrame({'Transit Value': transit_value, 'Center Time Values': center_time_values})
-    #return df
 
 
 

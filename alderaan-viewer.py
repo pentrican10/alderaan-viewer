@@ -186,6 +186,11 @@ def plot2(koi_id, line_number):
         error2 = f'No data found for {koi_id}'
         return jsonify(error2=error2)
 
+@app.route('/get_transit_numbers/<koi_id>')
+def get_transit_numbers(koi_id):
+    transit_values, center_time_values = read_center_time_values_from_file(koi_id)
+    return jsonify(transit_values)
+
 
 
 if __name__ == '__main__':

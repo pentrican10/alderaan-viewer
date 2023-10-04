@@ -128,24 +128,61 @@
            plot2(selectedKoiId, lineNumber);
         }
 
-/*
+
+        function fetchTransitNumbers(){
+            fetch('/get_transit_numbers/<koi_id>')
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+
+        // need to link transit and line numbers correctly
         function displayTransit() {
             //get transit number
             const transitNumberInput = document.getElementById('transitNumber');
             const transitNumber = parseInt(transitNumberInput.value);
 
+            fetchTransitNumbers()
+                .then(trueTransitNumbers => {
+                    if (!isNaN(transitNumber)){
+                        if (trueTransitNumbers.includes(transitNumber)){
+                            transitNumberInput.value = '';
+
+                            plot2(selectedKoiId, lineNumber);
+                        } else {
+                            alert("Transit number not found. Please enter a valid transit number.");
+                        }
+                    } else {
+                        // not valid number
+                        alert("Please enter a valid transit number.")
+                    }
+                });
+
+
+            /*
+            trueTransitNumbers = fetchTransitNumbers();
+            
             if (!isNaN(transitNumber)) {
+                if (trueTransitNumbers.includes(transitNumber)){
+                    //
+                }
                 transitNumberInput.value='';
-                lineNumber=transitNumber;
+                //lineNumber=transitNumber;
+
                 plot2(selectedKoiId, lineNumber);
                 
             } else {
                 //not valid number
-                alert("Please enter a valid transit number.");
+                alert("Transit number not found. Please enter a valid transit number.");
             }
-
+            */
         }
-    */
+    
 
 
         //plot center transit line as vertical line !!!!!!!!!!!!!!!!

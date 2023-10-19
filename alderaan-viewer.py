@@ -1,8 +1,13 @@
+# add short cadence 
+# get results and clone whole repository and get to work in jupyter
+# import results class from results.py
+# launch jupyter
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for
 import os
 import csv
 from datetime import datetime
 import plotly.express as px
+import plotly.graph_objects as go
 from astropy.io import fits
 import pandas as pd
 import json
@@ -56,7 +61,7 @@ def read_table_data():
             table_data.append(row)
     return table_data
 
-
+#environment variable -- mini app
 @app.route('/star/<koi_id>')
 def display_comment_file(koi_id):
     file_path = os.path.join('C:\\Users\\Paige\\Projects','miniflask','comment_files',f'{koi_id}_comments.txt')
@@ -96,9 +101,9 @@ def fetch_data(koi_id, line_number):
 
             use = (photometry_data['TIME'] > start_time) & (photometry_data['TIME'] < end_time)
             filtered_data = photometry_data[use]
-            return filtered_data, transit_number
+            return filtered_data, transit_number, center_time ############
     else:
-        return None, None
+        return None, None, None
     
 
 def read_center_time_values_from_file(koi_id): #read_ct_and_transit_number_from_file(koi_id)
@@ -118,7 +123,7 @@ def read_center_time_values_from_file(koi_id): #read_ct_and_transit_number_from_
             center_time_values.append(columns[1])
             transit_value.append(columns[0])
         
-    print(center_time_values)
+    #print(center_time_values)
     return transit_value, center_time_values
     
 
@@ -165,16 +170,26 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         error_message = f'No data found for {koi_id}'
         return jsonify(error_message=error_message)
         
-
+# light curve file: has quarter, use this to separate viewing, dashed line
 # function that generates plot 2, individual transits
 @app.route('/plot2/<koi_id>/<int:line_number>')#<int:start_time>/<int:end_time>')
 def plot2(koi_id, line_number): 
     if (fetch_data(koi_id, line_number)):
-        photometry_data, true_transit_number = fetch_data(koi_id, line_number)
+        photometry_data, true_transit_number, center_time = fetch_data(koi_id, line_number)
 
         fig = px.scatter(photometry_data, x="TIME", y="FLUX") #only want to plot data within selected time window
         #fig.update_traces(marker=dict(
         #        color='red'))
+        
+        # plot the center time on the single transit block
+        fig.add_trace(
+            go.Scatter(x=[center_time, center_time], y=[min(fig.data[0].y), max(fig.data[0].y)],
+               mode='lines',
+               line=dict(color="red", width=2),
+               name="Center time",
+               showlegend=True)
+        )
+
         graph2JSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
         response_data = {
             'graphJSON': graph2JSON,
@@ -187,7 +202,17 @@ def plot2(koi_id, line_number):
         return jsonify(error2=error2)
 
 
+def o_minus_c_plot():
+
+    return
+
+def folded_transit_plot():
+
+    return
+
 
 if __name__ == '__main__':
     app.run(debug=True)
 
+
+# to plotly function to take data and make interactive 

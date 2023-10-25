@@ -13,7 +13,9 @@ import pandas as pd
 import json
 import plotly.utils
 import numpy as np
-
+import sys
+sys.path.append('c:\\Users\\Paige\\Projects\\alderaan\\')
+import myResults
 
 app = Flask(__name__)
 app.secret_key = 'super_secret'

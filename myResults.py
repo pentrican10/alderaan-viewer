@@ -11,10 +11,13 @@ import os
 import pandas as pd
 import pickle
 import warnings
+import sys
+sys.path.append('c:\\Users\\Paige\\Projects\\alderaan\\')
 
-from .io import load_detrended_lightcurve
-from .utils import weighted_percentile
-from .constants import lcit, scit
+from alderaan.io import load_detrended_lightcurve
+from alderaan.utils import weighted_percentile
+from alderaan.constants import lcit, scit
+
 
 __all__ = ['Results']
 

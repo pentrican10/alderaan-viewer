@@ -1,5 +1,6 @@
 <!--
 PHASE FOLDED TRANSIT PLOT AND O-C TTV DIAGRAM
+
 JUMP FORWARD 10
 OR SPOT TO ENTER TRANSIT TIME, EXAMPLE T=1000 DAYS
 SLIDER TO UPDATE LIMITS 
@@ -15,6 +16,27 @@ POSSIBLE STACKED TRANSITS PER QUARTER
 <head>
     <title>Right Section</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+    //toggle plot 2
+        function togglePlotVisibility2() {
+            const plotContainerPlot2 = document.getElementById("graph2");
+            const plotCheckbox = document.getElementById("plotCheckbox2");
+            const plotTitle2 = document.getElementById("graphTitle2");
+            const axisButtons = document.getElementById("axisAdjustment");
+        
+            if (plotCheckbox.checked) {
+                plotTitle2.style.display = "block";
+                plotContainerPlot2.style.display = "block";  // Show the plot
+                axisButtons.style.display = "block";
+                plot2(selectedKoiId, lineNumber);
+            } else {
+                plotTitle2.style.display = "none";
+                plotContainerPlot2.style.display = "none";   // Hide the plot
+                axisButtons.style.display = "none";
+            }
+        }
+    </script>
+
 </head>
 <body>
     <h1>Star Information Display</h1>
@@ -158,7 +180,7 @@ POSSIBLE STACKED TRANSITS PER QUARTER
             });
         }
 
-
+        /*
         // need to link transit and line numbers correctly
         function displayTransit() {
             //get transit number
@@ -182,7 +204,7 @@ POSSIBLE STACKED TRANSITS PER QUARTER
                 });
 
 
-            /*
+            
             trueTransitNumbers = fetchTransitNumbers();
             
             if (!isNaN(transitNumber)) {
@@ -198,9 +220,9 @@ POSSIBLE STACKED TRANSITS PER QUARTER
                 //not valid number
                 alert("Transit number not found. Please enter a valid transit number.");
             }
-            */
+            
         }
-    
+        
 
         // function to display more than one transit at once
         function numberTransitsShown() {
@@ -208,7 +230,7 @@ POSSIBLE STACKED TRANSITS PER QUARTER
             const numberShown = parseInt(numberShownInput.value);
 
         }
-
+        */
         //plot center transit line as vertical line !!!!!!!!!!!!!!!!
         // check- holding lightcurve data in memory for star, not re reading data
         // when pressing forward buttons dont access the data from the file
@@ -249,6 +271,7 @@ POSSIBLE STACKED TRANSITS PER QUARTER
             transitInfo.innerHTML = `<p>Current transit: Number ${trueTransitNumber}</p>`;
         }
 
+        /*
         //toggle plot 2
         function togglePlotVisibility2() {
             const plotContainerPlot2 = document.getElementById("graph2");
@@ -267,6 +290,7 @@ POSSIBLE STACKED TRANSITS PER QUARTER
                 axisButtons.style.display = "none";
             }
         }
+        */
 
     </script>    
 

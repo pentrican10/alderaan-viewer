@@ -1,8 +1,42 @@
+<!--
+PHASE FOLDED TRANSIT PLOT AND O-C TTV DIAGRAM
+
+JUMP FORWARD 10
+OR SPOT TO ENTER TRANSIT TIME, EXAMPLE T=1000 DAYS
+SLIDER TO UPDATE LIMITS 
+MAKE THE VIEW MORE THAN A SINGLE TRANSIT AT A TIME 
+BUTTONS FOR DIFFERENT PLOT VIEWS 
+EDIT PLOT 1: QUARTER MARKER ON PLOT AND THE TRANSIT INDICATORS 
+POSSIBLE STACKED TRANSITS PER QUARTER
+
+-->
+
 <!DOCTYPE html>
 <html>
 <head>
     <title>Right Section</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+    //toggle plot 2
+        function togglePlotVisibility2() {
+            const plotContainerPlot2 = document.getElementById("graph2");
+            const plotCheckbox = document.getElementById("plotCheckbox2");
+            const plotTitle2 = document.getElementById("graphTitle2");
+            const axisButtons = document.getElementById("axisAdjustment");
+        
+            if (plotCheckbox.checked) {
+                plotTitle2.style.display = "block";
+                plotContainerPlot2.style.display = "block";  // Show the plot
+                axisButtons.style.display = "block";
+                plot2(selectedKoiId, lineNumber);
+            } else {
+                plotTitle2.style.display = "none";
+                plotContainerPlot2.style.display = "none";   // Hide the plot
+                axisButtons.style.display = "none";
+            }
+        }
+    </script>
+
 </head>
 <body>
     <h1>Star Information Display</h1>
@@ -18,18 +52,6 @@
 
         <input type="checkbox" id="plotCheckbox2" onchange="togglePlotVisibility2()"/>
         <label for="plotCheckbox2">Plot 2</label>
-        <!-- read in same photometry data, plot using dif color, 
-            write new python function
-            plot folded transit and also look at individual transits and flip through them
-            focus: how to make forward and back button for flipping through
-            start by plotting time=0->time=200, forward makes it t=200->t=400
-            forward and back button focus
-            box to enter quarter/segment number and jump to that section - 7 segments
-            clean and generalizable !!!
-            not rerendering when not necessary, want to be fast
-            look into plotly auto scaling on axis - might be faster to hardcode axis - low priority
-
-           -->
 
 
     </div>
@@ -59,9 +81,24 @@
             <button onclick="displayTransit()">Display Transit</button>
         </div>
         <br>
+
+        <!-- enter number of transits shown at once -->
+        <!--<div id="numberTransitsShown">
+            <input type="number" id="transitsShown" placeholder="# transits shown at once...">
+            <button onclick="numberTransitsShown()">Show Transits</button>
+        </div>
+        <br>
+    -->
+        <!-- move back by ten transits -->
+        <!-- move by a single transit -->
         <button onclick="movePlotBackward()">&#x2190;</button> <!--previous transit-->
         <button onclick="movePlotForward()">&#x2192;</button> <!--next transit -->
-        <!-- possibly add button to jump by 10 -->
+        <!-- move forward 10 -->
+
+        <br>
+        <!-- create dropdown?? -->
+        
+        <!-- enter transit time (in days or transit number) -->
 
         
     </div>
@@ -110,8 +147,11 @@
 
 
         //plot 2
+        // WAY TO GENERALIZE THE PLOT FUNCTION???
 
         let lineNumber = 0; // lineNumber - index number is the true transit
+
+        let numberTransitsShown = 1;  //default to show one transit at a time
 
         function movePlotBackward() {
             lineNumber -= 1;
@@ -140,7 +180,7 @@
             });
         }
 
-
+        /*
         // need to link transit and line numbers correctly
         function displayTransit() {
             //get transit number
@@ -164,7 +204,7 @@
                 });
 
 
-            /*
+            
             trueTransitNumbers = fetchTransitNumbers();
             
             if (!isNaN(transitNumber)) {
@@ -180,19 +220,23 @@
                 //not valid number
                 alert("Transit number not found. Please enter a valid transit number.");
             }
-            */
+            
         }
-    
+        
 
+        // function to display more than one transit at once
+        function numberTransitsShown() {
+            const numberShownInput = document.getElementById("transitsShown");
+            const numberShown = parseInt(numberShownInput.value);
 
+        }
+        */
         //plot center transit line as vertical line !!!!!!!!!!!!!!!!
         // check- holding lightcurve data in memory for star, not re reading data
         // when pressing forward buttons dont access the data from the file
         // maybe have a load data function for 
 
-
-        // LINKING THE TRANSIT INDEX NUMBER TO THE TRUE TRANSIT NUMBER
-        function plot2(koiId, lineNumber){ //currentStartTime, currentEndTime){
+        function plot2(koiId, lineNumber){ 
             const plotContainerPlot2 = document.getElementById("graph2");
             // Fetch the Plotly figure data from the server
             fetch(`/plot2/${koiId}/${lineNumber}`)
@@ -227,6 +271,7 @@
             transitInfo.innerHTML = `<p>Current transit: Number ${trueTransitNumber}</p>`;
         }
 
+        /*
         //toggle plot 2
         function togglePlotVisibility2() {
             const plotContainerPlot2 = document.getElementById("graph2");
@@ -245,6 +290,7 @@
                 axisButtons.style.display = "none";
             }
         }
+        */
 
     </script>    
 

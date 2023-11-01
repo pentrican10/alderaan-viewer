@@ -65,7 +65,12 @@
                 generatePlotDetrendedLightCurve(koiId); //replace with distriptive name generatePlotDetrendedLightCurve
 
                 //check what boxes are checked and display appropriate plots
-                togglePlotVisibilityDetrendedLightCurve()
+                //togglePlotVisibilityDetrendedLightCurve()
+                const checkboxList = ['detrendedLC', 'O-C', 'foldedTransit'];
+
+                for (const item of checkboxList) {
+                    togglePlotVisibilityDemo(item);
+                }
                 togglePlotVisibility2()
 
                 

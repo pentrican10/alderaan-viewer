@@ -18,6 +18,25 @@ POSSIBLE STACKED TRANSITS PER QUARTER
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script>
     //toggle plot 2
+        function togglePlotVisibilityDemo(typePlot) {
+            var containerId = typePlot + "Plot";
+            var checkboxId = typePlot + "Checkbox";
+            var titleId = typePlot + "Title";
+            const plotContainer = document.getElementById(containerId);
+            const plotCheckbox = document.getElementById(checkboxId);
+            const plotTitle = document.getElementById(titleId);
+            
+            if (plotCheckbox.checked) {
+                plotTitle.style.display = "block";
+                plotContainer.style.display = "block";  // Show the plot
+            } else {
+                plotTitle.style.display = "none";
+                plotContainer.style.display = "none";   // Hide the plot
+            }
+
+        }
+
+
         function togglePlotVisibility2() {
             const plotContainerPlot2 = document.getElementById("graph2");
             const plotCheckbox = document.getElementById("plotCheckbox2");
@@ -47,61 +66,96 @@ POSSIBLE STACKED TRANSITS PER QUARTER
 
     <!--checkboxes -->
     <div id="checkbox_container" style="display:none;">
-        <input type="checkbox" id="plotCheckbox1" onchange="togglePlotVisibilityDetrendedLightCurve()" checked/> 
-        <label for="plotCheckbox1">Detrended Light Curve</label>
+        <input type="checkbox" id="detrendedLCCheckbox" onchange="togglePlotVisibilityDemo('detrendedLC')" checked/> 
+        <label for="detrendedLCCheckbox">Detrended Light Curve</label>
 
         <input type="checkbox" id="plotCheckbox2" onchange="togglePlotVisibility2()"/>
-        <label for="plotCheckbox2">Plot 2</label>
+        <label for="plotCheckbox2">Single Transit</label>
+
+        <input type="checkbox" id="O-CCheckbox" onchange="togglePlotVisibilityDemo('O-C')"/>
+        <label for="O-CCheckbox">O-C</label>
+
+        <input type="checkbox" id="foldedTransitCheckbox" onchange="togglePlotVisibilityDemo('foldedTransit')"/>
+        <label for="foldedTransitCheckbox">Folded Transit</label>
 
 
     </div>
     
 
-    <div id="graphTitle1" style="display:none;">
+    <div id="detrendedLCTitle" style="display:none;">
         <h3>Kepler Detrended Light Curve:</h3>
+
+        <div id="detrendedLCPlot" data-koi-id="{{ koi_id }}" style="display:none;">
+            <!-- detrended light curve will display here -->
+        </div>
+
     </div>
-    <div id="graph1" data-koi-id="{{ koi_id }}" style="display:none;">
-        <!-- detrended light curve will display here -->
-    </div>
+    
 
     <div id="graphTitle2" style="display:none;">
         <h3>Plot 2:</h3>
-    </div>
-    <div id="graph2" data-koi-id="{{ koiId }}" style="display:none;">
-        <!-- plot with forward and backward buttons -->
-    </div>
-    <div id="axisAdjustment" style="display:none;">
-        <!-- Add Forward and Backward buttons for Plot2 -->
-        <div id="currentTransit">
-            <!-- current transit number and center time should appear here-->
-        </div>
-        <br>
-        <div id="transitInputContainer">
-            <input type="number" id="transitNumber" placeholder="Enter transit number...">
-            <button onclick="displayTransit()">Display Transit</button>
-        </div>
-        <br>
 
-        <!-- enter number of transits shown at once -->
-        <!--<div id="numberTransitsShown">
-            <input type="number" id="transitsShown" placeholder="# transits shown at once...">
-            <button onclick="numberTransitsShown()">Show Transits</button>
+        <div id="graph2" data-koi-id="{{ koiId }}" style="display:none;">
+            <!-- plot with forward and backward buttons -->
         </div>
-        <br>
-    -->
-        <!-- move back by ten transits -->
-        <!-- move by a single transit -->
-        <button onclick="movePlotBackward()">&#x2190;</button> <!--previous transit-->
-        <button onclick="movePlotForward()">&#x2192;</button> <!--next transit -->
-        <!-- move forward 10 -->
+        <div id="axisAdjustment" style="display:none;">
+            <!-- Add Forward and Backward buttons for Plot2 -->
+            <div id="currentTransit">
+                <!-- current transit number and center time should appear here-->
+            </div>
+            <br>
+            <div id="transitInputContainer">
+                <input type="number" id="transitNumber" placeholder="Enter transit number...">
+                <button onclick="displayTransit()">Display Transit</button>
+            </div>
+            <br>
+    
+            <!-- enter number of transits shown at once -->
+            <!--<div id="numberTransitsShown">
+                <input type="number" id="transitsShown" placeholder="# transits shown at once...">
+                <button onclick="numberTransitsShown()">Show Transits</button>
+            </div>
+            <br>
+        -->
+            <!-- move back by ten transits -->
+            <!-- move by a single transit -->
+            <button onclick="movePlotBackward()">&#x2190;</button> <!--previous transit-->
+            <button onclick="movePlotForward()">&#x2192;</button> <!--next transit -->
+            <!-- move forward 10 -->
+    
+            <br>
+            <!-- create dropdown?? -->
+            
+            <!-- enter transit time (in days or transit number) -->
+    
+            
+        </div>
 
-        <br>
-        <!-- create dropdown?? -->
-        
-        <!-- enter transit time (in days or transit number) -->
-
-        
     </div>
+    
+
+    <div id="O-CTitle" style="display:none;">
+        <h3>O-C:</h3>
+
+        <div id="O-CPlot" data-koi-id="{{ koi_id }}" style="display:none;">
+            <!-- O-C will display here -->
+            <h3>Demo!</h3>
+        </div>
+
+    </div>
+
+
+    <div id="foldedTransitTitle" style="display:none;">
+        <h3>Folded Transit:</h3>
+
+        <div id="foldedTransitPlot" data-koi-id="{{ koi_id }}" style="display:none;">
+            <!-- O-C will display here -->
+            <h3>Demo!</h3>
+        </div>
+
+    </div>
+    
+
 
     <script>
         function generatePlotDetrendedLightCurve(koiId) {
@@ -113,11 +167,11 @@ POSSIBLE STACKED TRANSITS PER QUARTER
                     console.log("Received data:", data); // Log the received data
                     if(data.error_message){ 
                         // Display the error message in the plot container
-                        const plotContainerDetrendedLightCurve = document.getElementById("graph1");
+                        const plotContainerDetrendedLightCurve = document.getElementById("detrendedLCPlot");
                         plotContainerDetrendedLightCurve.innerHTML = `<p>${data.error_message}</p>`;
                     } else { 
                         // Clear any existing error message
-                        const plotContainerDetrendedLightCurve = document.getElementById("graph1");
+                        const plotContainerDetrendedLightCurve = document.getElementById("detrendedLCPlot");
                         plotContainerDetrendedLightCurve.innerHTML = "";
                         //display plot
                         const parsedData = JSON.parse(data);

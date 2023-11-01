@@ -88,12 +88,20 @@ def read_data_from_fits(file_path):
 
 def fetch_data(koi_id, line_number):
     star_id = koi_id.replace("K","S")
-    file_name = star_id + '_lc_detrended.fits'
-    file_path = os.path.join('C:\\Users\\Paige\\Projects','miniflask','kepler_lightcurves_for_paige',file_name)
+    #file_name_lc = star_id + '_lc_detrended.fits'
+    #file_path_lc = os.path.join('C:\\Users\\Paige\\Projects','miniflask','kepler_lightcurves_for_paige',file_name_lc)
+    file_name_lc = star_id + '_lc_filtered.fits'
+    file_path_lc = os.path.join('C:\\Users\\Paige\\Projects','alderaan-viewer','data',file_name_lc)
+    
+    file_name_sc = star_id + '_sc_filtered.fits'
+    file_path_sc = os.path.join('C:\\Users\\Paige\\Projects','alderaan-viewer','data', file_name_sc)
+
+    combined_data = None
     #get data and create detrended light curve
-    if os.path.isfile(file_path):
-        photometry_data = read_data_from_fits(file_path) #descriptive names
+    if os.path.isfile(file_path_lc):
+        photometry_data_lc = read_data_from_fits(file_path_lc) #descriptive names
         transit_values, center_time_values = read_center_time_values_from_file(koi_id)
+
         if line_number < len(transit_values):
             center_time = center_time_values[line_number]
             transit_number = transit_values[line_number]
@@ -101,12 +109,24 @@ def fetch_data(koi_id, line_number):
             start_time = float(center_time) - 0.25
             end_time= float(center_time) + 0.25
 
-            use = (photometry_data['TIME'] > start_time) & (photometry_data['TIME'] < end_time)
-            filtered_data = photometry_data[use]
-            return filtered_data, transit_number, center_time ############
-    else:
-        return None, None, None
+            use_lc = (photometry_data_lc['TIME'] > start_time) & (photometry_data_lc['TIME'] < end_time)
+            lc_data = photometry_data_lc[use_lc]
+            combined_data = lc_data
+            #return filtered_data, transit_number, center_time ############
+    if os.path.isfile(file_path_sc):
+            photometry_data_sc = read_data_from_fits(file_name_sc)
+            if combined_data is not None:
+                use_sc = (photometry_data_sc['TIME'] > start_time) & (photometry_data_sc['TIME'] < end_time)
+                sc_data = photometry_data_sc[use_sc]
+                combined_data= pd.concat([combined_data, sc_data],ignore_index=True)
+            else:
+                combined_data = photometry_data_sc
+
+    return combined_data, transit_number, center_time ############
+    #else:
+    #    return None, None, None
     
+
 
 def read_center_time_values_from_file(koi_id): #read_ct_and_transit_number_from_file(koi_id)
     star_id = koi_id.replace("K","S")
@@ -159,15 +179,33 @@ def save_file(koi_id):
 @app.route('/generate_plot/<koi_id>')
 def generate_plot_Detrended_Light_Curve(koi_id):
     star_id = koi_id.replace("K","S")
-    file_name = star_id + '_lc_detrended.fits'
-    file_path = os.path.join('C:\\Users\\Paige\\Projects','miniflask','kepler_lightcurves_for_paige',file_name)
+    file_name_lc = star_id + '_lc_detrended.fits'
+    file_path_lc = os.path.join('C:\\Users\\Paige\\Projects','miniflask','kepler_lightcurves_for_paige',file_name_lc)
+    file_name_sc = star_id + '_sc_filtered.fits'
+    file_path_sc = os.path.join('C:\\Users\\Paige\\Projects','alderaan-viewer','data', file_name_sc)
+
     #get data and create detrended light curve
-    if os.path.isfile(file_path):
-        data = read_data_from_fits(file_path)
-        fig = px.scatter(data, x="TIME", y="FLUX")#, 
+    if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
+        data_lc = read_data_from_fits(file_path_lc)
+        data_sc = read_data_from_fits(file_path_sc)
+        fig = px.scatter(data_lc, x="TIME", y="FLUX")#, 
                     #title="Kepler Detrended Light Curve")
+        fig.add_scatter(x=data_sc['TIME'], y=data_sc['FLUX'],mode='markers')
         graph1JSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
         return jsonify(graph1JSON)
+    
+    elif os.path.isfile(file_path_lc):
+        data_lc = read_data_from_fits(file_path_lc)
+        fig = px.scatter(data_lc, x="TIME", y="FLUX")
+        graph1JSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
+        return jsonify(graph1JSON)
+    
+    elif os.path.isfile(file_path_sc):
+        data_sc = read_data_from_fits(file_path_sc)
+        fig = px.scatter(data_sc, x="TIME", y="FLUX")
+        graph1JSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
+        return jsonify(graph1JSON)
+    
     else:
         error_message = f'No data found for {koi_id}'
         return jsonify(error_message=error_message)

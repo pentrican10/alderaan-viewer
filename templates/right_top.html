@@ -16,7 +16,7 @@
         <input type="checkbox" id="detrendedLCCheckbox" onchange="togglePlotVisibilityDetrendedLightCurve()" checked/> 
         <label for="detrendedLCCheckbox">Detrended Light Curve</label>
 
-        <input type="checkbox" id="singletransitCheckbox" onchange="togglePlotVisibilitySingleTransit()"/>
+        <input type="checkbox" id="singleTransitCheckbox" onchange="togglePlotVisibilitySingleTransit()"/>
         <label for="singleTransitCheckbox">Single Transit</label>
 
         <input type="checkbox" id="O-CCheckbox" onchange="togglePlotVisibilityDemo('O-C')"/>
@@ -35,11 +35,20 @@
 
     </div>
 
-    <div id="singletransitTitle" style="display:none;">
+    <div id="singleTransitTitle" style="display:none;">
         <h3>Single Transit:</h3>
 
         <div id="singleTransitPlot" data-koi-id="{{ koi_id }}" style="display:none;">
             <!-- single transit plot will display here -->
+        </div>
+        <br>
+        <div id="transitAdjustment" style="display:none;">
+            <div id="currentTransit">
+                <!-- current transit number and center time should appear here-->
+            </div>
+            <br>
+            <button onclick="movePlotBackward()">&#x2190;</button> <!--previous transit-->
+            <button onclick="movePlotForward()">&#x2192;</button> <!--next transit -->
         </div>
     </div>
 
@@ -94,6 +103,75 @@
 
         }
 
+
+        // single transit
+        let lineNumber = 0; // lineNumber - index number from ttv
+        // move forward and backward buttons
+        function movePlotBackward() {
+            lineNumber -= 1;
+            if (lineNumber <0) {
+                lineNumber = 0;
+            }
+            generatePlotSingleTransit(selectedKoiId, lineNumber);
+        }
+
+        function movePlotForward() {
+           lineNumber += 1;
+           generatePlotSingleTransit(selectedKoiId, lineNumber);
+        }
+        function displayTransitNumber(transitNumber){
+            const transitInfo = document.getElementById("currentTransit");
+            transitInfo.innerHTML = `<p>Current transit: Number ${transitNumber}</p>`;
+        }
+        // generate the plot
+        function generatePlotSingleTransit(koiId, lineNumber) {
+            // Fetch the Plotly figure data from the server
+            fetch(`/generate_plot_single_transit/${koiId}/${lineNumber}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Received data"); // Log the received data
+                    if(data.error_message){ 
+                        // Display the error message in the plot container
+                        const plotContainer = document.getElementById("singleTransitPlot");
+                        plotContainer.innerHTML = `<p>${data.error_message}</p>`;
+                    } else { 
+                        // Clear any existing error message
+                        const plotContainer = document.getElementById("singleTransitPlot");
+                        plotContainer.innerHTML = "";
+                        //display transit number
+                        const trueTransitNumber = data.transit_number;
+                        displayTransitNumber(trueTransitNumber);
+                        //display plot
+                        const parsedData = JSON.parse(data.graphJSON);
+                        Plotly.newPlot(plotContainer, parsedData);
+                    }
+                })
+                .catch(error => {
+                    plotContainer.innerHTML = "<p>Error loading plot data.</p>";
+                    console.error(error);
+                });
+        }
+
+        function togglePlotVisibilitySingleTransit() {
+            const plotContainer = document.getElementById("singleTransitPlot");
+            const plotCheckbox = document.getElementById("singleTransitCheckbox");
+            const plotTitle = document.getElementById("singleTransitTitle");
+            const transitButtons = document.getElementById("transitAdjustment");
+
+            if (plotCheckbox.checked) {
+                plotTitle.style.display = "block";
+                plotContainer.style.display = "block";  // Show the plot
+                transitButtons.style.display = "block";
+                generatePlotSingleTransit(selectedKoiId, lineNumber);
+            } else {
+                plotTitle.style.display = "none";
+                plotContainer.style.display = "none";   // Hide the plot
+                transitButtons.style.display = "none";
+            }
+
+        }
+
+
         // folded light curve
         function generatePlotFoldedLightCurve(koiId) {
             // Fetch the Plotly figure data from the server
@@ -137,47 +215,6 @@
         }
 
 
-        // single transit
-        function generatePlotSingleTransit(koiId) {
-            // Fetch the Plotly figure data from the server
-            fetch(`/generate_plot_single_transit/${koiId}`)
-                .then(response => response.json())
-                .then(data => {
-                    console.log("Received data:", data); // Log the received data
-                    if(data.error_message){ 
-                        // Display the error message in the plot container
-                        const plotContainerDetrendedLightCurve = document.getElementById("singleTransitPlot");
-                        plotContainerDetrendedLightCurve.innerHTML = `<p>${data.error_message}</p>`;
-                    } else { 
-                        // Clear any existing error message
-                        const plotContainerDetrendedLightCurve = document.getElementById("singleTransitPlot");
-                        plotContainerDetrendedLightCurve.innerHTML = "";
-                        //display plot
-                        const parsedData = JSON.parse(data);
-                        Plotly.newPlot(plotContainerDetrendedLightCurve, parsedData);
-                    }
-                })
-                .catch(error => {
-                    plotContainerDetrendedLightCurve.innerHTML = "<p>Error loading plot data.</p>";
-                    console.error(error);
-                });
-        }
-
-        function togglePlotVisibilitySingleTransit() {
-            const plotContainer = document.getElementById("singleTransitPlot");
-            const plotCheckbox = document.getElementById("singleTransitCheckbox");
-            const plotTitle = document.getElementById("singleTransitTitle");
-            
-            if (plotCheckbox.checked) {
-                plotTitle.style.display = "block";
-                plotContainer.style.display = "block";  // Show the plot
-                generatePlotSingleTransit(selectedKoiId);
-            } else {
-                plotTitle.style.display = "none";
-                plotContainer.style.display = "none";   // Hide the plot
-            }
-
-        }
 
 
     </script>

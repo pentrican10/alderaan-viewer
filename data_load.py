@@ -75,23 +75,21 @@ def get_ttv_file(koi_id):
     
 def fetch_data(koi_id, line_number):
     star_id = koi_id.replace("K","S")
-    #file_name_lc = star_id + '_lc_detrended.fits'
-    #file_path_lc = os.path.join('C:\\Users\\Paige\\Projects','miniflask','kepler_lightcurves_for_paige',file_name_lc)
-    file_name_lc = star_id + '_lc_filtered.fits'
-    file_path_lc = os.path.join('C:\\Users\\Paige\\Projects','alderaan-viewer','data',file_name_lc)
+    file_name_lc = star_id + '_lc_detrended.fits'
+    file_path_lc = os.path.join(data_directory,'kepler_lightcurves_for_paige',file_name_lc)
     
     file_name_sc = star_id + '_sc_filtered.fits'
-    file_path_sc = os.path.join('C:\\Users\\Paige\\Projects','alderaan-viewer','data', file_name_sc)
+    file_path_sc = os.path.join(data_directory, file_name_sc)
 
     combined_data = None
     #get data and create detrended light curve
     if os.path.isfile(file_path_lc):
         photometry_data_lc = read_data_from_fits(file_path_lc) #descriptive names
-        transit_values, center_time_values = read_center_time_values_from_file(koi_id)
+        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id)
 
-        if line_number < len(transit_values):
-            center_time = center_time_values[line_number]
-            transit_number = transit_values[line_number]
+        if line_number < len(index):
+            center_time = ttime[line_number]
+            transit_number = index[line_number]
         
             start_time = float(center_time) - 0.25
             end_time= float(center_time) + 0.25

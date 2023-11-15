@@ -25,7 +25,7 @@
     </div>
 
     <script>
-        
+
         // Function to fetch and display the associated file content
         function displayCommentFile(koiId) {
             const fileContentContainer = document.getElementById("file_content_container");
@@ -45,7 +45,7 @@
             editButton.style.display = "block";
             
         }
- 
+
         // JavaScript code for handling the click event on the left side links
         document.addEventListener("click", function(event) {
             const target = event.target;
@@ -60,22 +60,16 @@
                 //show checkbox container
                 const checkboxContainer= document.getElementById("checkbox_container");
                 checkboxContainer.style.display= "block";
-                
+            
                 //when link clicked, make graph:
-                generatePlotDetrendedLightCurve(koiId); //replace with distriptive name generatePlotDetrendedLightCurve
-
-                //check what boxes are checked and display appropriate plots
-                togglePlotVisibilityDetrendedLightCurve()
-                togglePlotVisibility2()
-
-                
-
-            } 
+                generatePlotDetrendedLightCurve(koiId); 
+                togglePlotVisibilityDetrendedLightCurve();
+                togglePlotVisibilityFoldedLightCurve();
+                togglePlotVisibilitySingleTransit();
+            }
         });
-
-        
 
     </script>
 
-</body>
+
 </html>

@@ -1,86 +1,30 @@
-<!--
-PHASE FOLDED TRANSIT PLOT AND O-C TTV DIAGRAM
-
-JUMP FORWARD 10
-OR SPOT TO ENTER TRANSIT TIME, EXAMPLE T=1000 DAYS
-SLIDER TO UPDATE LIMITS 
-MAKE THE VIEW MORE THAN A SINGLE TRANSIT AT A TIME 
-BUTTONS FOR DIFFERENT PLOT VIEWS 
-EDIT PLOT 1: QUARTER MARKER ON PLOT AND THE TRANSIT INDICATORS 
-POSSIBLE STACKED TRANSITS PER QUARTER
-
--->
-
 <!DOCTYPE html>
 <html>
 <head>
     <title>Right Section</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <script>
-    //toggle plot 2
-        function togglePlotVisibilityDemo(typePlot) {
-            var containerId = typePlot + "Plot";
-            var checkboxId = typePlot + "Checkbox";
-            var titleId = typePlot + "Title";
-            const plotContainer = document.getElementById(containerId);
-            const plotCheckbox = document.getElementById(checkboxId);
-            const plotTitle = document.getElementById(titleId);
-            
-            if (plotCheckbox.checked) {
-                plotTitle.style.display = "block";
-                plotContainer.style.display = "block";  // Show the plot
-            } else {
-                plotTitle.style.display = "none";
-                plotContainer.style.display = "none";   // Hide the plot
-            }
-
-        }
-
-
-        function togglePlotVisibility2() {
-            const plotContainerPlot2 = document.getElementById("graph2");
-            const plotCheckbox = document.getElementById("plotCheckbox2");
-            const plotTitle2 = document.getElementById("graphTitle2");
-            const axisButtons = document.getElementById("axisAdjustment");
-        
-            if (plotCheckbox.checked) {
-                plotTitle2.style.display = "block";
-                plotContainerPlot2.style.display = "block";  // Show the plot
-                axisButtons.style.display = "block";
-                plot2(selectedKoiId, lineNumber);
-            } else {
-                plotTitle2.style.display = "none";
-                plotContainerPlot2.style.display = "none";   // Hide the plot
-                axisButtons.style.display = "none";
-            }
-        }
-    </script>
 
 </head>
 <body>
     <h1>Star Information Display</h1>
-    
     <div id="koi_id_container">
         <!-- The selected "koi_id" will be displayed here -->
     </div>
 
     <!--checkboxes -->
     <div id="checkbox_container" style="display:none;">
-        <input type="checkbox" id="detrendedLCCheckbox" onchange="togglePlotVisibilityDemo('detrendedLC')" checked/> 
+        <input type="checkbox" id="detrendedLCCheckbox" onchange="togglePlotVisibilityDetrendedLightCurve()" checked/> 
         <label for="detrendedLCCheckbox">Detrended Light Curve</label>
 
-        <input type="checkbox" id="plotCheckbox2" onchange="togglePlotVisibility2()"/>
-        <label for="plotCheckbox2">Single Transit</label>
+        <input type="checkbox" id="singletransitCheckbox" onchange="togglePlotVisibilitySingleTransit()"/>
+        <label for="singleTransitCheckbox">Single Transit</label>
 
         <input type="checkbox" id="O-CCheckbox" onchange="togglePlotVisibilityDemo('O-C')"/>
         <label for="O-CCheckbox">O-C</label>
 
-        <input type="checkbox" id="foldedTransitCheckbox" onchange="togglePlotVisibilityDemo('foldedTransit')"/>
-        <label for="foldedTransitCheckbox">Folded Transit</label>
-
-
+        <input type="checkbox" id="foldedLightCurveCheckbox" onchange="togglePlotVisibilityFoldedLightCurve()"/>
+        <label for="foldedLightCurveCheckbox">Folded Transit</label>
     </div>
-    
 
     <div id="detrendedLCTitle" style="display:none;">
         <h3>Kepler Detrended Light Curve:</h3>
@@ -90,76 +34,26 @@ POSSIBLE STACKED TRANSITS PER QUARTER
         </div>
 
     </div>
-    
 
-    <div id="graphTitle2" style="display:none;">
-        <h3>Plot 2:</h3>
+    <div id="singletransitTitle" style="display:none;">
+        <h3>Single Transit:</h3>
 
-        <div id="graph2" data-koi-id="{{ koiId }}" style="display:none;">
-            <!-- plot with forward and backward buttons -->
+        <div id="singleTransitPlot" data-koi-id="{{ koi_id }}" style="display:none;">
+            <!-- single transit plot will display here -->
         </div>
-        <div id="axisAdjustment" style="display:none;">
-            <!-- Add Forward and Backward buttons for Plot2 -->
-            <div id="currentTransit">
-                <!-- current transit number and center time should appear here-->
-            </div>
-            <br>
-            <div id="transitInputContainer">
-                <input type="number" id="transitNumber" placeholder="Enter transit number...">
-                <button onclick="displayTransit()">Display Transit</button>
-            </div>
-            <br>
-    
-            <!-- enter number of transits shown at once -->
-            <!--<div id="numberTransitsShown">
-                <input type="number" id="transitsShown" placeholder="# transits shown at once...">
-                <button onclick="numberTransitsShown()">Show Transits</button>
-            </div>
-            <br>
-        -->
-            <!-- move back by ten transits -->
-            <!-- move by a single transit -->
-            <button onclick="movePlotBackward()">&#x2190;</button> <!--previous transit-->
-            <button onclick="movePlotForward()">&#x2192;</button> <!--next transit -->
-            <!-- move forward 10 -->
-    
-            <br>
-            <!-- create dropdown?? -->
-            
-            <!-- enter transit time (in days or transit number) -->
-    
-            
-        </div>
-
-    </div>
-    
-
-    <div id="O-CTitle" style="display:none;">
-        <h3>O-C:</h3>
-
-        <div id="O-CPlot" data-koi-id="{{ koi_id }}" style="display:none;">
-            <!-- O-C will display here -->
-            <h3>Demo!</h3>
-        </div>
-
     </div>
 
+    <div id="foldedLightCurveTitle" style="display:none;">
+        <h3>Folded Light Curve:</h3>
 
-    <div id="foldedTransitTitle" style="display:none;">
-        <h3>Folded Transit:</h3>
-
-        <div id="foldedTransitPlot" data-koi-id="{{ koi_id }}" style="display:none;">
-            <!-- O-C will display here -->
-            <h3>Demo!</h3>
+        <div id="foldedLightCurvePlot" data-koi-id="{{ koi_id }}" style="display:none;">
+            <!-- folded light curve will display here -->
         </div>
-
     </div>
-    
 
 
     <script>
         function generatePlotDetrendedLightCurve(koiId) {
-            const plotContainerDetrendedLightCurve = document.getElementById("graph1");
             // Fetch the Plotly figure data from the server
             fetch(`/generate_plot/${koiId}`)
                 .then(response => response.json())
@@ -184,172 +78,110 @@ POSSIBLE STACKED TRANSITS PER QUARTER
                 });
         }
 
-        // Function to toggle plot visibility based on the checkbox
         function togglePlotVisibilityDetrendedLightCurve() {
-            const plotContainerDetrendedLightCurve = document.getElementById("graph1");
-            const plotCheckbox = document.getElementById("plotCheckbox1");
-            const plotTitle1 = document.getElementById("graphTitle1");
+            const plotContainer = document.getElementById("detrendedLCPlot");
+            const plotCheckbox = document.getElementById("detrendedLCCheckbox");
+            const plotTitle = document.getElementById("detrendedLCTitle");
             
             if (plotCheckbox.checked) {
-                plotTitle1.style.display = "block";
-                plotContainerDetrendedLightCurve.style.display = "block";  // Show the plot
+                plotTitle.style.display = "block";
+                plotContainer.style.display = "block";  // Show the plot
+                generatePlotDetrendedLightCurve(selectedKoiId);
             } else {
-                plotTitle1.style.display = "none";
-                plotContainerDetrendedLightCurve.style.display = "none";   // Hide the plot
+                plotTitle.style.display = "none";
+                plotContainer.style.display = "none";   // Hide the plot
             }
-        }
-
-
-        //plot 2
-        // WAY TO GENERALIZE THE PLOT FUNCTION???
-
-        let lineNumber = 0; // lineNumber - index number is the true transit
-
-        let numberTransitsShown = 1;  //default to show one transit at a time
-
-        function movePlotBackward() {
-            lineNumber -= 1;
-            if (lineNumber <0) {
-                lineNumber = 0;
-            }
-            plot2(selectedKoiId, lineNumber);
 
         }
 
-        function movePlotForward() {
-           lineNumber += 1;
-
-           plot2(selectedKoiId, lineNumber);
-        }
-
-
-        function fetchTransitNumbers(){
-            fetch('/get_transit_numbers/<koi_id>')
-            .then(response => response.json())
-            .then(data => {
-                console.log(data);
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
-        }
-
-        /*
-        // need to link transit and line numbers correctly
-        function displayTransit() {
-            //get transit number
-            const transitNumberInput = document.getElementById('transitNumber');
-            const transitNumber = parseInt(transitNumberInput.value);
-
-            fetchTransitNumbers()
-                .then(trueTransitNumbers => {
-                    if (!isNaN(transitNumber)){
-                        if (trueTransitNumbers.includes(transitNumber)){
-                            transitNumberInput.value = '';
-
-                            plot2(selectedKoiId, lineNumber);
-                        } else {
-                            alert("Transit number not found. Please enter a valid transit number.");
-                        }
-                    } else {
-                        // not valid number
-                        alert("Please enter a valid transit number.")
-                    }
-                });
-
-
-            
-            trueTransitNumbers = fetchTransitNumbers();
-            
-            if (!isNaN(transitNumber)) {
-                if (trueTransitNumbers.includes(transitNumber)){
-                    //
-                }
-                transitNumberInput.value='';
-                //lineNumber=transitNumber;
-
-                plot2(selectedKoiId, lineNumber);
-                
-            } else {
-                //not valid number
-                alert("Transit number not found. Please enter a valid transit number.");
-            }
-            
-        }
-        
-
-        // function to display more than one transit at once
-        function numberTransitsShown() {
-            const numberShownInput = document.getElementById("transitsShown");
-            const numberShown = parseInt(numberShownInput.value);
-
-        }
-        */
-        //plot center transit line as vertical line !!!!!!!!!!!!!!!!
-        // check- holding lightcurve data in memory for star, not re reading data
-        // when pressing forward buttons dont access the data from the file
-        // maybe have a load data function for 
-
-        function plot2(koiId, lineNumber){ 
-            const plotContainerPlot2 = document.getElementById("graph2");
+        // folded light curve
+        function generatePlotFoldedLightCurve(koiId) {
             // Fetch the Plotly figure data from the server
-            fetch(`/plot2/${koiId}/${lineNumber}`)
+            fetch(`/generate_plot_folded_light_curve/${koiId}`)
                 .then(response => response.json())
                 .then(data => {
                     console.log("Received data:", data); // Log the received data
-                    if(data.error2){ 
+                    if(data.error_message){ 
                         // Display the error message in the plot container
-                        const plotContainerPlot2 = document.getElementById("graph2");
-                        plotContainerPlot2.innerHTML = `<p>${data.error2}</p>`;
+                        const plotContainer = document.getElementById("foldedLightCurvePlot");
+                        plotContainer.innerHTML = `<p>${data.error_message}</p>`;
                     } else { 
                         // Clear any existing error message
-                        const plotContainerPlot2 = document.getElementById("graph2");
-                        plotContainerPlot2.innerHTML = "";
-
-                        const trueTransitNumber = data.transit_number;
-                        displayTransitNumber(trueTransitNumber);
+                        const plotContainer = document.getElementById("foldedLightCurvePlot");
+                        plotContainer.innerHTML = "";
                         //display plot
-                        const parsedData = JSON.parse(data.graphJSON);
-                        Plotly.newPlot(plotContainerPlot2, parsedData);
+                        const parsedData = JSON.parse(data);
+                        Plotly.newPlot(plotContainer, parsedData);
                     }
                 })
                 .catch(error => {
-                    console.error("error loading plot data: ", error);
-                    plotContainerPlot2.innerHTML = "<p>Error loading plot data.</p>";
-                    
+                    plotContainerDetrendedLightCurve.innerHTML = "<p>Error loading plot data.</p>";
+                    console.error(error);
                 });
         }
 
-        function displayTransitNumber(trueTransitNumber){
-            const transitInfo = document.getElementById("currentTransit");
-            transitInfo.innerHTML = `<p>Current transit: Number ${trueTransitNumber}</p>`;
-        }
-
-        /*
-        //toggle plot 2
-        function togglePlotVisibility2() {
-            const plotContainerPlot2 = document.getElementById("graph2");
-            const plotCheckbox = document.getElementById("plotCheckbox2");
-            const plotTitle2 = document.getElementById("graphTitle2");
-            const axisButtons = document.getElementById("axisAdjustment");
-        
+        function togglePlotVisibilityFoldedLightCurve() {
+            const plotContainer = document.getElementById("foldedLightCurvePlot");
+            const plotCheckbox = document.getElementById("foldedLightCurveCheckbox");
+            const plotTitle = document.getElementById("foldedLightCurveTitle");
+            
             if (plotCheckbox.checked) {
-                plotTitle2.style.display = "block";
-                plotContainerPlot2.style.display = "block";  // Show the plot
-                axisButtons.style.display = "block";
-                plot2(selectedKoiId, lineNumber);
+                plotTitle.style.display = "block";
+                plotContainer.style.display = "block";  // Show the plot
+                generatePlotFoldedLightCurve(selectedKoiId);
             } else {
-                plotTitle2.style.display = "none";
-                plotContainerPlot2.style.display = "none";   // Hide the plot
-                axisButtons.style.display = "none";
+                plotTitle.style.display = "none";
+                plotContainer.style.display = "none";   // Hide the plot
             }
+
         }
-        */
 
-    </script>    
 
-    
-    
+        // single transit
+        function generatePlotSingleTransit(koiId) {
+            // Fetch the Plotly figure data from the server
+            fetch(`/generate_plot_single_transit/${koiId}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Received data:", data); // Log the received data
+                    if(data.error_message){ 
+                        // Display the error message in the plot container
+                        const plotContainerDetrendedLightCurve = document.getElementById("singleTransitPlot");
+                        plotContainerDetrendedLightCurve.innerHTML = `<p>${data.error_message}</p>`;
+                    } else { 
+                        // Clear any existing error message
+                        const plotContainerDetrendedLightCurve = document.getElementById("singleTransitPlot");
+                        plotContainerDetrendedLightCurve.innerHTML = "";
+                        //display plot
+                        const parsedData = JSON.parse(data);
+                        Plotly.newPlot(plotContainerDetrendedLightCurve, parsedData);
+                    }
+                })
+                .catch(error => {
+                    plotContainerDetrendedLightCurve.innerHTML = "<p>Error loading plot data.</p>";
+                    console.error(error);
+                });
+        }
+
+        function togglePlotVisibilitySingleTransit() {
+            const plotContainer = document.getElementById("singleTransitPlot");
+            const plotCheckbox = document.getElementById("singleTransitCheckbox");
+            const plotTitle = document.getElementById("singleTransitTitle");
+            
+            if (plotCheckbox.checked) {
+                plotTitle.style.display = "block";
+                plotContainer.style.display = "block";  // Show the plot
+                generatePlotSingleTransit(selectedKoiId);
+            } else {
+                plotTitle.style.display = "none";
+                plotContainer.style.display = "none";   // Hide the plot
+            }
+
+        }
+
+
+    </script>
+
 </body>
-</html>
 
+</html>

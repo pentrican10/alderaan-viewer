@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kepler Data</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+
+    <div style="display: flex;">
+        
+        <div class="left-section">
+            <!-- Left section content -->
+            {{ left_content | safe }}
+        </div>
+        <div class="right-section">
+            <div class="right-top-section">
+                {{ right_top_content | safe }}
+                
+            </div>
+            <div class="right-bottom-section">
+                {{ right_bottom_content | safe }}
+            </div>
+            
+        </div>
+    </div>
+
+    <script>
+
+        // Function to fetch and display the associated file content
+        function displayCommentFile(koiId) {
+            const fileContentContainer = document.getElementById("file_content_container");
+            fetch(`/star/${koiId}`)
+                .then(response => response.text())
+                .then(data => {
+                    fileContentContainer.innerHTML = `<pre>${data}</pre>`;
+                })
+                .catch(error => {
+                    fileContentContainer.innerHTML = "<p>Error loading comment file.</p>";
+                    console.error(error);
+                });
+            selectedKoiId = koiId; //
+
+            // Display the "Edit Comment File" button
+            const editButton = document.getElementById("editButton");
+            editButton.style.display = "block";
+            
+        }
+
+        // JavaScript code for handling the click event on the left side links
+        document.addEventListener("click", function(event) {
+            const target = event.target;
+            if (target.tagName === "A" && target.href) {
+                event.preventDefault();
+                const koiId = target.innerText;
+                const koiIdContainer = document.getElementById("koi_id_container");
+                koiIdContainer.innerHTML = `<h2>Selected koi_id: ${koiId}</h2>`;
+                selectedKoiId = koiId;
+                displayCommentFile(koiId);
+
+                //show checkbox container
+                const checkboxContainer= document.getElementById("checkbox_container");
+                checkboxContainer.style.display= "block";
+            
+                //when link clicked, make graph:
+                generatePlotDetrendedLightCurve(koiId); 
+                togglePlotVisibilityDetrendedLightCurve();
+                togglePlotVisibilityFoldedLightCurve();
+                togglePlotVisibilitySingleTransit();
+            }
+        });
+
+    </script>
+
+
+</html>

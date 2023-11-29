@@ -139,7 +139,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         error_message = f'No data found for {koi_id}'
         return jsonify(error_message=error_message)
 
-''' 
+'''
 @app.route('/generate_plot_single_transit/<koi_id>/<int:line_number>')
 def generate_plot_single_transit(koi_id, line_number):
     if (data_load.fetch_data(koi_id, line_number)):
@@ -168,18 +168,41 @@ def generate_plot_single_transit(koi_id, line_number):
     else: 
         error2 = f'No data found for {koi_id}'
         return jsonify(error2=error2)
+
+        
 '''
+
+@app.route('/generate_plot_single_transit/<koi_id>/<int:line_number>')
+def generate_plot_single_transit(koi_id, line_number):
+    if (data_load.fetch_data(koi_id, line_number)):
+        photometry_data, transit_number, center_time = data_load.fetch_data(koi_id, line_number)
+        fig = px.scatter(photometry_data, x="TIME", y="FLUX")
+
+        graphJSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
+        response_data = {
+            'graphJSON': graphJSON,
+            'transit_number': transit_number
+        }
+        return jsonify(response_data)
+    else:
+        error_message = f'No data found for {koi_id}'
+        return jsonify(error_message=error_message)
+
+
 @app.route('/generate_plot_folded_light_curve/<koi_id>')
 def generate_plot_folded_light_curve(koi_id):
-    x = np.linspace(1,4,1000)
-    y = x**2
-    df = pd.DataFrame(dict(
-            X=x,
-            Y=y
-        ))
-    fig = px.scatter(df, x="X",y="Y")
-    graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
-    return jsonify(graphJSON)
+    fold_data = data_load.folded_data(koi_id)
+    
+    if fold_data is not None:
+        fig = px.scatter(fold_data, x="TIME",y="FLUX")
+        graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
+        return jsonify(graphJSON)
+    else:
+        error_message = f'No data found for {koi_id}'
+        return jsonify(error_message=error_message)
+
+
+
 
 
 #@app.route('/generate_plot/<koi_id>')

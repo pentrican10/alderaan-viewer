@@ -193,7 +193,8 @@
                     }
                 })
                 .catch(error => {
-                    plotContainerDetrendedLightCurve.innerHTML = "<p>Error loading plot data.</p>";
+                    const plotContainer = document.getElementById("foldedLightCurvePlot");
+                    plotContainer.innerHTML = "<p>Error loading plot data.</p>";
                     console.error(error);
                 });
         }

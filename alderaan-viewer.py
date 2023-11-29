@@ -191,15 +191,15 @@ def generate_plot_single_transit(koi_id, line_number):
 
 @app.route('/generate_plot_folded_light_curve/<koi_id>')
 def generate_plot_folded_light_curve(koi_id):
-    x = np.linspace(1,4,1000)
-    y = x**2
-    df = pd.DataFrame(dict(
-            X=x,
-            Y=y
-        ))
-    fig = px.scatter(df, x="X",y="Y")
-    graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
-    return jsonify(graphJSON)
+    fold_data = data_load.folded_data(koi_id)
+    
+    if fold_data is not None:
+        fig = px.scatter(fold_data, x="TIME",y="FLUX")
+        graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
+        return jsonify(graphJSON)
+    else:
+        error_message = f'No data found for {koi_id}'
+        return jsonify(error_message=error_message)
 
 
 

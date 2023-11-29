@@ -108,5 +108,44 @@ def fetch_data(koi_id, line_number):
                 combined_data = photometry_data_sc
 
     return combined_data, transit_number, center_time ############
-    #else:
-    #    return None, None, None
+    
+
+def folded_data(koi_id):
+    star_id = koi_id.replace("K","S")
+    file_name_lc = star_id + '_lc_detrended.fits'
+    file_path_lc = os.path.join(data_directory,'kepler_lightcurves_for_paige',file_name_lc)
+    
+    file_name_sc = star_id + '_sc_filtered.fits'
+    file_path_sc = os.path.join(data_directory, file_name_sc)
+
+    #get data and create detrended light curve
+    if os.path.isfile(file_path_lc):
+        photometry_data_lc = read_data_from_fits(file_path_lc) #descriptive names
+        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id)
+        fold_data_time = []
+        fold_data_flux = []
+        for i in range(len(index)):
+            center_time = ttime[i]
+        
+            start_time = float(center_time) - 0.25
+            end_time= float(center_time) + 0.25
+
+            use = (photometry_data_lc['TIME'] > start_time) & (photometry_data_lc['TIME'] < end_time)
+            transit_data = photometry_data_lc[use]
+
+            # Check and ensure that 'TIME' column is of numeric type
+            transit_data['TIME'] = pd.to_numeric(transit_data['TIME'], errors='coerce')
+
+            # Check and ensure that center_time is of numeric type
+            center_time = float(center_time)
+
+            norm_time = transit_data['TIME'] - center_time
+            fold_data_time.extend(norm_time)
+            fold_data_flux.extend(transit_data['FLUX'])
+
+        fold_data = pd.DataFrame({
+            'TIME' : fold_data_time,
+            'FLUX': fold_data_flux
+        })
+        return fold_data
+

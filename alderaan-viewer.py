@@ -139,38 +139,6 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         error_message = f'No data found for {koi_id}'
         return jsonify(error_message=error_message)
 
-'''
-@app.route('/generate_plot_single_transit/<koi_id>/<int:line_number>')
-def generate_plot_single_transit(koi_id, line_number):
-    if (data_load.fetch_data(koi_id, line_number)):
-        photometry_data, true_transit_number, center_time = data_load.fetch_data(koi_id, line_number)
-
-        fig = px.scatter(photometry_data, x="TIME", y="FLUX") #only want to plot data within selected time window
-        #fig.update_traces(marker=dict(
-        #        color='red'))
-        
-        # plot the center time on the single transit block
-        fig.add_trace(
-            go.Scatter(x=[center_time, center_time], y=[min(fig.data[0].y), max(fig.data[0].y)],
-               mode='lines',
-               line=dict(color="red", width=2),
-               name="Center time",
-               showlegend=True)
-        )
-
-        graph2JSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
-        response_data = {
-            'graphJSON': graph2JSON,
-            'transit_number': true_transit_number
-        }
-        return jsonify(response_data)
-        #return jsonify(graph2JSON), jsonify(true_transit_number)
-    else: 
-        error2 = f'No data found for {koi_id}'
-        return jsonify(error2=error2)
-
-        
-'''
 
 @app.route('/generate_plot_single_transit/<koi_id>/<int:line_number>')
 def generate_plot_single_transit(koi_id, line_number):
@@ -192,7 +160,7 @@ def generate_plot_single_transit(koi_id, line_number):
 @app.route('/generate_plot_folded_light_curve/<koi_id>')
 def generate_plot_folded_light_curve(koi_id):
     fold_data = data_load.folded_data(koi_id)
-    
+
     if fold_data is not None:
         fig = px.scatter(fold_data, x="TIME",y="FLUX")
         graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
@@ -203,9 +171,19 @@ def generate_plot_folded_light_curve(koi_id):
 
 
 
+@app.route('/generate_plot_OMC/<koi_id>')
+def generate_plot_OMC(koi_id):
+    omc_data = data_load.OMC_data(koi_id)
 
+    if omc_data is not None:
+        fig = px.scatter(omc_data, x="TIME",y="OMC")
+        graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
+        return jsonify(graphJSON)
+    else:
+        error_message = f'No data found for {koi_id}'
+        return jsonify(error_message=error_message)
 
-#@app.route('/generate_plot/<koi_id>')
+    
 
 
 

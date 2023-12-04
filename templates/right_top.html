@@ -19,11 +19,11 @@
         <input type="checkbox" id="singleTransitCheckbox" onchange="togglePlotVisibilitySingleTransit()"/>
         <label for="singleTransitCheckbox">Single Transit</label>
 
-        <input type="checkbox" id="O-CCheckbox" onchange="togglePlotVisibilityDemo('O-C')"/>
-        <label for="O-CCheckbox">O-C</label>
-
         <input type="checkbox" id="foldedLightCurveCheckbox" onchange="togglePlotVisibilityFoldedLightCurve()"/>
         <label for="foldedLightCurveCheckbox">Folded Transit</label>
+
+        <input type="checkbox" id="OMCCheckbox" onchange="togglePlotVisibilityOMC()"/>
+        <label for="OMCCheckbox">O-C</label>
     </div>
 
     <div id="detrendedLCTitle" style="display:none;">
@@ -59,6 +59,15 @@
             <!-- folded light curve will display here -->
         </div>
     </div>
+
+    <div id="OMCTitle" style="display:none;">
+        <h3>O-C Curve:</h3>
+
+        <div id="OMCPlot" data-koi-id="{{ koi_id }}" style="display:none;">
+            <!-- O-C plot will display here -->
+        </div>
+    </div>
+
 
 
     <script>
@@ -208,6 +217,48 @@
                 plotTitle.style.display = "block";
                 plotContainer.style.display = "block";  // Show the plot
                 generatePlotFoldedLightCurve(selectedKoiId);
+            } else {
+                plotTitle.style.display = "none";
+                plotContainer.style.display = "none";   // Hide the plot
+            }
+
+        }
+
+        // O-C
+        function generatePlotOMC(koiId) {
+            // Fetch the Plotly figure data from the server
+            fetch(`/generate_plot_OMC/${koiId}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Received data:", data); // Log the received data
+                    if(data.error_message){ 
+                        // Display the error message in the plot container
+                        const plotContainer = document.getElementById("OMCPlot");
+                        plotContainer.innerHTML = `<p>${data.error_message}</p>`;
+                    } else { 
+                        // Clear any existing error message
+                        const plotContainer = document.getElementById("OMCPlot");
+                        plotContainer.innerHTML = "";
+                        //display plot
+                        const parsedData = JSON.parse(data);
+                        Plotly.newPlot(plotContainer, parsedData);
+                    }
+                })
+                .catch(error => {
+                    plotContainer.innerHTML = "<p>Error loading plot data.</p>";
+                    console.error(error);
+                });
+        }
+
+        function togglePlotVisibilityOMC() {
+            const plotContainer = document.getElementById("OMCPlot");
+            const plotCheckbox = document.getElementById("OMCCheckbox");
+            const plotTitle = document.getElementById("OMCTitle");
+            
+            if (plotCheckbox.checked) {
+                plotTitle.style.display = "block";
+                plotContainer.style.display = "block";  // Show the plot
+                generatePlotOMC(selectedKoiId);
             } else {
                 plotTitle.style.display = "none";
                 plotContainer.style.display = "none";   // Hide the plot

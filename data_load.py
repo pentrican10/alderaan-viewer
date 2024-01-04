@@ -142,11 +142,13 @@ def folded_data(koi_id):
             norm_time = transit_data['TIME'] - center_time
             fold_data_time.extend(norm_time)
             fold_data_flux.extend(transit_data['FLUX'])
+            
 
         fold_data = pd.DataFrame({
             'TIME' : fold_data_time,
             'FLUX': fold_data_flux
         })
+        fold_data['TIME'] = fold_data['TIME'] * 24 ### to hours
         return fold_data
 
 def OMC_data(koi_id):
@@ -154,10 +156,26 @@ def OMC_data(koi_id):
     index = np.asarray(index, dtype=np.float64)
     model = np.asarray(model, dtype=np.float64)
     ttime = np.asarray(ttime, dtype=np.float64)
+    model = np.asarray(model, dtype=np.float64)
+    out_prob = np.asarray(out_prob, dtype=np.float64)
     t0, period = poly.polyfit(index, model, 1)
     omc_model = model - poly.polyval(index, [t0, period])
     omc_ttime =ttime - poly.polyval(index, [t0, period])
 
+    omc_time_data = omc_ttime*24*60
+    omc_model_data = omc_model*24*60
+
+    OMC_data = pd.DataFrame({
+        'TIME' : ttime,
+        'OMC' : omc_time_data
+    })
+
+    OMC_model = pd.DataFrame({
+        'TIME' : ttime,
+        'OMC_MODEL' : omc_model_data
+    })
+
+    return OMC_data, OMC_model, out_prob, out_flag
 
     # tts = self.transittimes.ttime[i]
     # out = self.transittimes.out_flag[i]
@@ -172,14 +190,3 @@ def OMC_data(koi_id):
     #     ax[i].plot(ttime[~out_flag], omc_ttime[~out_flag]*24*60, 'o', c='lightgrey')
     #     ax[i].plot(ttime[~out_flag], omc_model[~out_flag]*24*60, c='C{0}'.format(i), lw=3)
     #     ax[i].set_ylabel('O-C [min]', fontsize=20)
-
-    omc_time_data = omc_ttime*24*60
-
-    OMC_data = pd.DataFrame({
-        'TIME' : ttime,
-        'OMC' : omc_time_data
-    })
-
-    return OMC_data
-
-    

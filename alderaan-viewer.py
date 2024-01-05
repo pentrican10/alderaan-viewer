@@ -14,6 +14,9 @@ import lightkurve as lk
 import numpy.polynomial.polynomial as poly
 import data_load
 
+from plotly.subplots import make_subplots
+
+
 #sys.path.append('c:\\Users\\Paige\\Projects\\alderaan\\')
 
 data_directory = 'c:\\Users\\Paige\\Projects\\data\\'
@@ -119,19 +122,30 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         data_sc = data_load.read_data_from_fits(file_path_sc)
         fig = px.scatter(data_lc, x="TIME", y="FLUX")#, 
                     #title="Kepler Detrended Light Curve")
-        fig.add_scatter(x=data_sc['TIME'], y=data_sc['FLUX'],mode='markers')
+        
+        ### trim short cadence data
+        sc_time_trim = data_sc['TIME'][::30]
+        sc_flux_trim = data_sc['FLUX'][::30]
+        fig.add_scatter(x=sc_time_trim, y=sc_flux_trim,mode='markers')
+
+        # Update x-axis label with units
+        fig.update_layout(xaxis_title=f"TIME (DAYS)", yaxis_title="FLUX")
         graph1JSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
         return jsonify(graph1JSON)
     
-    if os.path.isfile(file_path_lc):
+    elif os.path.isfile(file_path_lc):
         data_lc = data_load.read_data_from_fits(file_path_lc)
         fig = px.scatter(data_lc, x="TIME", y="FLUX")
+        # Update x-axis label with units
+        fig.update_layout(xaxis_title=f"TIME (DAYS)", yaxis_title="FLUX")
         graph1JSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
         return jsonify(graph1JSON)
     
     elif os.path.isfile(file_path_sc):
         data_sc = data_load.read_data_from_fits(file_path_sc)
         fig = px.scatter(data_sc, x="TIME", y="FLUX")
+        # Update x-axis label with units
+        fig.update_layout(xaxis_title=f"TIME (DAYS)", yaxis_title="FLUX")
         graph1JSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
         return jsonify(graph1JSON)
     
@@ -139,44 +153,14 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         error_message = f'No data found for {koi_id}'
         return jsonify(error_message=error_message)
 
-'''
-@app.route('/generate_plot_single_transit/<koi_id>/<int:line_number>')
-def generate_plot_single_transit(koi_id, line_number):
-    if (data_load.fetch_data(koi_id, line_number)):
-        photometry_data, true_transit_number, center_time = data_load.fetch_data(koi_id, line_number)
-
-        fig = px.scatter(photometry_data, x="TIME", y="FLUX") #only want to plot data within selected time window
-        #fig.update_traces(marker=dict(
-        #        color='red'))
-        
-        # plot the center time on the single transit block
-        fig.add_trace(
-            go.Scatter(x=[center_time, center_time], y=[min(fig.data[0].y), max(fig.data[0].y)],
-               mode='lines',
-               line=dict(color="red", width=2),
-               name="Center time",
-               showlegend=True)
-        )
-
-        graph2JSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
-        response_data = {
-            'graphJSON': graph2JSON,
-            'transit_number': true_transit_number
-        }
-        return jsonify(response_data)
-        #return jsonify(graph2JSON), jsonify(true_transit_number)
-    else: 
-        error2 = f'No data found for {koi_id}'
-        return jsonify(error2=error2)
-
-        
-'''
 
 @app.route('/generate_plot_single_transit/<koi_id>/<int:line_number>')
 def generate_plot_single_transit(koi_id, line_number):
     if (data_load.fetch_data(koi_id, line_number)):
         photometry_data, transit_number, center_time = data_load.fetch_data(koi_id, line_number)
         fig = px.scatter(photometry_data, x="TIME", y="FLUX")
+        # Update x-axis label with units
+        fig.update_layout(xaxis_title=f"TIME (DAYS)", yaxis_title="FLUX")
 
         graphJSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
         response_data = {
@@ -192,9 +176,11 @@ def generate_plot_single_transit(koi_id, line_number):
 @app.route('/generate_plot_folded_light_curve/<koi_id>')
 def generate_plot_folded_light_curve(koi_id):
     fold_data = data_load.folded_data(koi_id)
-    
+
     if fold_data is not None:
         fig = px.scatter(fold_data, x="TIME",y="FLUX")
+        # Update x-axis label with units
+        fig.update_layout(xaxis_title=f"TIME (HOURS)", yaxis_title="FLUX")
         graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
         return jsonify(graphJSON)
     else:
@@ -203,10 +189,61 @@ def generate_plot_folded_light_curve(koi_id):
 
 
 
+@app.route('/generate_plot_OMC/<koi_id>')
+def generate_plot_OMC(koi_id):
+    omc_data, omc_model, out_prob, out_flag = data_load.OMC_data(koi_id)
+    show_outliers = True
+
+    if omc_data is not None:
+        mask = [bool(flag) for flag in out_flag]
+        if show_outliers:
+            # Ensure out_flag is a boolean list
+            #mask = [bool(flag) for flag in out_flag]
+            fig = px.scatter(omc_data, #[mask], 
+                             x='TIME', 
+                             y='OMC', 
+                             color=out_prob, 
+                             color_continuous_scale='viridis')#.data[0]
+            line_trace = px.line(omc_model[mask],x='TIME', y='OMC_MODEL').data[0]
+            line_trace.line.color = 'red'
+            fig.add_trace(line_trace)
+
+            # Add a new scatter trace for outliers with 'x' shape markers
+            scatter_outliers = px.scatter(omc_data[mask], x='TIME', y='OMC').update_traces(
+                marker=dict(symbol='x', color='orange'),
+                line=dict(width=0.7))
+
+            fig.add_trace(scatter_outliers.data[0])
+
+            fig.update_layout(xaxis_title=f"TIME (BJKD)", 
+                              yaxis_title="O-C (MINUTES)",
+                              coloraxis_colorbar=dict(title='Out Probability'))
+        else:
+            mask_arr = np.array(mask)
+            fig = px.scatter(omc_data[~mask_arr], x="TIME",y="OMC")
+            # Add a line plot for OMC_MODEL
+            line_trace = px.line(omc_model[~mask_arr], x="TIME", y="OMC_MODEL").data[0]
+            line_trace.line.color = 'red'  # Set the line color to red
+            fig.add_trace(line_trace)
+            # Update x-axis label with units
+            fig.update_layout(xaxis_title=f"TIME (BJKD)", 
+                              yaxis_title="O-C (MINUTES)",
+                              coloraxis_colorbar=dict(title='Out Probability'))
+
+        graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
+        return jsonify(graphJSON)
+    else: 
+        error_message = f'No data found for {koi_id}'
+        return jsonify(error_message=error_message)
+    
 
 
-#@app.route('/generate_plot/<koi_id>')
 
+# SHORT CADENCE
+    #thinning data, check slack sc by 30
+# add short cadence to all plots (possible)
+    # did it work right for the folded transit curve? 
+    # do we want to differentiate sc and lc in the folded curve?
 
 
 

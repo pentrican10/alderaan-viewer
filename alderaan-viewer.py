@@ -122,13 +122,18 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         data_sc = data_load.read_data_from_fits(file_path_sc)
         fig = px.scatter(data_lc, x="TIME", y="FLUX")#, 
                     #title="Kepler Detrended Light Curve")
-        fig.add_scatter(x=data_sc['TIME'], y=data_sc['FLUX'],mode='markers')
+        
+        ### trim short cadence data
+        sc_time_trim = data_sc['TIME'][::30]
+        sc_flux_trim = data_sc['FLUX'][::30]
+        fig.add_scatter(x=sc_time_trim, y=sc_flux_trim,mode='markers')
+
         # Update x-axis label with units
         fig.update_layout(xaxis_title=f"TIME (DAYS)", yaxis_title="FLUX")
         graph1JSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
         return jsonify(graph1JSON)
     
-    if os.path.isfile(file_path_lc):
+    elif os.path.isfile(file_path_lc):
         data_lc = data_load.read_data_from_fits(file_path_lc)
         fig = px.scatter(data_lc, x="TIME", y="FLUX")
         # Update x-axis label with units
@@ -190,10 +195,11 @@ def generate_plot_OMC(koi_id):
     show_outliers = True
 
     if omc_data is not None:
+        mask = [bool(flag) for flag in out_flag]
         if show_outliers:
             # Ensure out_flag is a boolean list
-            mask = [bool(flag) for flag in out_flag]
-            fig = px.scatter(omc_data[mask], 
+            #mask = [bool(flag) for flag in out_flag]
+            fig = px.scatter(omc_data, #[mask], 
                              x='TIME', 
                              y='OMC', 
                              color=out_prob, 
@@ -201,13 +207,22 @@ def generate_plot_OMC(koi_id):
             line_trace = px.line(omc_model[mask],x='TIME', y='OMC_MODEL').data[0]
             line_trace.line.color = 'red'
             fig.add_trace(line_trace)
+
+            # Add a new scatter trace for outliers with 'x' shape markers
+            scatter_outliers = px.scatter(omc_data[mask], x='TIME', y='OMC').update_traces(
+                marker=dict(symbol='x', color='orange'),
+                line=dict(width=0.7))
+
+            fig.add_trace(scatter_outliers.data[0])
+
             fig.update_layout(xaxis_title=f"TIME (BJKD)", 
                               yaxis_title="O-C (MINUTES)",
                               coloraxis_colorbar=dict(title='Out Probability'))
         else:
-            fig = px.scatter(omc_data, x="TIME",y="OMC")
+            mask_arr = np.array(mask)
+            fig = px.scatter(omc_data[~mask_arr], x="TIME",y="OMC")
             # Add a line plot for OMC_MODEL
-            line_trace = px.line(omc_model, x="TIME", y="OMC_MODEL").data[0]
+            line_trace = px.line(omc_model[~mask_arr], x="TIME", y="OMC_MODEL").data[0]
             line_trace.line.color = 'red'  # Set the line color to red
             fig.add_trace(line_trace)
             # Update x-axis label with units
@@ -226,7 +241,9 @@ def generate_plot_OMC(koi_id):
 
 # SHORT CADENCE
     #thinning data, check slack sc by 30
-
+# add short cadence to all plots (possible)
+    # did it work right for the folded transit curve? 
+    # do we want to differentiate sc and lc in the folded curve?
 
 
 

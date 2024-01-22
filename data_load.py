@@ -12,17 +12,27 @@ import numpy as np
 import sys
 import lightkurve as lk
 import numpy.polynomial.polynomial as poly
+import glob
 
 
-data_directory = 'c:\\Users\\Paige\\Projects\\data\\'
+#data_directory = 'c:\\Users\\Paige\\Projects\\data\\'
+data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
 
 
-def read_table_data():
+def update_data_directory(selected_table):
+    global data_directory
+    data_directory = os.path.join('c:\\Users\\Paige\\Projects\\data\\alderaan_results', selected_table[:-4])
+
+def read_table_data(table):
     """
     Reads data for the table on the left side of the web app
     Shows koi_id, kep_mag, Rstar, logrho, Teff, logg
     """
-    file_path = os.path.join(data_directory, '2023-05-19_singles.csv')
+    #file_path = os.path.join(data_directory, '2023-05-19_singles.csv')
+    global data_directory
+    #folder = table[:-4]
+    update_data_directory(table)
+    file_path = os.path.join(data_directory, table)
     table_data = []
     with open(file_path, 'r') as csvfile:
         reader = csv.DictReader(csvfile)
@@ -34,7 +44,20 @@ def read_table_data():
             row['Teff'] = round(float(row['Teff']))
             row['logg'] = round(float(row['logg']), 2)
             table_data.append(row)
-    return table_data
+            
+    ### Remove duplicates based on koi_id
+    unique_data = []
+    seen_koi_ids = set()
+    for row in table_data:
+        koi_id = row['koi_id']
+        ### Check if koi_id is not in the set of seen ids
+        if koi_id not in seen_koi_ids:
+            ### Add the row to unique_data and the koi_id to the set
+            unique_data.append(row)
+            seen_koi_ids.add(koi_id)
+
+    return unique_data
+    #return table_data
 
 def read_data_from_fits(file_path):
     with fits.open(file_path) as fits_file:
@@ -47,10 +70,10 @@ def read_data_from_fits(file_path):
     return df
 
 
-def get_ttv_file(koi_id):
-    star_id = koi_id.replace("K","S")
-    file_name = star_id + '_00_quick.ttvs'
-    file_path = os.path.join(data_directory,'quick_ttvs_for_paige',file_name)
+def get_ttv_file(koi_id, file_path):
+    #star_id = koi_id.replace("K","S")
+    #file_name = star_id + '_00_quick.ttvs'
+    #file_path = os.path.join(data_directory,'quick_ttvs_for_paige',file_name)
     if os.path.isfile(file_path):
         index =[]
         ttime=[] 
@@ -110,13 +133,15 @@ def fetch_data(koi_id, line_number):
     return combined_data, transit_number, center_time ############
     
 
-def folded_data(koi_id):
+def folded_data(koi_id, file_path):
     star_id = koi_id.replace("K","S")
     file_name_lc = star_id + '_lc_detrended.fits'
-    file_path_lc = os.path.join(data_directory,'kepler_lightcurves_for_paige',file_name_lc)
+    #file_path_lc = os.path.join(data_directory,'kepler_lightcurves_for_paige',file_name_lc)
+    file_path_lc = os.path.join(data_directory, star_id, file_name_lc)
     
     file_name_sc = star_id + '_sc_filtered.fits'
-    file_path_sc = os.path.join(data_directory, file_name_sc)
+    #file_path_sc = os.path.join(data_directory, file_name_sc)
+    file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
 
     fold_data_time = []
     fold_data_flux = []
@@ -124,7 +149,7 @@ def folded_data(koi_id):
     if os.path.isfile(file_path_lc):
         photometry_data_lc = read_data_from_fits(file_path_lc) #descriptive names
         #photometry_data_sc = read_data_from_fits(file_path_sc)
-        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id)
+        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
         
         for i in range(len(index)):
             center_time = ttime[i]
@@ -175,9 +200,9 @@ def folded_data(koi_id):
     fold_data['TIME'] = fold_data['TIME'] * 24 ### to hours
     return fold_data
 
-def OMC_data(koi_id):
-    index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id)
-    index = np.asarray(index, dtype=np.float64)
+def OMC_data(koi_id,file_path):
+    index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
+    index = np.asarray(index, dtype=np.int64)
     model = np.asarray(model, dtype=np.float64)
     ttime = np.asarray(ttime, dtype=np.float64)
     model = np.asarray(model, dtype=np.float64)
@@ -202,16 +227,38 @@ def OMC_data(koi_id):
 
     return OMC_data, OMC_model, out_prob, out_flag
 
-    # tts = self.transittimes.ttime[i]
-    # out = self.transittimes.out_flag[i]
-    # omc_ttime = self.transittimes.omc_ttime[i]
-    # omc_model = self.transittimes.omc_model[i]
-            
-    # if show_outliers:
-    #     ax[i].scatter(tts, omc_ttime*24*60, c=out_prob, cmap='viridis')
-    #     ax[i].plot(ttime[out_flag], omc_ttime[out_flag]*24*60, 'rx')
-    #     ax[i].plot(ttime, omc_model*24*60, 'k')
-    # else:
-    #     ax[i].plot(ttime[~out_flag], omc_ttime[~out_flag]*24*60, 'o', c='lightgrey')
-    #     ax[i].plot(ttime[~out_flag], omc_model[~out_flag]*24*60, c='C{0}'.format(i), lw=3)
-    #     ax[i].set_ylabel('O-C [min]', fontsize=20)
+
+### MULTI PLANET SYSTEMS
+
+'''
+file_name = koi_id + '_0*_quick.ttvs'
+file_path = glob.glob(os.path.join(data_directory,'quick_ttvs_for_paige',file_name))
+
+for file_path in file_paths: 
+    ttv_file(koi_id, file_path)
+'''
+
+def ttv_file(koi_id, file_path):
+    file_name = koi_id + '_0*_quick.ttvs'
+    file_path = glob.glob(os.path.join(data_directory,'quick_ttvs_for_paige',file_name))
+    if os.path.isfile(file_path):
+        index =[]
+        ttime=[] 
+        model = []
+        out_prob = []
+        out_flag = []
+        # Open the file for reading
+        with open(file_path, 'r') as file:
+            # Iterate through each line in the file
+            for line in file:
+                # Split the line into columns based on the delimiter
+                columns = line.strip().split('\t')
+
+                index.append(columns[0])
+                ttime.append(columns[1])
+                model.append(columns[2])
+                out_prob.append(columns[3])
+                out_flag.append(columns[4])
+                
+        #df = pd.read_csv(file_path, delimiter='\t', header=None)
+        return index, ttime, model, out_prob, out_flag

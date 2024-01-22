@@ -11,11 +11,24 @@
         </div>
         <h1>Table Data</h1>
     <body>
+
+    <div>
+        <label for="tableSelect">Select Table:</label>
+        <select id="tableSelect" onchange="loadTable()">
+            <option value="2023-05-19_singles.csv" {% if request.args.get('table') == '2023-05-19_singles.csv' %}selected{% endif %}>Singles</option>
+            <option value="2023-05-15_doubles.csv" {% if request.args.get('table') == '2023-05-15_doubles.csv' %}selected{% endif %}>Doubles</option>
+            <!--<option value="2023-05-19_singles.csv">Singles</option>
+            <option value="2023-05-15_doubles.csv">Doubles</option> -->
+        </select>
+    
+    </div>
     
     <div>
         <h3>Search KOI ID:</h3>
         <input type="text" id="searchInput" placeholder="Enter KOI ID">
     </div>
+
+    
 
 
     <table>
@@ -42,6 +55,22 @@
     <div id="searchResults"></div>
 
     <script>
+
+        function loadTable(){
+            const selectedTable = document.getElementById('tableSelect').value;
+            window.location.href = "/home?table=" + selectedTable;
+
+            // Update the selected option in the dropdown
+            const dropdown = document.getElementById('tableSelect');
+            for (let i = 0; i < dropdown.options.length; i++) {
+                if (dropdown.options[i].value === selectedTable) {
+                    dropdown.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+
+
         // Function to handle the search
         function searchKoi() {
             const input = document.getElementById("searchInput");

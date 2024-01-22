@@ -19,8 +19,7 @@ from plotly.subplots import make_subplots
 
 
 #sys.path.append('c:\\Users\\Paige\\Projects\\alderaan\\')
-#data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
-data_directory = 'c:\\Users\\Paige\\Projects\\data\\'
+data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
 
 
 app = Flask(__name__)
@@ -30,6 +29,7 @@ app.secret_key = 'super_secret'
 def index():
     session.clear()
     return redirect(url_for('login'))
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -52,11 +52,16 @@ def display_table_data():
     Renders Index Template
     """
     table = request.args.get('table', '2023-05-19_singles.csv')
+    update_data_directory(table)
     table_data = data_load.read_table_data(table)
     left_content = render_template('left.html', table_data=table_data)
     right_top_content = render_template('right_top.html')
     right_bottom_content = render_template('right_bottom.html')
     return render_template('index.html',left_content=left_content, right_top_content=right_top_content, right_bottom_content=right_bottom_content)
+
+def update_data_directory(selected_table):
+    global data_directory
+    data_directory = os.path.join('c:\\Users\\Paige\\Projects\\data\\alderaan_results', selected_table[:-4])
 
 @app.route('/star/<koi_id>')
 def display_comment_file(koi_id):
@@ -113,10 +118,10 @@ def save_file(koi_id):
 @app.route('/generate_plot/<koi_id>')
 def generate_plot_Detrended_Light_Curve(koi_id):
     star_id = koi_id.replace("K","S")
-    file_name_lc = star_id + '_lc_detrended.fits'
-    file_path_lc = os.path.join(data_directory,'kepler_lightcurves_for_paige',file_name_lc)
+    file_name_lc = star_id + '_lc_filtered.fits'
+    file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
     file_name_sc = star_id + '_sc_filtered.fits'
-    file_path_sc = os.path.join(data_directory, file_name_sc)
+    file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
 
     ### get data and create detrended light curve
     if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
@@ -195,7 +200,7 @@ def generate_plot_folded_light_curve(koi_id):
 def generate_plot_OMC(koi_id):
     star_id = koi_id.replace("K","S")
     file_name = star_id + '_*_quick.ttvs'
-    file_paths = glob.glob(os.path.join(data_directory,'doubles_for_paige',star_id, file_name))
+    file_paths = glob.glob(os.path.join(data_directory,star_id, file_name))
     ### number of planets from number of ttv files
     npl = len(file_paths)
     fig = make_subplots(rows=npl, cols=1,
@@ -244,11 +249,16 @@ def generate_plot_OMC(koi_id):
                 fig.update_yaxes(title_text="O-C (MINUTES)", row=i+1, col=1)
                 fig.update_coloraxes(colorbar_title_text='Out Probability', colorbar_len=0.2, row=i+1, col=1)
 
-            graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
-            return jsonify(graphJSON)
+            # graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
+            # return jsonify(graphJSON)
+        
         else: 
             error_message = f'No data found for {koi_id}'
             return jsonify(error_message=error_message)
+    ### return whole figure to page
+    graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
+    return jsonify(graphJSON)
+        
         
 
 

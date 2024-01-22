@@ -230,35 +230,3 @@ def OMC_data(koi_id,file_path):
 
 ### MULTI PLANET SYSTEMS
 
-'''
-file_name = koi_id + '_0*_quick.ttvs'
-file_path = glob.glob(os.path.join(data_directory,'quick_ttvs_for_paige',file_name))
-
-for file_path in file_paths: 
-    ttv_file(koi_id, file_path)
-'''
-
-def ttv_file(koi_id, file_path):
-    file_name = koi_id + '_0*_quick.ttvs'
-    file_path = glob.glob(os.path.join(data_directory,'quick_ttvs_for_paige',file_name))
-    if os.path.isfile(file_path):
-        index =[]
-        ttime=[] 
-        model = []
-        out_prob = []
-        out_flag = []
-        # Open the file for reading
-        with open(file_path, 'r') as file:
-            # Iterate through each line in the file
-            for line in file:
-                # Split the line into columns based on the delimiter
-                columns = line.strip().split('\t')
-
-                index.append(columns[0])
-                ttime.append(columns[1])
-                model.append(columns[2])
-                out_prob.append(columns[3])
-                out_flag.append(columns[4])
-                
-        #df = pd.read_csv(file_path, delimiter='\t', header=None)
-        return index, ttime, model, out_prob, out_flag

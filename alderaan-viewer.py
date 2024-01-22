@@ -70,7 +70,8 @@ def display_comment_file(koi_id):
     args: 
         koi_id: string, format K00000
     """
-    path_extension = os.path.join('comment_files', f'{koi_id}_comments.txt')
+    star_id = koi_id.replace("K","S")
+    path_extension = os.path.join(star_id, f'{star_id}_comments.txt')
     file_path = os.path.join(data_directory, path_extension)
     if os.path.isfile(file_path):
         with open(file_path, 'r') as file:
@@ -86,7 +87,8 @@ def save_comment(koi_id):
     Saves with username, date, comment
     Returns the function to display the updated comment file
     """
-    path_extension = os.path.join('comment_files', f'{koi_id}_comments.txt')
+    star_id = koi_id.replace("K","S")
+    path_extension = os.path.join(star_id, f'{star_id}_comments.txt')
     file_path = os.path.join(data_directory, path_extension)
     comment = request.form.get('comment').strip()
     username = session.get('username')
@@ -102,7 +104,8 @@ def save_file(koi_id):
     """
     saves the file and displays the updated file or an error message
     """
-    path_extension = os.path.join('comment_files', f'{koi_id}_comments.txt')
+    star_id = koi_id.replace("K","S")
+    path_extension = os.path.join(star_id, f'{star_id}_comments.txt')
     file_path = os.path.join(data_directory, path_extension)
     content = request.form.get('content')
     # Normalize line endings to Unix-style (\n)
@@ -182,17 +185,36 @@ def generate_plot_single_transit(koi_id, line_number):
 
 @app.route('/generate_plot_folded_light_curve/<koi_id>')
 def generate_plot_folded_light_curve(koi_id):
-    fold_data = data_load.folded_data(koi_id)
+    star_id = koi_id.replace("K","S")
+    file_name = star_id + '_*_quick.ttvs'
+    file_paths = glob.glob(os.path.join(data_directory,star_id, file_name))
+    ### number of planets from number of ttv files
+    npl = len(file_paths)
+    #subplot_height=350
+    fig = make_subplots(rows=npl, cols=1,
+                        subplot_titles=[f"File 0{i}" for i in range(len(file_paths))])#,
+                        # row_heights=[subplot_height]*npl,
+                        # vertical_spacing=0.15)
+    
+    for i, file_path in enumerate(file_paths):
+        fold_data = data_load.folded_data(koi_id,file_path)
 
-    if fold_data is not None:
-        fig = px.scatter(fold_data, x="TIME",y="FLUX")
-        # Update x-axis label with units
-        fig.update_layout(xaxis_title=f"TIME (HOURS)", yaxis_title="FLUX")
-        graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
-        return jsonify(graphJSON)
-    else:
-        error_message = f'No data found for {koi_id}'
-        return jsonify(error_message=error_message)
+        if fold_data is not None:
+            fold = px.scatter(fold_data, x="TIME",y="FLUX").data[0]
+            fig.add_trace(fold, row=i+1, col=1)
+            ### Update x-axis and y-axis labels for each subplot
+            fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
+            fig.update_yaxes(title_text="FLUX", row=i+1, col=1)
+        # graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
+        # return jsonify(graphJSON)
+        else:
+            error_message = f'No data found for {koi_id}'
+            return jsonify(error_message=error_message)
+    ### return whole fig to page
+    #fig.update_layout(height=npl * subplot_height)
+    graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
+    return jsonify(graphJSON)
+    
 
 
 
@@ -203,9 +225,11 @@ def generate_plot_OMC(koi_id):
     file_paths = glob.glob(os.path.join(data_directory,star_id, file_name))
     ### number of planets from number of ttv files
     npl = len(file_paths)
+    #subplot_height=250
     fig = make_subplots(rows=npl, cols=1,
-                        subplot_titles=[f"File 0{i}" for i in range(len(file_paths))])
-    
+                        subplot_titles=[f"File 0{i}" for i in range(len(file_paths))])#,
+                        # row_heights=[subplot_height]*npl,
+                        # vertical_spacing=0.)
 
     for i, file_path in enumerate(file_paths):
         omc_data, omc_model, out_prob, out_flag = data_load.OMC_data(koi_id, file_path)
@@ -256,6 +280,7 @@ def generate_plot_OMC(koi_id):
             error_message = f'No data found for {koi_id}'
             return jsonify(error_message=error_message)
     ### return whole figure to page
+    #fig.update_layout(height=npl * subplot_height)
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
     return jsonify(graphJSON)
         

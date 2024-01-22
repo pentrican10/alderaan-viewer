@@ -99,10 +99,10 @@ def get_ttv_file(koi_id, file_path):
 def fetch_data(koi_id, line_number):
     star_id = koi_id.replace("K","S")
     file_name_lc = star_id + '_lc_detrended.fits'
-    file_path_lc = os.path.join(data_directory,'kepler_lightcurves_for_paige',file_name_lc)
+    file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
     
     file_name_sc = star_id + '_sc_filtered.fits'
-    file_path_sc = os.path.join(data_directory, file_name_sc)
+    file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
 
     combined_data = None
     #get data and create detrended light curve
@@ -191,8 +191,6 @@ def folded_data(koi_id, file_path):
             fold_data_time.extend(norm_time_sc)
             fold_data_flux.extend(transit_data_sc['FLUX'])
   
-            
-
     fold_data = pd.DataFrame({
         'TIME' : fold_data_time,
         'FLUX': fold_data_flux

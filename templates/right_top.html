@@ -245,6 +245,7 @@
                     }
                 })
                 .catch(error => {
+                    const plotContainer = document.getElementById("OMCPlot");
                     plotContainer.innerHTML = "<p>Error loading plot data.</p>";
                     console.error(error);
                 });

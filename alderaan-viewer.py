@@ -126,19 +126,33 @@ def generate_plot_Detrended_Light_Curve(koi_id):
     file_name_sc = star_id + '_sc_filtered.fits'
     file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
 
+    ### initialize figure
+    fig = make_subplots(rows=1, cols=1)
+
     ### get data and create detrended light curve
     if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
         data_lc = data_load.read_data_from_fits(file_path_lc)
         data_sc = data_load.read_data_from_fits(file_path_sc)
-        fig = px.scatter(data_lc, x="TIME", y="FLUX")#, 
+
+        lc = px.scatter(data_lc, x="TIME",y="FLUX").data[0]
+        lc.marker.update(symbol="circle", size=4, color="blue")
+        lc.name = "Long Cadence"
+        fig.add_trace(lc, row=1, col=1)
+
+        #fig = px.scatter(data_lc, x="TIME", y="FLUX")#, 
                     #title="Kepler Detrended Light Curve")
         
         ### trim short cadence data
         sc_time_trim = data_sc['TIME'][::30]
         sc_flux_trim = data_sc['FLUX'][::30]
-        fig.add_scatter(x=sc_time_trim, y=sc_flux_trim,mode='markers')
+        sc = px.scatter(x=sc_time_trim, y=sc_flux_trim).data[0]
+        sc.marker.update(symbol="circle", size=4, color="gray")
+        sc.name = "Short Cadence"
+        fig.add_trace(sc, row=1, col=1)
+        #fig.add_scatter(x=sc_time_trim, y=sc_flux_trim,mode='markers')
 
         # Update x-axis label with units
+        fig.update_traces(showlegend=True, row=1, col=1)
         fig.update_layout(xaxis_title=f"TIME (DAYS)", yaxis_title="FLUX")
         graph1JSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
         return jsonify(graph1JSON)
@@ -190,28 +204,60 @@ def generate_plot_folded_light_curve(koi_id):
     file_paths = glob.glob(os.path.join(data_directory,star_id, file_name))
     ### number of planets from number of ttv files
     npl = len(file_paths)
-    #subplot_height=350
+    subplot_height=350
     fig = make_subplots(rows=npl, cols=1,
-                        subplot_titles=[f"File 0{i}" for i in range(len(file_paths))])#,
-                        # row_heights=[subplot_height]*npl,
-                        # vertical_spacing=0.15)
+                        subplot_titles=[f"File 0{i}" for i in range(len(file_paths))],#,
+                        row_heights=[subplot_height]*npl,
+                        vertical_spacing=0.15)
     
     for i, file_path in enumerate(file_paths):
-        fold_data = data_load.folded_data(koi_id,file_path)
+        fold_data_lc, fold_data_sc = data_load.folded_data(koi_id,file_path)
 
-        if fold_data is not None:
-            fold = px.scatter(fold_data, x="TIME",y="FLUX").data[0]
-            fig.add_trace(fold, row=i+1, col=1)
+        if fold_data_lc is not None and fold_data_sc is not None:
+            ### short cadence
+            fold_sc = px.scatter(fold_data_sc, x="TIME",y="FLUX").data[0]
+            fold_sc.marker.update(symbol="circle", size=4, color="gray")
+            fold_sc.name = "Short Cadence"
+            fig.add_trace(fold_sc, row=i+1, col=1)
+            ### long cadence
+            fold_lc = px.scatter(fold_data_lc, x="TIME",y="FLUX").data[0]
+            fold_lc.marker.update(symbol="circle-open", size=5, color="blue")
+            fold_lc.name = "Long Cadence"
+            fig.add_trace(fold_lc, row=i+1, col=1)
+
             ### Update x-axis and y-axis labels for each subplot
+            #fig.update_traces(showlegend=True, row=i+1, col=1)
             fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
             fig.update_yaxes(title_text="FLUX", row=i+1, col=1)
-        # graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
-        # return jsonify(graphJSON)
+        
+        elif fold_data_lc is not None:
+            fold_lc = px.scatter(fold_data_lc, x="TIME",y="FLUX").data[0]
+            fold_lc.marker.update(symbol="circle", size=4, color="gray")
+            fold_lc.name = "Long Cadence"
+            fig.add_trace(fold_lc, row=i+1, col=1)
+            ### Update x-axis and y-axis labels for each subplot
+            fig.update_traces(showlegend=True, row=i + 1, col=1)
+            fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
+            fig.update_yaxes(title_text="FLUX", row=i+1, col=1)
+
+        elif fold_data_sc is not None:
+            fold_sc = px.scatter(fold_data_sc, x="TIME",y="FLUX").data[0]
+            fold_sc.marker.update(symbol="circle", size=4, color="gray")
+            fold_sc.name = "Short Cadence"
+            fig.add_trace(fold_sc, row=i+1, col=1)
+            ### Update x-axis and y-axis labels for each subplot
+            fig.update_traces(showlegend=True, row=i + 1, col=1)
+            fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
+            fig.update_yaxes(title_text="FLUX", row=i+1, col=1)
+        
         else:
             error_message = f'No data found for {koi_id}'
             return jsonify(error_message=error_message)
+        
     ### return whole fig to page
-    #fig.update_layout(height=npl * subplot_height)
+    if npl>1:
+        fig.update_layout(height=npl * subplot_height)
+    fig.update_traces(showlegend=True, row=1, col=1)
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
     return jsonify(graphJSON)
     
@@ -281,6 +327,7 @@ def generate_plot_OMC(koi_id):
             return jsonify(error_message=error_message)
     ### return whole figure to page
     #fig.update_layout(height=npl * subplot_height)
+    fig.update_coloraxes(colorbar_title_text='Out Probability')#, colorbar_len=0.2)
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
     return jsonify(graphJSON)
         

@@ -98,7 +98,7 @@ def get_ttv_file(koi_id, file_path):
     
 def fetch_data(koi_id, line_number):
     star_id = koi_id.replace("K","S")
-    file_name_lc = star_id + '_lc_detrended.fits'
+    file_name_lc = star_id + '_lc_filtered.fits'
     file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
     
     file_name_sc = star_id + '_sc_filtered.fits'
@@ -136,19 +136,18 @@ def fetch_data(koi_id, line_number):
 def folded_data(koi_id, file_path):
     star_id = koi_id.replace("K","S")
     file_name_lc = star_id + '_lc_detrended.fits'
-    #file_path_lc = os.path.join(data_directory,'kepler_lightcurves_for_paige',file_name_lc)
     file_path_lc = os.path.join(data_directory, star_id, file_name_lc)
     
     file_name_sc = star_id + '_sc_filtered.fits'
-    #file_path_sc = os.path.join(data_directory, file_name_sc)
     file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
 
     fold_data_time = []
     fold_data_flux = []
+    fold_data_time_sc = []
+    fold_data_flux_sc = []
     #get data and create detrended light curve
     if os.path.isfile(file_path_lc):
-        photometry_data_lc = read_data_from_fits(file_path_lc) #descriptive names
-        #photometry_data_sc = read_data_from_fits(file_path_sc)
+        photometry_data_lc = read_data_from_fits(file_path_lc)
         index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
         
         for i in range(len(index)):
@@ -160,22 +159,16 @@ def folded_data(koi_id, file_path):
             use = (photometry_data_lc['TIME'] > start_time) & (photometry_data_lc['TIME'] < end_time)
             transit_data = photometry_data_lc[use]
 
-            #use_sc = (photometry_data_sc['TIME']>start_time) & (photometry_data_sc['TIME']<end_time)
-            #transit_data_sc = photometry_data_sc[use_sc]
-
-            # Check and ensure that 'TIME' column is of numeric type
+            ### Check and ensure that 'TIME' column is of numeric type
             transit_data['TIME'] = pd.to_numeric(transit_data['TIME'], errors='coerce')
-            #transit_data_sc['TIME'] = pd.to_numeric(transit_data_sc['TIME'], errors='coerce')
             
-            # Check and ensure that center_time is of numeric type
+            ### Check and ensure that center_time is of numeric type
             center_time = float(center_time)
 
             norm_time = transit_data['TIME'] - center_time
-            #norm_time_sc = transit_data_sc['TIME'] - center_time
             fold_data_time.extend(norm_time)
             fold_data_flux.extend(transit_data['FLUX'])
-            #fold_data_time.extend(norm_time_sc)
-            #fold_data_flux.extend(transit_data_sc['FLUX'])
+
     if os.path.isfile(file_path_sc):
         photometry_data_sc = read_data_from_fits(file_path_sc)
         for i in range(len(index)):
@@ -188,15 +181,22 @@ def folded_data(koi_id, file_path):
             transit_data_sc['TIME'] = pd.to_numeric(transit_data_sc['TIME'], errors='coerce')
             center_time = float(center_time)
             norm_time_sc = transit_data_sc['TIME'] - center_time
-            fold_data_time.extend(norm_time_sc)
-            fold_data_flux.extend(transit_data_sc['FLUX'])
+            fold_data_time_sc.extend(norm_time_sc)
+            fold_data_flux_sc.extend(transit_data_sc['FLUX'])
   
-    fold_data = pd.DataFrame({
+    fold_data_lc = pd.DataFrame({
         'TIME' : fold_data_time,
         'FLUX': fold_data_flux
     })
-    fold_data['TIME'] = fold_data['TIME'] * 24 ### to hours
-    return fold_data
+    fold_data_lc['TIME'] = fold_data_lc['TIME'] * 24 ### to hours
+
+    fold_data_sc = pd.DataFrame({
+        'TIME' : fold_data_time_sc,
+        'FLUX': fold_data_flux_sc
+    })
+    fold_data_sc['TIME'] = fold_data_sc['TIME'] * 24 ### to hours
+
+    return fold_data_lc, fold_data_sc
 
 def OMC_data(koi_id,file_path):
     index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)

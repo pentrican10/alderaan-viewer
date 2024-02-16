@@ -120,7 +120,27 @@ def generate_plot_folded_light_curve(koi_id):
 
 
 if __name__ == '__main__':
-    koi_id = 'K00352'
+    def read_fits_file(file_path):
+        with fits.open(file_path) as hdul:
+            # Print general information about the FITS file
+            print("Number of HDUs (extensions):", len(hdul))
 
-    #generate_plot_OMC(koi_id)
-    generate_plot_folded_light_curve(koi_id)
+            # Print information about each extension
+            for i, hdu in enumerate(hdul):
+                print(f"\nHDU {i + 1} (Extension {i}):")
+                print("Header:")
+                print(repr(hdu.header))
+                print("Data:")
+                print(hdu.data)
+
+    # Provide the path to your FITS file
+    fits_file_path = "C://Users//Paige//Projects//data//alderaan_results//2023-05-15_doubles//S00301//S00301_lc_detrended.fits"
+
+    # Call the function to read and display information about the FITS file
+    #read_fits_file(fits_file_path)
+    with fits.open(fits_file_path) as fits_file:
+        lc_flux = np.array(fits_file[2].data, dtype=float)
+        lc_flux_err = np.array(fits_file[3].data, dtype=float)
+    print(len(lc_flux))
+    print(len(lc_flux_err))
+    print(lc_flux_err)

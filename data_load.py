@@ -59,21 +59,35 @@ def read_table_data(table):
     return unique_data
     #return table_data
 
+def get_periods_for_koi_id(file_path, koi_id):
+    periods = []
+    with open(file_path, 'r') as file:
+        reader = csv.DictReader(file)
+        
+        for row in reader:
+            if row['koi_id'] == koi_id:
+                period_value = float(row['period'])
+                rounded_period = round(period_value, 1)
+                append = f'Period: {rounded_period} Days'
+                periods.append(append)
+
+    return periods if periods else None
+
+
 def read_data_from_fits(file_path):
     with fits.open(file_path) as fits_file:
         time = np.array(fits_file[1].data, dtype=float)
         flux = np.array(fits_file[2].data, dtype=float)
+        err = np.array(fits_file[3].data, dtype=float)
         df = pd.DataFrame(dict(
             TIME=time,
-            FLUX=flux
+            FLUX=flux,
+            ERR = err
         ))
     return df
 
 
 def get_ttv_file(koi_id, file_path):
-    #star_id = koi_id.replace("K","S")
-    #file_name = star_id + '_00_quick.ttvs'
-    #file_path = os.path.join(data_directory,'quick_ttvs_for_paige',file_name)
     if os.path.isfile(file_path):
         index =[]
         ttime=[] 
@@ -92,11 +106,10 @@ def get_ttv_file(koi_id, file_path):
                 model.append(columns[2])
                 out_prob.append(columns[3])
                 out_flag.append(columns[4])
-                
         #df = pd.read_csv(file_path, delimiter='\t', header=None)
         return index, ttime, model, out_prob, out_flag
     
-def fetch_data(koi_id, line_number):
+def single_transit_data(koi_id, line_number, ttv_file):
     star_id = koi_id.replace("K","S")
     file_name_lc = star_id + '_lc_filtered.fits'
     file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
@@ -104,11 +117,13 @@ def fetch_data(koi_id, line_number):
     file_name_sc = star_id + '_sc_filtered.fits'
     file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
 
+    file_path = os.path.join(data_directory, star_id, ttv_file)
+
     combined_data = None
     #get data and create detrended light curve
     if os.path.isfile(file_path_lc):
         photometry_data_lc = read_data_from_fits(file_path_lc) #descriptive names
-        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id)
+        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
 
         if line_number < len(index):
             center_time = ttime[line_number]
@@ -122,7 +137,7 @@ def fetch_data(koi_id, line_number):
             combined_data = lc_data
             #return filtered_data, transit_number, center_time ############
     if os.path.isfile(file_path_sc):
-            photometry_data_sc = read_data_from_fits(file_name_sc)
+            photometry_data_sc = read_data_from_fits(file_path_sc)
             if combined_data is not None:
                 use_sc = (photometry_data_sc['TIME'] > start_time) & (photometry_data_sc['TIME'] < end_time)
                 sc_data = photometry_data_sc[use_sc]
@@ -143,8 +158,10 @@ def folded_data(koi_id, file_path):
 
     fold_data_time = []
     fold_data_flux = []
+    fold_data_err = []
     fold_data_time_sc = []
     fold_data_flux_sc = []
+    fold_data_err_sc = []
     #get data and create detrended light curve
     if os.path.isfile(file_path_lc):
         photometry_data_lc = read_data_from_fits(file_path_lc)
@@ -168,6 +185,7 @@ def folded_data(koi_id, file_path):
             norm_time = transit_data['TIME'] - center_time
             fold_data_time.extend(norm_time)
             fold_data_flux.extend(transit_data['FLUX'])
+            fold_data_err.extend(transit_data['ERR'])
 
     if os.path.isfile(file_path_sc):
         photometry_data_sc = read_data_from_fits(file_path_sc)
@@ -183,20 +201,61 @@ def folded_data(koi_id, file_path):
             norm_time_sc = transit_data_sc['TIME'] - center_time
             fold_data_time_sc.extend(norm_time_sc)
             fold_data_flux_sc.extend(transit_data_sc['FLUX'])
+            fold_data_err_sc.extend(transit_data_sc['ERR'])
   
     fold_data_lc = pd.DataFrame({
         'TIME' : fold_data_time,
-        'FLUX': fold_data_flux
+        'FLUX': fold_data_flux,
+        'ERR' : fold_data_err
     })
     fold_data_lc['TIME'] = fold_data_lc['TIME'] * 24 ### to hours
 
     fold_data_sc = pd.DataFrame({
         'TIME' : fold_data_time_sc,
-        'FLUX': fold_data_flux_sc
+        'FLUX': fold_data_flux_sc,
+        'ERR' : fold_data_err_sc
     })
     fold_data_sc['TIME'] = fold_data_sc['TIME'] * 24 ### to hours
 
-    return fold_data_lc, fold_data_sc
+    bin_size = 0.5
+    combined_time = np.concatenate([fold_data_lc['TIME'], fold_data_sc['TIME']])
+    combined_flux = np.concatenate([fold_data_lc['FLUX'], fold_data_sc['FLUX']])
+    combined_flux_err = np.concatenate([fold_data_lc['ERR'], fold_data_sc['ERR']]) 
+
+    bin_centers_combined, weighted_avg_combined = calculate_binned_weighted_average(combined_time, combined_flux, combined_flux_err, bin_size)
+
+    # Create DataFrame for combined binned weighted average data
+    binned_weighted_avg_combined = pd.DataFrame({
+        'TIME': bin_centers_combined,
+        'FLUX': weighted_avg_combined
+    })
+    #return binned_weighted_avg_combined
+
+    return fold_data_lc, fold_data_sc, binned_weighted_avg_combined
+
+
+########################################################################################
+# Binned weighted average function
+def calculate_binned_weighted_average(time, flux, flux_err, bin_size):
+    bins = np.arange(time.min(), time.max() + bin_size, bin_size)
+    indices = np.digitize(time, bins)
+        
+    weighted_avg = []
+    for i in range(1, len(bins)):
+        bin_indices = indices == i
+        if any(bin_indices):
+            weighted_avg.append(np.average(flux[bin_indices], weights=1.0 / flux_err[bin_indices]**2))
+        else:
+            weighted_avg.append(np.nan)  # or use a different indicator for missing data
+        
+    bin_centers = (bins[1:] + bins[:-1]) / 2
+    return bin_centers, weighted_avg
+
+# Calculate binned weighted average for combined lc and sc data
+
+    
+
+
 
 def OMC_data(koi_id,file_path):
     index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
@@ -226,5 +285,4 @@ def OMC_data(koi_id,file_path):
     return OMC_data, OMC_model, out_prob, out_flag
 
 
-### MULTI PLANET SYSTEMS
 

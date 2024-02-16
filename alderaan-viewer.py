@@ -182,11 +182,9 @@ def generate_plot_Detrended_Light_Curve(koi_id):
 
 @app.route('/generate_plot_single_transit/<koi_id>/<int:line_number>/<planet>')
 def generate_plot_single_transit(koi_id, line_number,planet):
-    #planet = request.args.get('planet', '_00_quick.ttvs')
     star_id = koi_id.replace("K","S")
     
     ttv_file = star_id + planet
-    #file_paths = glob.glob(os.path.join(data_directory,star_id, file_name))
     ### initialize figure
     fig = make_subplots(rows=1, cols=1)
 
@@ -210,6 +208,21 @@ def generate_plot_single_transit(koi_id, line_number,planet):
     else:
         error_message = f'No data found for {koi_id}'
         return jsonify(error_message=error_message)
+    
+@app.route('/get_transit_file_options/<koi_id>')
+def planet_options(koi_id):
+    star_id = koi_id.replace("K","S")
+    file_name = star_id + '_*_quick.ttvs'
+    file_paths = glob.glob(os.path.join(data_directory,star_id, file_name))
+    options = []
+    for i in range(len(file_paths)):
+        option_value = f"_{i:02d}_quick.ttvs"
+        option = {'number': f'{i:02d}', 'value': option_value}
+        options.append(option)
+        #opt = f"{i:02d}"
+        #options.append(opt)
+    return jsonify(options)
+
 
 
 @app.route('/generate_plot_folded_light_curve/<koi_id>')

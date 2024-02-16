@@ -46,8 +46,8 @@
             <div>
                 <label for="planetSelect">Select Planet:</label>
                 <select id="planetSelect" onchange="updatePlot()">
-                    <option value="_00_quick.ttvs" {% if request.args.get('planet') == '_00_quick.ttvs' %}selected{% endif %}>00</option>
-                    <option value="_01_quick.ttvs" {% if request.args.get('planet') == '_01_quick.ttvs' %}selected{% endif %}>01</option>
+                    <!--<option value="_00_quick.ttvs" {% if request.args.get('planet') == '_00_quick.ttvs' %}selected{% endif %}>00</option> -->
+                    <!--<option value="_01_quick.ttvs" {% if request.args.get('planet') == '_01_quick.ttvs' %}selected{% endif %}>01</option> -->
                     <!--<option value="2023-05-19_singles.csv">Singles</option>
                     <option value="2023-05-15_doubles.csv">Doubles</option> -->
                 </select>
@@ -210,6 +210,23 @@
 
         }
 
+        function updatePlanetSelectOptions(koi_id) {
+            fetch(`/get_transit_file_options/${koi_id}`)
+                .then(response => response.json())
+                .then(options => {
+                    const select = document.getElementById("planetSelect");
+                    select.innerHTML = ""; // Clear previous options
+                    options.forEach(option => {
+                        const opt = document.createElement("option");
+                        opt.value = option.value;
+                        opt.innerHTML = option.number;
+                        select.appendChild(opt);
+                    });
+                    // Trigger plot update when options are updated
+                    updatePlot();
+                })
+                .catch(error => console.error('Error fetching transit file options:', error));
+        }
 
         function updatePlot() {
             const planetSelect = document.getElementById("planetSelect");

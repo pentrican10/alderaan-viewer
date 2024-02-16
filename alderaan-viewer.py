@@ -141,9 +141,6 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         lc.name = "Long Cadence"
         fig.add_trace(lc, row=1, col=1)
 
-        #fig = px.scatter(data_lc, x="TIME", y="FLUX")#, 
-                    #title="Kepler Detrended Light Curve")
-        
         ### trim short cadence data
         sc_time_trim = data_sc['TIME'][::30]
         sc_flux_trim = data_sc['FLUX'][::30]
@@ -151,7 +148,6 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         sc.marker.update(symbol="circle", size=4, color="gray")
         sc.name = "Short Cadence"
         fig.add_trace(sc, row=1, col=1)
-        #fig.add_scatter(x=sc_time_trim, y=sc_flux_trim,mode='markers')
 
         # Update x-axis label with units
         fig.update_traces(showlegend=True, row=1, col=1)
@@ -161,7 +157,10 @@ def generate_plot_Detrended_Light_Curve(koi_id):
     
     elif os.path.isfile(file_path_lc):
         data_lc = data_load.read_data_from_fits(file_path_lc)
-        fig = px.scatter(data_lc, x="TIME", y="FLUX")
+        lc = px.scatter(data_lc, x="TIME",y="FLUX").data[0]
+        lc.marker.update(symbol="circle", size=4, color="blue")
+        lc.name = "Long Cadence"
+        fig.add_trace(lc, row=1, col=1)
         # Update x-axis label with units
         fig.update_layout(xaxis_title=f"TIME (DAYS)", yaxis_title="FLUX")
         graph1JSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
@@ -169,7 +168,12 @@ def generate_plot_Detrended_Light_Curve(koi_id):
     
     elif os.path.isfile(file_path_sc):
         data_sc = data_load.read_data_from_fits(file_path_sc)
-        fig = px.scatter(data_sc, x="TIME", y="FLUX")
+        sc_time_trim = data_sc['TIME'][::30]
+        sc_flux_trim = data_sc['FLUX'][::30]
+        sc = px.scatter(x=sc_time_trim, y=sc_flux_trim).data[0]
+        sc.marker.update(symbol="circle", size=4, color="gray")
+        sc.name = "Short Cadence"
+        fig.add_trace(sc, row=1, col=1)
         # Update x-axis label with units
         fig.update_layout(xaxis_title=f"TIME (DAYS)", yaxis_title="FLUX")
         graph1JSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
@@ -183,8 +187,8 @@ def generate_plot_Detrended_Light_Curve(koi_id):
 @app.route('/generate_plot_single_transit/<koi_id>/<int:line_number>/<planet>')
 def generate_plot_single_transit(koi_id, line_number,planet):
     star_id = koi_id.replace("K","S")
-    
     ttv_file = star_id + planet
+
     ### initialize figure
     fig = make_subplots(rows=1, cols=1)
 
@@ -192,12 +196,21 @@ def generate_plot_single_transit(koi_id, line_number,planet):
         photometry_data, transit_number, center_time = data_load.single_transit_data(koi_id, line_number,ttv_file)
         transit = px.scatter(photometry_data, x="TIME", y="FLUX").data[0]
         fig.add_trace(transit, row=1, col=1)
-        # Update x-axis label with units
-        fig.update_layout(xaxis_title=f"TIME (DAYS)", yaxis_title="FLUX")
+
+        ### Calculate the y-axis range
+        flux_min = photometry_data["FLUX"].min() 
+        flux_max = photometry_data["FLUX"].max() 
+        y_range = max(flux_max - 1, 1 - flux_min) * 2  # Add some padding
+        ### Update x-axis label with units and y-range
+        fig.update_layout(xaxis_title=f"TIME (DAYS)", 
+                          yaxis_title="FLUX",
+                          yaxis=dict(range=[(1 - y_range / 2), (1 + y_range / 2)])
+        )
+
         planet_num = re.findall(r'\d+', planet)
         # Convert the list of numbers to integers if needed
         planet_num = [int(num) for num in planet_num]
-        fig.update_layout(title=f"Planet {planet_num}")
+        fig.update_layout(title=f"Planet 0{planet_num[0]}")
 
         graphJSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
         response_data = {
@@ -219,8 +232,6 @@ def planet_options(koi_id):
         option_value = f"_{i:02d}_quick.ttvs"
         option = {'number': f'{i:02d}', 'value': option_value}
         options.append(option)
-        #opt = f"{i:02d}"
-        #options.append(opt)
     return jsonify(options)
 
 
@@ -232,12 +243,12 @@ def generate_plot_folded_light_curve(koi_id):
     file_paths = glob.glob(os.path.join(data_directory,star_id, file_name))
     ext = os.path.basename(data_directory) +'.csv'
     csv_file_path = os.path.join(data_directory, ext)
+
     ### number of planets from number of ttv files
     npl = len(file_paths)
     subplot_height=350
     titles = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
     fig = make_subplots(rows=npl, cols=1,
-                        #subplot_titles=[f"File 0{i}" for i in range(len(file_paths))],#,
                         subplot_titles = titles,
                         row_heights=[subplot_height]*npl,
                         vertical_spacing=0.15)
@@ -247,57 +258,49 @@ def generate_plot_folded_light_curve(koi_id):
 
         if fold_data_lc is not None and fold_data_sc is not None:
             ### short cadence
-            #fold_sc = go.Scatter(fold_data_sc, x="TIME",y="FLUX")#.data[0]
             fold_sc = go.Scatter(x=fold_data_sc.TIME, y=fold_data_sc.FLUX, mode='markers')
             fold_sc.marker.update(symbol="circle", size=4, color="gray")
             fold_sc.name = "Short Cadence"
             fig.add_trace(fold_sc, row=i+1, col=1)
             ### long cadence
-            #fold_lc = go.Scatter(fold_data_lc, x="TIME",y="FLUX")#.data[0]
             fold_lc = go.Scatter(x=fold_data_lc.TIME, y=fold_data_lc.FLUX, mode='markers')
             fold_lc.marker.update(symbol="circle", size=5, color="blue")
             fold_lc.name = "Long Cadence"
             fig.add_trace(fold_lc, row=i+1, col=1)
             ### binned avg
-            #bin_avg = go.Scatter(binned_avg, x="TIME", y="FLUX")#.data[0]
             bin_avg = go.Scatter(x=binned_avg.TIME, y=binned_avg.FLUX, mode='markers')
             bin_avg.marker.update(symbol="square", size=10, color="orange")
             bin_avg.name = "Binned Average"
             fig.add_trace(bin_avg, row=i+1, col=1)
-
-
             ### Update x-axis and y-axis labels for each subplot
-            #fig.update_traces(showlegend=True, row=i+1, col=1)
             fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
             fig.update_yaxes(title_text="FLUX", row=i+1, col=1)
         
         elif fold_data_lc is not None and fold_data_sc is None:
-            fold_lc = px.scatter(fold_data_lc, x="TIME",y="FLUX").data[0]
-            fold_lc.marker.update(symbol="circle", size=4, color="gray")
+            fold_lc = go.Scatter(x=fold_data_lc.TIME, y=fold_data_lc.FLUX, mode='markers')
+            fold_lc.marker.update(symbol="circle", size=5, color="blue")
             fold_lc.name = "Long Cadence"
             fig.add_trace(fold_lc, row=i+1, col=1)
             ### binned avg
-            bin_avg = px.scatter(binned_avg, x="TIME", y="FLUX").data[0]
-            bin_avg.marker.update(symbol="circle", size=5, color="purple")
+            bin_avg = go.Scatter(x=binned_avg.TIME, y=binned_avg.FLUX, mode='markers')
+            bin_avg.marker.update(symbol="square", size=10, color="orange")
             bin_avg.name = "Binned Average"
             fig.add_trace(bin_avg, row=i+1, col=1)
             ### Update x-axis and y-axis labels for each subplot
-            fig.update_traces(showlegend=True, row=i + 1, col=1)
             fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
             fig.update_yaxes(title_text="FLUX", row=i+1, col=1)
 
         elif fold_data_sc is not None and fold_data_lc is None:
-            fold_sc = px.scatter(fold_data_sc, x="TIME",y="FLUX").data[0]
+            fold_sc = go.Scatter(x=fold_data_sc.TIME, y=fold_data_sc.FLUX, mode='markers')
             fold_sc.marker.update(symbol="circle", size=4, color="gray")
             fold_sc.name = "Short Cadence"
             fig.add_trace(fold_sc, row=i+1, col=1)
             ### binned avg
-            bin_avg = px.scatter(binned_avg, x="TIME", y="FLUX").data[0]
-            bin_avg.marker.update(symbol="circle", size=5, color="purple")
+            bin_avg = go.Scatter(x=binned_avg.TIME, y=binned_avg.FLUX, mode='markers')
+            bin_avg.marker.update(symbol="square", size=10, color="orange")
             bin_avg.name = "Binned Average"
             fig.add_trace(bin_avg, row=i+1, col=1)
             ### Update x-axis and y-axis labels for each subplot
-            fig.update_traces(showlegend=True, row=i + 1, col=1)
             fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
             fig.update_yaxes(title_text="FLUX", row=i+1, col=1)
         
@@ -306,7 +309,6 @@ def generate_plot_folded_light_curve(koi_id):
             return jsonify(error_message=error_message)
         
     ### return whole fig to page
-    #fig.update_layout(marker=dict(symbol_sequence=["circle", "circle-open", "square"]))
     if npl>1:
         fig.update_layout(height=npl * subplot_height)
     fig.update_traces(showlegend=True, row=1, col=1)
@@ -325,12 +327,9 @@ def generate_plot_OMC(koi_id):
     csv_file_path = os.path.join(data_directory, ext)
     ### number of planets from number of ttv files
     npl = len(file_paths)
-    #subplot_height=250
     titles = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
     fig = make_subplots(rows=npl, cols=1,
-                        subplot_titles=titles)#,
-                        # row_heights=[subplot_height]*npl,
-                        # vertical_spacing=0.)
+                        subplot_titles=titles)
 
     for i, file_path in enumerate(file_paths):
         omc_data, omc_model, out_prob, out_flag = data_load.OMC_data(koi_id, file_path)
@@ -339,7 +338,7 @@ def generate_plot_OMC(koi_id):
         if omc_data is not None:
             mask = [bool(flag) for flag in out_flag]
             if show_outliers:
-                omc = px.scatter(omc_data, #[mask], 
+                omc = px.scatter(omc_data,  
                                 x='TIME', 
                                 y='OMC', 
                                 color=out_prob, 
@@ -366,22 +365,18 @@ def generate_plot_OMC(koi_id):
                 omc = px.scatter(omc_data[~mask_arr], x="TIME",y="OMC")
                 # Add a line plot for OMC_MODEL
                 line_trace = px.line(omc_model[~mask_arr], x="TIME", y="OMC_MODEL").data[0]
-                line_trace.line.color = 'red'  # Set the line color to red
+                line_trace.line.color = 'red' 
                 fig.add_trace(omc, row=(i+1), col=1)
                 fig.add_trace(line_trace, row=(i+1), col=1)
                 ### update axes and colorbar
                 fig.update_xaxes(title_text="TIME (DAYS)", row=i+1, col=1)
                 fig.update_yaxes(title_text="O-C (MINUTES)", row=i+1, col=1)
                 fig.update_coloraxes(colorbar_title_text='Out Probability', colorbar_len=0.2, row=i+1, col=1)
-
-            # graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
-            # return jsonify(graphJSON)
         
         else: 
             error_message = f'No data found for {koi_id}'
             return jsonify(error_message=error_message)
     ### return whole figure to page
-    #fig.update_layout(height=npl * subplot_height)
     fig.update_coloraxes(colorbar_title_text='Out Probability')#, colorbar_len=0.2)
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
     return jsonify(graphJSON)

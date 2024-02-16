@@ -57,7 +57,6 @@ def read_table_data(table):
             seen_koi_ids.add(koi_id)
 
     return unique_data
-    #return table_data
 
 def get_periods_for_koi_id(file_path, koi_id):
     periods = []
@@ -100,13 +99,11 @@ def get_ttv_file(koi_id, file_path):
             for line in file:
                 # Split the line into columns based on the delimiter
                 columns = line.strip().split('\t')
-
                 index.append(columns[0])
                 ttime.append(columns[1])
                 model.append(columns[2])
                 out_prob.append(columns[3])
                 out_flag.append(columns[4])
-        #df = pd.read_csv(file_path, delimiter='\t', header=None)
         return index, ttime, model, out_prob, out_flag
     
 def single_transit_data(koi_id, line_number, ttv_file):
@@ -135,7 +132,6 @@ def single_transit_data(koi_id, line_number, ttv_file):
             use_lc = (photometry_data_lc['TIME'] > start_time) & (photometry_data_lc['TIME'] < end_time)
             lc_data = photometry_data_lc[use_lc]
             combined_data = lc_data
-            #return filtered_data, transit_number, center_time ############
     if os.path.isfile(file_path_sc):
             photometry_data_sc = read_data_from_fits(file_path_sc)
             if combined_data is not None:
@@ -229,7 +225,6 @@ def folded_data(koi_id, file_path):
         'TIME': bin_centers_combined,
         'FLUX': weighted_avg_combined
     })
-    #return binned_weighted_avg_combined
 
     return fold_data_lc, fold_data_sc, binned_weighted_avg_combined
 
@@ -251,12 +246,8 @@ def calculate_binned_weighted_average(time, flux, flux_err, bin_size):
     bin_centers = (bins[1:] + bins[:-1]) / 2
     return bin_centers, weighted_avg
 
-# Calculate binned weighted average for combined lc and sc data
 
     
-
-
-
 def OMC_data(koi_id,file_path):
     index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
     index = np.asarray(index, dtype=np.int64)

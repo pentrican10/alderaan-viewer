@@ -261,16 +261,19 @@ def generate_plot_folded_light_curve(koi_id):
             fold_sc = go.Scatter(x=fold_data_sc.TIME, y=fold_data_sc.FLUX, mode='markers')
             fold_sc.marker.update(symbol="circle", size=4, color="gray")
             fold_sc.name = "Short Cadence"
+            fold_sc.legendgroup=f'{i}'
             fig.add_trace(fold_sc, row=i+1, col=1)
             ### long cadence
             fold_lc = go.Scatter(x=fold_data_lc.TIME, y=fold_data_lc.FLUX, mode='markers')
             fold_lc.marker.update(symbol="circle", size=5, color="blue")
             fold_lc.name = "Long Cadence"
+            fold_lc.legendgroup=f'{i}'
             fig.add_trace(fold_lc, row=i+1, col=1)
             ### binned avg
             bin_avg = go.Scatter(x=binned_avg.TIME, y=binned_avg.FLUX, mode='markers')
             bin_avg.marker.update(symbol="square", size=10, color="orange")
             bin_avg.name = "Binned Average"
+            bin_avg.legendgroup=f'{i}'
             fig.add_trace(bin_avg, row=i+1, col=1)
             ### Update x-axis and y-axis labels for each subplot
             fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
@@ -310,7 +313,7 @@ def generate_plot_folded_light_curve(koi_id):
         
     ### return whole fig to page
     if npl>1:
-        fig.update_layout(height=npl * subplot_height)
+        fig.update_layout(height=npl * subplot_height,legend_tracegroupgap = 240)
     fig.update_traces(showlegend=True, row=1, col=1)
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
     return jsonify(graphJSON)

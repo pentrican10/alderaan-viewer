@@ -231,6 +231,7 @@
         function updatePlot() {
             const planetSelect = document.getElementById("planetSelect");
             planet = planetSelect.value;
+            lineNumber=0
             console.log(planet)
             generatePlotSingleTransit(selectedKoiId, lineNumber, planet);
         }

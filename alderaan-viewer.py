@@ -188,7 +188,16 @@ def generate_plot_Detrended_Light_Curve(koi_id):
 def generate_plot_single_transit(koi_id, line_number,planet):
     star_id = koi_id.replace("K","S")
     ttv_file = star_id + planet
+    ext = os.path.basename(data_directory) +'.csv'
+    csv_file_path = os.path.join(data_directory, ext)
 
+    period = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
+
+    planet_num = re.findall(r'\d+', planet)
+    num = planet_num[0][1]
+    int_num = int(num)
+    title = period[int_num]
+    
     ### initialize figure
     fig = make_subplots(rows=1, cols=1)
 
@@ -214,18 +223,8 @@ def generate_plot_single_transit(koi_id, line_number,planet):
                           yaxis=dict(range=[lc_min, lc_max])
             )
        
-        # if len(sc)>0 then use sc limits
-        # fig.update_layout(xaxis_title=f"TIME (DAYS)", 
-        #                   yaxis_title="FLUX"#,
-        #                   #yaxis=dict(range=[(1 - y_range / 2), (1 + y_range / 2)])
-        # )
-        ####FIXME
-
-        planet_num = re.findall(r'\d+', planet)
-        # Convert the list of numbers to integers if needed
-        planet_num = [int(num) for num in planet_num]
-        fig.update_layout(title=f"Planet 0{planet_num[0]}")
-
+        fig.update_layout(title=title, title_x=0.5)
+        
         graphJSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
         response_data = {
             'graphJSON': graphJSON,
@@ -236,19 +235,6 @@ def generate_plot_single_transit(koi_id, line_number,planet):
         error_message = f'No data found for {koi_id}'
         return jsonify(error_message=error_message)
     
-# def get_min_max(koi_id,line_number, ttv_file):
-#     star_id = koi_id.replace("K","S")
-#     file_name_lc = star_id + '_lc_filtered.fits'
-#     file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
-    
-#     file_name_sc = star_id + '_sc_filtered.fits'
-#     file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
-
-#     file_path = os.path.join(data_directory, star_id, ttv_file)
-
-#     if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
-#         photometry_data_lc = read_data_from_fits(file_path_lc) 
-#         photometry_data_sc = read_data_from_fits(file_path_sc)
 
     
 @app.route('/get_transit_file_options/<koi_id>')

@@ -16,11 +16,11 @@
         <input type="checkbox" id="detrendedLCCheckbox" onchange="togglePlotVisibilityDetrendedLightCurve()" checked/> 
         <label for="detrendedLCCheckbox">Detrended Light Curve</label>
 
-        <input type="checkbox" id="singleTransitCheckbox" onchange="togglePlotVisibilitySingleTransit()"/>
-        <label for="singleTransitCheckbox">Single Transit</label>
-
         <input type="checkbox" id="foldedLightCurveCheckbox" onchange="togglePlotVisibilityFoldedLightCurve()"/>
         <label for="foldedLightCurveCheckbox">Folded Transit</label>
+
+        <input type="checkbox" id="singleTransitCheckbox" onchange="togglePlotVisibilitySingleTransit()"/>
+        <label for="singleTransitCheckbox">Single Transit</label>
 
         <input type="checkbox" id="OMCCheckbox" onchange="togglePlotVisibilityOMC()"/>
         <label for="OMCCheckbox">O-C</label>
@@ -33,6 +33,14 @@
             <!-- detrended light curve will display here -->
         </div>
 
+    </div>
+
+    <div id="foldedLightCurveTitle" style="display:none;">
+        <h3>Folded Light Curve:</h3>
+
+        <div id="foldedLightCurvePlot" data-koi-id="{{ koi_id }}" style="display:none;">
+            <!-- folded light curve will display here -->
+        </div>
     </div>
 
     <div id="singleTransitTitle" style="display:none;">
@@ -62,14 +70,6 @@
             <br>
             <button onclick="move10Backward()">&#x2190;10</button>
             <button onclick="move10Forward()">10&#x2192;</button>
-        </div>
-    </div>
-
-    <div id="foldedLightCurveTitle" style="display:none;">
-        <h3>Folded Light Curve:</h3>
-
-        <div id="foldedLightCurvePlot" data-koi-id="{{ koi_id }}" style="display:none;">
-            <!-- folded light curve will display here -->
         </div>
     </div>
 

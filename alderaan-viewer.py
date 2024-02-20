@@ -193,19 +193,33 @@ def generate_plot_single_transit(koi_id, line_number,planet):
     fig = make_subplots(rows=1, cols=1)
 
     if (data_load.single_transit_data(koi_id, line_number,ttv_file)):
-        photometry_data, transit_number, center_time = data_load.single_transit_data(koi_id, line_number,ttv_file)
-        transit = px.scatter(photometry_data, x="TIME", y="FLUX").data[0]
-        fig.add_trace(transit, row=1, col=1)
+        photometry_data_lc,photometry_data_sc, transit_number, center_time = data_load.single_data(koi_id, line_number,ttv_file)
+        transit_lc = px.scatter(photometry_data_lc, x="TIME", y="FLUX").data[0]
 
-        ### Calculate the y-axis range
-        flux_min = photometry_data["FLUX"].min() 
-        flux_max = photometry_data["FLUX"].max() 
-        y_range = max(flux_max - 1, 1 - flux_min) * 2  # Add some padding
-        ### Update x-axis label with units and y-range
-        fig.update_layout(xaxis_title=f"TIME (DAYS)", 
+        fig.add_trace(transit_lc, row=1, col=1)
+
+        transit_sc = px.scatter(photometry_data_sc, x="TIME", y="FLUX").data[0]
+        fig.add_trace(transit_sc,row=1,col=1)
+
+        lc_min,lc_max,sc_min,sc_max = data_load.get_min_max(koi_id)
+
+        if len(photometry_data_sc)>0:
+            fig.update_layout(xaxis_title=f"TIME (DAYS)", 
                           yaxis_title="FLUX",
-                          yaxis=dict(range=[(1 - y_range / 2), (1 + y_range / 2)])
-        )
+                          yaxis=dict(range=[sc_min, sc_max])
+            )
+        else:
+            fig.update_layout(xaxis_title=f"TIME (DAYS)", 
+                          yaxis_title="FLUX",
+                          yaxis=dict(range=[lc_min, lc_max])
+            )
+       
+        # if len(sc)>0 then use sc limits
+        # fig.update_layout(xaxis_title=f"TIME (DAYS)", 
+        #                   yaxis_title="FLUX"#,
+        #                   #yaxis=dict(range=[(1 - y_range / 2), (1 + y_range / 2)])
+        # )
+        ####FIXME
 
         planet_num = re.findall(r'\d+', planet)
         # Convert the list of numbers to integers if needed
@@ -221,6 +235,21 @@ def generate_plot_single_transit(koi_id, line_number,planet):
     else:
         error_message = f'No data found for {koi_id}'
         return jsonify(error_message=error_message)
+    
+# def get_min_max(koi_id,line_number, ttv_file):
+#     star_id = koi_id.replace("K","S")
+#     file_name_lc = star_id + '_lc_filtered.fits'
+#     file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
+    
+#     file_name_sc = star_id + '_sc_filtered.fits'
+#     file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
+
+#     file_path = os.path.join(data_directory, star_id, ttv_file)
+
+#     if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
+#         photometry_data_lc = read_data_from_fits(file_path_lc) 
+#         photometry_data_sc = read_data_from_fits(file_path_sc)
+
     
 @app.route('/get_transit_file_options/<koi_id>')
 def planet_options(koi_id):

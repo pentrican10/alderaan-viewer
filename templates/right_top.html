@@ -24,6 +24,9 @@
 
         <input type="checkbox" id="OMCCheckbox" onchange="togglePlotVisibilityOMC()"/>
         <label for="OMCCheckbox">O-C</label>
+
+        <input type="checkbox" id="CornerCheckbox" onchange="togglePlotVisibilityCorner()"/>
+        <label for="CornerCheckbox">Corner</label>
     </div>
 
     <div id="detrendedLCTitle" style="display:none;">
@@ -54,10 +57,7 @@
             <div>
                 <label for="planetSelect">Select Planet:</label>
                 <select id="planetSelect" onchange="updatePlot()">
-                    <!--<option value="_00_quick.ttvs" {% if request.args.get('planet') == '_00_quick.ttvs' %}selected{% endif %}>00</option> -->
-                    <!--<option value="_01_quick.ttvs" {% if request.args.get('planet') == '_01_quick.ttvs' %}selected{% endif %}>01</option> -->
-                    <!--<option value="2023-05-19_singles.csv">Singles</option>
-                    <option value="2023-05-15_doubles.csv">Doubles</option> -->
+                    <!-- planet options will display here -->
                 </select>
             
             </div>
@@ -78,6 +78,14 @@
 
         <div id="OMCPlot" data-koi-id="{{ koi_id }}" style="display:none;">
             <!-- O-C plot will display here -->
+        </div>
+    </div>
+
+    <div id="CornerTitle" style="display:none;">
+        <h3>Corner Plot:</h3>
+
+        <div id="CornerPlot" data-koi-id="{{ koi_id }}" style="display:none;">
+            <!-- folded light curve will display here -->
         </div>
     </div>
 
@@ -322,7 +330,47 @@
 
         }
 
+        // corner plot
+        function generatePlotCorner(koiId) {
+            // Fetch the Plotly figure data from the server
+            fetch(`/generate_plot_corner/${koiId}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Received data:", data); // Log the received data
+                    if(data.error_message){ 
+                        // Display the error message in the plot container
+                        const plotContainer = document.getElementById("CornerPlot");
+                        plotContainer.innerHTML = `<p>${data.error_message}</p>`;
+                    } else { 
+                        // Clear any existing error message
+                        const plotContainer = document.getElementById("CornerPlot");
+                        plotContainer.innerHTML = "";
+                        //display plot
+                        const parsedData = JSON.parse(data);
+                        Plotly.newPlot(plotContainer, parsedData);
+                    }
+                })
+                .catch(error => {
+                    plotContainer.innerHTML = "<p>Error loading plot data.</p>";
+                    console.error(error);
+                });
+        }
 
+        function togglePlotVisibilityCorner() {
+            const plotContainer = document.getElementById("CornerPlot");
+            const plotCheckbox = document.getElementById("CornerCheckbox");
+            const plotTitle = document.getElementById("CornerTitle");
+            
+            if (plotCheckbox.checked) {
+                plotTitle.style.display = "block";
+                plotContainer.style.display = "block";  // Show the plot
+                generatePlotCorner(selectedKoiId);
+            } else {
+                plotTitle.style.display = "none";
+                plotContainer.style.display = "none";   // Hide the plot
+            }
+
+        }
 
 
     </script>

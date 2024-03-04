@@ -16,6 +16,8 @@ import data_load
 import glob
 import plotly.graph_objects as go
 import re
+from scipy.stats import gaussian_kde
+
 
 from plotly.subplots import make_subplots
 
@@ -131,6 +133,10 @@ def generate_plot_Detrended_Light_Curve(koi_id):
     ### initialize figure
     fig = make_subplots(rows=1, cols=1)
 
+    file_name = star_id + '_*_quick.ttvs'
+    file_paths = glob.glob(os.path.join(data_directory,star_id, file_name))
+    
+
     ### get data and create detrended light curve
     if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
         data_lc = data_load.read_data_from_fits(file_path_lc)
@@ -149,9 +155,30 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         sc.name = "Short Cadence"
         fig.add_trace(sc, row=1, col=1)
 
+        ###################
+        colors = ['orange','green','blue','pink','red','purple']
+
+        ttv_lines = []  # Store all TTV lines for manual legend item creation
+
+        # Iterate through file paths
+        for i, file_path in enumerate(file_paths):
+            if os.path.isfile(file_path):
+                index, center_time, model, out_prob, out_flag = data_load.get_ttv_file(koi_id, file_path)
+
+                # Add a dot for each center time
+                offset = 0.0001*i
+                y_pts = 0.998* np.ones(len(center_time)) + offset
+                c_time = px.scatter(x=center_time, y=y_pts).data[0]
+                color = colors[i]
+                c_time.marker.update(symbol="circle", size=4, color=color)
+                c_time.name = f"ttime 0{i}"
+                fig.add_trace(c_time, row=1, col=1)
+                
+
         # Update x-axis label with units
         fig.update_traces(showlegend=True, row=1, col=1)
         fig.update_layout(xaxis_title=f"TIME (DAYS)", yaxis_title="FLUX")
+        fig.update_layout(legend=dict(traceorder="normal"))
         graph1JSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
         return jsonify(graph1JSON)
     
@@ -399,7 +426,57 @@ def generate_plot_OMC(koi_id):
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
     return jsonify(graphJSON)
         
+@app.route('/generate_plot_corner/<koi_id>')
+def generate_plot_corner(koi_id):
+    star_id = koi_id.replace("K","S")
+    file =star_id + '-results.fits'
+    file_path = os.path.join(data_directory, star_id, file)
+    if os.path.isfile(file_path):
+        data = data_load.load_posteriors(file_path)
+        Nvar = 5  # Set the number of variables to 5
 
+        # Slice the DataFrame to include only the first 5 columns
+        data = data.iloc[:, :Nvar]
+        # Subsample the data to every 100th data point
+        #data = data.iloc[::30, :]
+        labels = data.columns.tolist()
+
+        fig = make_subplots(rows=Nvar, cols=Nvar, horizontal_spacing=0.04, vertical_spacing=0.05)
+
+        for i in range(1, Nvar + 1):
+            for j in range(i, Nvar + 1):
+                x = data.iloc[:, i - 1]
+                y = data.iloc[:, j - 1]
+
+                # plot the data
+                if i != j:
+                    x = data.iloc[::30, i-1]
+                    y=data.iloc[::30, j-1]
+                    fig.add_trace(go.Scatter(x=x, y=y, mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j, col=i)
+                    fig.add_trace(go.Histogram2dContour(x=x,y=y,colorscale='Blues',reversescale=False,showscale=False,ncontours=8, contours=dict(coloring='fill'),line=dict(width=1)),row=j,col=i)
+                    
+                else:
+                    # here's where you put the histogram/kde
+                    #fig.add_trace(go.Histogram(x=x), row=j, col=i)
+                    kde = gaussian_kde(x)
+                    x_vals = np.linspace(min(x), max(x), 1000)
+                    y_vals = kde(x_vals)
+                    fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', line=dict(color='blue'),name=labels[i-1]), row=j, col=i)
+
+                # add axes labels
+                if (i == 1) and (i != j):
+                    fig.update_yaxes(title_text=labels[j - 1], row=j, col=i)
+                if j == Nvar:
+                    fig.update_xaxes(title_text=labels[i - 1], row=j, col=i)
+                # Add border to each subplot
+                fig.update_xaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j, col=i, tickangle=0)
+                fig.update_yaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j, col=i)
+        fig.update_layout(height=800, width=900)
+        graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
+        return jsonify(graphJSON)
+    else:
+        error_message = f'No data found for {koi_id}'
+        return jsonify(error_message=error_message)
 
 if __name__ == '__main__':
     app.run(debug=True)

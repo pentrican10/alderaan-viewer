@@ -106,6 +106,16 @@ def get_ttv_file(koi_id, file_path):
                 out_flag.append(columns[4])
         return index, ttime, model, out_prob, out_flag
     
+
+def load_posteriors(f):
+    with fits.open(f) as hduL:
+        data = hduL['SAMPLES'].data
+        keys = data.names
+        _posteriors = []
+        for k in keys:
+            _posteriors.append(data[k])
+        return pd.DataFrame(np.array(_posteriors).T, columns=keys)
+
 def single_transit_data(koi_id, line_number, ttv_file):
     star_id = koi_id.replace("K","S")
     file_name_lc = star_id + '_lc_filtered.fits'

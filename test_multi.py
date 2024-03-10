@@ -68,7 +68,45 @@ def load_posteriors(f):
         return pd.DataFrame(np.array(_posteriors).T, columns=keys)
 
 data = load_posteriors(file)
+data = load_posteriors(file)
 
+selected_columns = ['C0_0','C1_0','ROR_0','IMPACT_0','DUR14_0']
+
+data = data[selected_columns]
+
+labels = data.columns.tolist()
+
+fig = make_subplots(rows=len(selected_columns), cols=len(selected_columns))
+
+for i in range(len(selected_columns)):
+    for j in range(i, len(selected_columns)):
+        # x = data[selected_columns[i]]
+        # y = data[selected_columns[j]]
+        x = data[selected_columns[i]][::5]
+        y = data[selected_columns[j]][::5]
+
+        if i != j:
+            # x = data[selected_columns[i]][::30]
+            # y = data[selected_columns[j]][::30]
+            fig.add_trace(go.Scatter(x=x, y=y, mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)
+            fig.add_trace(go.Histogram2dContour(x=x, y=y, colorscale='Blues', reversescale=False, showscale=False, ncontours=4, contours=dict(coloring='fill'), line=dict(width=1)), row=j + 1, col=i + 1)
+        else:
+            kde = gaussian_kde(x)
+            x_vals = np.linspace(min(x), max(x), 1000)
+            y_vals = kde(x_vals)
+            fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', line=dict(color='blue'), name=labels[i]), row=j + 1, col=i + 1)
+
+        if (i == 0) and (i != j):
+            fig.update_yaxes(title_text=labels[j], row=j + 1, col=i + 1)
+        if j == len(selected_columns) - 1:
+            fig.update_xaxes(title_text=labels[i], row=j + 1, col=i + 1)
+
+        fig.update_xaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1)
+        fig.update_yaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1)
+
+fig.show()
+
+'''
 Nvar = 5  # Set the number of variables to 5
 
 # Slice the DataFrame to include only the first 5 columns
@@ -112,8 +150,8 @@ for i in range(1, Nvar + 1):
 
 # Set the plot background color to transparent
 #fig.update_layout(plot_bgcolor='rgba(0,0,0,0)')
-fig.show()
-
+fig.show() 
+'''
 
 '''
 #scatter = go.Scatter(x=x, y=y, mode='markers',marker=dict(size=1))

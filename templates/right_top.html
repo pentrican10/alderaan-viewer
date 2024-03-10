@@ -83,6 +83,42 @@
 
     <div id="CornerTitle" style="display:none;">
         <h3>Corner Plot:</h3>
+        <div id="cornerVarCheckbox" style="display:none;">
+            <input type="checkbox" id="C0_0" onchange="columns()" checked/> 
+            <label for="C0_0">C0_0</label>
+
+            <input type="checkbox" id="C1_0" onchange="columns()" checked/> 
+            <label for="C1_0">C1_0</label>
+
+            <input type="checkbox" id="ROR_0" onchange="columns()" checked/> 
+            <label for="ROR_0">ROR_0</label>
+
+            <input type="checkbox" id="IMPACT_0" onchange="columns()" checked/> 
+            <label for="IMPACT_0">IMPACT_0</label>
+
+            <input type="checkbox" id="DUR14_0" onchange="columns()" checked/> 
+            <label for="DUR14_0">DUR14_0</label>
+
+            <input type="checkbox" id="P" onchange="columns()" /> 
+            <label for="P">P</label>
+
+            <input type="checkbox" id="T0" onchange="columns()" /> 
+            <label for="T0">T0</label>
+
+            <br>
+
+            <input type="checkbox" id="LD_Q1" onchange="columns()"/> 
+            <label for="LD_Q1">LD_Q1</label>
+
+            <input type="checkbox" id="LD_Q2" onchange="columns()"/> 
+            <label for="LD_Q2">LD_Q2</label>
+
+            <input type="checkbox" id="LD_U1" onchange="columns()" /> 
+            <label for="LD_U1">LD_U1</label>
+
+            <input type="checkbox" id="LD_U2" onchange="columns()" /> 
+            <label for="LD_U2">LD_U2</label>
+        </div>
 
         <div id="CornerPlot" data-koi-id="{{ koi_id }}" style="display:none;">
             <!-- folded light curve will display here -->
@@ -331,9 +367,12 @@
         }
 
         // corner plot
-        function generatePlotCorner(koiId) {
+        let selectedColumns = ['C0_0', 'C1_0','ROR_0','IMPACT_0','DUR14_0']; // Initial selection
+
+        function generatePlotCorner(koiId,selectedColumns) {
             // Fetch the Plotly figure data from the server
-            fetch(`/generate_plot_corner/${koiId}`)
+            const encodedColumns = encodeURIComponent(selectedColumns.join(','));
+            fetch(`/generate_plot_corner/${koiId}/${encodedColumns}`)
                 .then(response => response.json())
                 .then(data => {
                     console.log("Received data:", data); // Log the received data
@@ -356,18 +395,36 @@
                 });
         }
 
+    
+        function columns() {
+            selectedColumns = []; // Clear the array
+            
+            // Get all checked checkboxes and add their IDs to selectedColumns
+            const checkboxes = document.querySelectorAll('#cornerVarCheckbox input[type="checkbox"]:checked');
+            checkboxes.forEach(checkbox => {
+                selectedColumns.push(checkbox.id);
+            });
+            
+            // Regenerate the plot with updated selected columns
+            generatePlotCorner(selectedKoiId, selectedColumns);
+        }
+
+
         function togglePlotVisibilityCorner() {
             const plotContainer = document.getElementById("CornerPlot");
             const plotCheckbox = document.getElementById("CornerCheckbox");
             const plotTitle = document.getElementById("CornerTitle");
+            const cornerVar = document.getElementById("cornerVarCheckbox");
             
             if (plotCheckbox.checked) {
                 plotTitle.style.display = "block";
                 plotContainer.style.display = "block";  // Show the plot
-                generatePlotCorner(selectedKoiId);
+                cornerVar.style.display="block";
+                generatePlotCorner(selectedKoiId,selectedColumns);
             } else {
                 plotTitle.style.display = "none";
                 plotContainer.style.display = "none";   // Hide the plot
+                cornerVar.style.display = "none";
             }
 
         }

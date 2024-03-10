@@ -68,7 +68,7 @@ def get_periods_for_koi_id(file_path, koi_id):
                 period_value = float(row['period'])
                 rounded_period = round(period_value, 1)
                 append = f'Period: {rounded_period} Days'
-                periods.append(append)
+                periods.append(str(append))
 
     return periods if periods else None
 
@@ -106,6 +106,16 @@ def get_ttv_file(koi_id, file_path):
                 out_flag.append(columns[4])
         return index, ttime, model, out_prob, out_flag
     
+
+def load_posteriors(f):
+    with fits.open(f) as hduL:
+        data = hduL['SAMPLES'].data
+        keys = data.names
+        _posteriors = []
+        for k in keys:
+            _posteriors.append(data[k])
+        return pd.DataFrame(np.array(_posteriors).T, columns=keys)
+
 def single_transit_data(koi_id, line_number, ttv_file):
     star_id = koi_id.replace("K","S")
     file_name_lc = star_id + '_lc_filtered.fits'
@@ -142,6 +152,95 @@ def single_transit_data(koi_id, line_number, ttv_file):
                 combined_data = photometry_data_sc
 
     return combined_data, transit_number, center_time ############
+
+
+def get_min_max(koi_id):
+    star_id = koi_id.replace("K","S")
+    file_name_lc = star_id + '_lc_filtered.fits'
+    file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
+    
+    file_name_sc = star_id + '_sc_filtered.fits'
+    file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
+
+    if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
+        photometry_data_lc = read_data_from_fits(file_path_lc) 
+        photometry_data_sc = read_data_from_fits(file_path_sc)
+        lc_max = photometry_data_lc['FLUX'].max()
+        lc_min = photometry_data_lc['FLUX'].min()
+
+        sc_max = photometry_data_sc['FLUX'].max()
+        sc_min = photometry_data_sc['FLUX'].min()
+        return lc_min,lc_max,sc_min,sc_max
+
+
+def single_data(koi_id, line_number, ttv_file):
+    star_id = koi_id.replace("K","S")
+    file_name_lc = star_id + '_lc_filtered.fits'
+    file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
+    
+    file_name_sc = star_id + '_sc_filtered.fits'
+    file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
+
+    file_path = os.path.join(data_directory, star_id, ttv_file)
+
+    combined_data = None
+    #get data and create detrended light curve
+    if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
+        photometry_data_lc = read_data_from_fits(file_path_lc) 
+        photometry_data_sc = read_data_from_fits(file_path_sc)
+        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
+
+        if line_number < len(index):
+            center_time = ttime[line_number]
+            transit_number = index[line_number]
+        
+            start_time = float(center_time) - 0.25
+            end_time= float(center_time) + 0.25
+
+            use_lc = (photometry_data_lc['TIME'] > start_time) & (photometry_data_lc['TIME'] < end_time)
+            lc_data = photometry_data_lc[use_lc]
+            combined_data = lc_data
+
+            use_sc = (photometry_data_sc['TIME'] > start_time) & (photometry_data_sc['TIME'] < end_time)
+            sc_data = photometry_data_sc[use_sc]
+
+            combined_data= pd.concat([combined_data, sc_data],ignore_index=True)
+        return lc_data, sc_data, transit_number, center_time
+        
+    elif os.path.isfile(file_path_lc):
+        photometry_data_lc = read_data_from_fits(file_path_lc) #descriptive names
+        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
+
+        if line_number < len(index):
+            center_time = ttime[line_number]
+            transit_number = index[line_number]
+        
+            start_time = float(center_time) - 0.25
+            end_time= float(center_time) + 0.25
+
+            use_lc = (photometry_data_lc['TIME'] > start_time) & (photometry_data_lc['TIME'] < end_time)
+            lc_data = photometry_data_lc[use_lc]
+            combined_data = lc_data
+            sc_data = None
+        return lc_data,sc_data, transit_number, center_time
+    elif os.path.isfile(file_path_sc):
+        photometry_data_sc = read_data_from_fits(file_path_sc)
+        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
+
+        if line_number < len(index):
+            center_time = ttime[line_number]
+            transit_number = index[line_number]
+        
+            start_time = float(center_time) - 0.25
+            end_time= float(center_time) + 0.25
+
+            use_sc = (photometry_data_sc['TIME'] > start_time) & (photometry_data_sc['TIME'] < end_time)
+            sc_data = photometry_data_sc[use_sc]
+            combined_data = sc_data
+            lc_data = None
+        return lc_data,sc_data, transit_number, center_time
+
+
     
 
 def folded_data(koi_id, file_path):

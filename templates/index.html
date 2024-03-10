@@ -62,12 +62,14 @@
                 checkboxContainer.style.display= "block";
             
                 //when link clicked, make graph:
+                lineNumber = 0
                 generatePlotDetrendedLightCurve(koiId); 
                 togglePlotVisibilityDetrendedLightCurve();
                 togglePlotVisibilityFoldedLightCurve();
                 updatePlanetSelectOptions(koiId)
                 togglePlotVisibilitySingleTransit();
                 togglePlotVisibilityOMC();
+                togglePlotVisibilityCorner();
             }
         });
 

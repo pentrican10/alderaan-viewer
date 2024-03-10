@@ -1,146 +1,189 @@
-from flask import Flask, render_template, jsonify, request, session, redirect, url_for
+'''
 import os
-import csv
-from datetime import datetime
-import plotly.express as px
-import plotly.graph_objects as go
-from astropy.io import fits
-import pandas as pd
-import json
-import plotly.utils
-import numpy as np
 import sys
-import lightkurve as lk
-import numpy.polynomial.polynomial as poly
-import data_load
-import glob
-
+PROJECT_DIR = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
+sys.path.append(PROJECT_DIR)
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+from astropy.io import fits
+import plotly.express as px
 from plotly.subplots import make_subplots
 
-data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results\\2023-05-15_doubles'
+file = os.path.join(PROJECT_DIR, '2023-05-19_singles\\S00333\\S00333-results.fits')
+def load_posteriors(f):
+    with fits.open(f) as hduL:
+        data = hduL['SAMPLES'].data
+        keys = data.names
+        _posteriors = []
+        for k in keys:
+            _posteriors.append(data[k])
+        return pd.DataFrame(np.array(_posteriors).T, columns=keys)
+data = load_posteriors(file)
+#data
+import corner
+#_ = corner.corner(data, var_names=['C0_0', 'C1_0', 'ROR_0', 'IMPACT_0', 'DUR14_0'])
+fig = make_subplots(rows=2,cols=2)
+contour = px.density_contour(data, x="C0_0", y="C1_0")#, marginal_x="histogram", marginal_y="histogram")
+hist1 = px.histogram(data, x="C0_0")
+hist2 = px.histogram(data,x="C1_0")
 
+for trace in contour.data:
+    fig.add_trace(trace, row=2, col=1)
 
-def generate_plot_OMC(koi_id):
-    star_id = koi_id.replace("K","S")
-    file_name = star_id + '_*_quick.ttvs'
-    file_paths = glob.glob(os.path.join(data_directory,star_id, file_name))
-    ### number of planets from number of ttv files
-    npl = len(file_paths)
-    fig = make_subplots(rows=npl, cols=1,
-                        subplot_titles=[f"File 0{i}" for i in range(len(file_paths))])
-    # Create a list to store subplot titles
-    #subplot_titles = [f"File 0{i}" for i in range(len(file_paths))]
+for trace in hist1.data:
+    fig.add_trace(trace, row=1, col=1)
 
-    for i, file_path in enumerate(file_paths):
-        omc_data, omc_model, out_prob, out_flag = data_load.OMC_data(koi_id, file_path)
-        show_outliers = True
+for trace in hist2.data:
+    fig.add_trace(trace, row=2, col=2)
 
-        if omc_data is not None:
-            mask = [bool(flag) for flag in out_flag]
-            if show_outliers:
-                omc = px.scatter(omc_data, #[mask], 
-                                x='TIME', 
-                                y='OMC', 
-                                color=out_prob, 
-                                color_continuous_scale='viridis').data[0]
-                line_trace = px.line(omc_model,x='TIME', y='OMC_MODEL').data[0]
-                line_trace.line.color = 'red'
-                fig.add_trace(omc, row=(i+1), col=1)
-                fig.add_trace(line_trace, row=(i+1), col=1)
+# fig.add_trace(contour, row=2,col=1)
+# fig.add_trace(hist1, row=1, col=1)
+# fig.add_trace(hist2, row=2,col=2)
+fig.show()
+#plt.show()
 
-                # Add a new scatter trace for outliers with 'x' shape markers
-                scatter_outliers = px.scatter(omc_data[mask], x='TIME', y='OMC').update_traces(
-                    marker=dict(symbol='x', color='orange'),
-                    line=dict(width=0.7))
+'''
 
-                fig.add_trace(scatter_outliers.data[0], row=(i+1), col=1)
+import os
+import numpy as np
+import pandas as pd
+from plotly.subplots import make_subplots
+import plotly.graph_objects as go
+from astropy.io import fits
+import plotly.figure_factory as ff
+from scipy.stats import gaussian_kde
 
-                # fig.update_layout(xaxis_title=f"TIME (DAYS)", 
-                #                 yaxis_title="O-C (MINUTES)",
-                #                 coloraxis_colorbar=dict(title='Out Probability'))
-                
-                # Update x-axis and y-axis labels for each subplot
-                fig.update_xaxes(title_text="TIME (DAYS)", row=i+1, col=1)
-                fig.update_yaxes(title_text="O-C (MINUTES)", row=i+1, col=1)
-                fig.update_coloraxes(colorbar_title_text='Out Probability', colorbar_len=0.2, row=i+1, col=1)
+PROJECT_DIR = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
 
-            else:
-                mask_arr = np.array(mask)
-                omc = px.scatter(omc_data[~mask_arr], x="TIME",y="OMC")
-                # Add a line plot for OMC_MODEL
-                line_trace = px.line(omc_model[~mask_arr], x="TIME", y="OMC_MODEL").data[0]
-                line_trace.line.color = 'red'  # Set the line color to red
-                fig.add_trace(omc, row=(i+1), col=1)
-                fig.add_trace(line_trace, row=(i+1), col=1)
-                # Update x-axis label with units
-                # fig.update_layout(xaxis_title=f"TIME (DAYS)", 
-                #                 yaxis_title="O-C (MINUTES)",
-                #                 coloraxis_colorbar=dict(title='Out Probability'))
-                # Update x-axis and y-axis labels for each subplot
+file = os.path.join(PROJECT_DIR, '2023-05-19_singles\\S00333\\S00333-results.fits')
 
-                fig.update_xaxes(title_text="TIME (DAYS)", row=i+1, col=1)
-                fig.update_yaxes(title_text="O-C (MINUTES)", row=i+1, col=1)
-                fig.update_coloraxes(colorbar_title_text='Out Probability', colorbar_len=0.2, row=i+1, col=1)
-    fig.show()
+def load_posteriors(f):
+    with fits.open(f) as hduL:
+        data = hduL['SAMPLES'].data
+        keys = data.names
+        _posteriors = []
+        for k in keys:
+            _posteriors.append(data[k])
+        return pd.DataFrame(np.array(_posteriors).T, columns=keys)
 
-            #graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
-            #return jsonify(graphJSON)
-        # else: 
-        #     error_message = f'No data found for {koi_id}'
-        #     return jsonify(error_message=error_message)
-        
+data = load_posteriors(file)
+data = load_posteriors(file)
 
-### IS THERE A BETTER WAY TO TELL HOW MANY PLANETS THERE ARE
-def generate_plot_folded_light_curve(koi_id):
-    star_id = koi_id.replace("K","S")
-    file_name = star_id + '_*_quick.ttvs'
-    file_paths = glob.glob(os.path.join(data_directory,star_id, file_name))
-    ### number of planets from number of ttv files
-    npl = len(file_paths)
-    fig = make_subplots(rows=npl, cols=1,
-                        subplot_titles=[f"File 0{i}" for i in range(len(file_paths))])
-    
-    for i, file_path in enumerate(file_paths):
-        fold_data = data_load.folded_data(koi_id,file_path)
+selected_columns = ['C0_0','C1_0','ROR_0','IMPACT_0','DUR14_0']
 
-        if fold_data is not None:
-            fold = px.scatter(fold_data, x="TIME",y="FLUX").data[0]
-            fig.add_trace(fold, row=i+1, col=1)
-            # Update x-axis label with units
-            # Update x-axis and y-axis labels for each subplot
-            fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
-            fig.update_yaxes(title_text="FLUX", row=i+1, col=1)
-    fig.show()
-        #     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
-        #     return jsonify(graphJSON)
-        # else:
-        #     error_message = f'No data found for {koi_id}'
-        #     return jsonify(error_message=error_message)
+data = data[selected_columns]
 
+labels = data.columns.tolist()
 
+fig = make_subplots(rows=len(selected_columns), cols=len(selected_columns))
 
-if __name__ == '__main__':
-    def read_fits_file(file_path):
-        with fits.open(file_path) as hdul:
-            # Print general information about the FITS file
-            print("Number of HDUs (extensions):", len(hdul))
+for i in range(len(selected_columns)):
+    for j in range(i, len(selected_columns)):
+        # x = data[selected_columns[i]]
+        # y = data[selected_columns[j]]
+        x = data[selected_columns[i]][::5]
+        y = data[selected_columns[j]][::5]
 
-            # Print information about each extension
-            for i, hdu in enumerate(hdul):
-                print(f"\nHDU {i + 1} (Extension {i}):")
-                print("Header:")
-                print(repr(hdu.header))
-                print("Data:")
-                print(hdu.data)
+        if i != j:
+            # x = data[selected_columns[i]][::30]
+            # y = data[selected_columns[j]][::30]
+            fig.add_trace(go.Scatter(x=x, y=y, mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)
+            fig.add_trace(go.Histogram2dContour(x=x, y=y, colorscale='Blues', reversescale=False, showscale=False, ncontours=4, contours=dict(coloring='fill'), line=dict(width=1)), row=j + 1, col=i + 1)
+        else:
+            kde = gaussian_kde(x)
+            x_vals = np.linspace(min(x), max(x), 1000)
+            y_vals = kde(x_vals)
+            fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', line=dict(color='blue'), name=labels[i]), row=j + 1, col=i + 1)
 
-    # Provide the path to your FITS file
-    fits_file_path = "C://Users//Paige//Projects//data//alderaan_results//2023-05-15_doubles//S00301//S00301_lc_detrended.fits"
+        if (i == 0) and (i != j):
+            fig.update_yaxes(title_text=labels[j], row=j + 1, col=i + 1)
+        if j == len(selected_columns) - 1:
+            fig.update_xaxes(title_text=labels[i], row=j + 1, col=i + 1)
 
-    # Call the function to read and display information about the FITS file
-    #read_fits_file(fits_file_path)
-    with fits.open(fits_file_path) as fits_file:
-        lc_flux = np.array(fits_file[2].data, dtype=float)
-        lc_flux_err = np.array(fits_file[3].data, dtype=float)
-    print(len(lc_flux))
-    print(len(lc_flux_err))
-    print(lc_flux_err)
+        fig.update_xaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1)
+        fig.update_yaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1)
+
+fig.show()
+
+'''
+Nvar = 5  # Set the number of variables to 5
+
+# Slice the DataFrame to include only the first 5 columns
+data = data.iloc[:, :Nvar]
+# Subsample the data to every 100th data point
+#data = data.iloc[::30, :]
+labels = data.columns.tolist()
+
+fig = make_subplots(rows=Nvar, cols=Nvar)
+
+for i in range(1, Nvar + 1):
+    for j in range(i, Nvar + 1):
+        x = data.iloc[:, i - 1]
+        y = data.iloc[:, j - 1]
+
+        # plot the data
+        if i != j:
+            x = data.iloc[::30, i-1]
+            y=data.iloc[::30, j-1]
+            fig.add_trace(go.Scatter(x=x, y=y, mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j, col=i)
+            fig.add_trace(go.Histogram2dContour(x=x,y=y,colorscale='Blues',reversescale=False,showscale=False,ncontours=8, contours=dict(coloring='fill'),line=dict(width=1)),row=j,col=i)
+            
+            
+
+        else:
+            # here's where you put the histogram/kde
+            #fig.add_trace(go.Histogram(x=x), row=j, col=i)
+            kde = gaussian_kde(x)
+            x_vals = np.linspace(min(x), max(x), 1000)
+            y_vals = kde(x_vals)
+            fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', line=dict(color='blue'),name=labels[i-1]), row=j, col=i)
+
+        # add axes labels
+        if (i == 1) and (i != j):
+            fig.update_yaxes(title_text=labels[j - 1], row=j, col=i)
+        if j == Nvar:
+            fig.update_xaxes(title_text=labels[i - 1], row=j, col=i)
+        # Add border to each subplot
+        fig.update_xaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j, col=i)
+        fig.update_yaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j, col=i)
+
+# Set the plot background color to transparent
+#fig.update_layout(plot_bgcolor='rgba(0,0,0,0)')
+fig.show() 
+'''
+
+'''
+#scatter = go.Scatter(x=x, y=y, mode='markers',marker=dict(size=1))
+            #fig.add_trace(scatter, row=j, col=i)
+            #fig.add_trace(go.Scatter(x=x, y=y, mode='markers',marker=dict(size=1)), row=j, col=i)
+
+            # Add density contour
+            #hist_data = np.histogram2d(x, y, bins=6, density=True)
+            #fig.add_trace(go.Contour(z=hist_data[0], x=hist_data[1][:-1], y=hist_data[2][:-1], contours_coloring='lines', showscale=False), row=j, col=i)
+            # Calculate density using Gaussian KDE
+            kde = gaussian_kde(np.vstack([x, y]))
+            xi, yi = np.mgrid[x.min():x.max():50j, y.min():y.max():50j]
+            zi = kde(np.vstack([xi.flatten(), yi.flatten()]))
+
+            # Transpose zi for correct orientation of contours
+            zi = zi.reshape(xi.shape).T
+
+            # Plot contours
+            contour = go.Contour(z=zi, x=xi[:, 0], y=yi[0, :], contours_coloring='lines', line_width=1, ncontours=8)
+            fig.add_trace(contour, row=j, col=i)
+            #fig.add_trace(scatter, row=j, col=i)
+            # Select scatter points outside the contour lines
+            threshold = np.percentile(zi, 90)  # Adjust the percentile threshold as needed
+            x_outside = []
+            y_outside = []
+
+            for m in range(len(xi)):
+                for n in range(len(yi)):
+                    if zi[m, n] < threshold:
+                        x_outside.append(xi[m, n])
+                        y_outside.append(yi[m, n])
+
+            # Plot scatter points outside the contour lines
+            fig.add_trace(go.Scatter(x=x_outside, y=y_outside, mode='markers', marker=dict(size=1)), row=j, col=i)
+'''

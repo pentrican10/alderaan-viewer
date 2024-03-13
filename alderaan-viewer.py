@@ -361,8 +361,6 @@ def generate_plot_folded_light_curve(koi_id):
     return jsonify(graphJSON)
     
 
-
-
 @app.route('/generate_plot_OMC/<koi_id>')
 def generate_plot_OMC(koi_id):
     star_id = koi_id.replace("K","S")
@@ -434,9 +432,7 @@ def generate_plot_corner(koi_id,selected_columns):
     file_path = os.path.join(data_directory, star_id, file)
 
     if os.path.isfile(file_path):
-        data = data_load.load_posteriors(file_path)
-        
-        #selected_columns = ['C0_0', 'C1_0','IMPACT_0']
+        data = data_load.load_posteriors(file_path,0,koi_id)
 
         data = data[selected_columns]
 
@@ -446,12 +442,14 @@ def generate_plot_corner(koi_id,selected_columns):
 
         for i in range(len(selected_columns)):
             for j in range(i, len(selected_columns)):
-                x = data[selected_columns[i]]
-                y = data[selected_columns[j]]
+                #x = data[selected_columns[i]]
+                #y = data[selected_columns[j]]
+                x = data[selected_columns[i]][::30]
+                y = data[selected_columns[j]][::30]
 
                 if i != j:
-                    x = data[selected_columns[i]][::30]
-                    y = data[selected_columns[j]][::30]
+                    #x = data[selected_columns[i]][::30]
+                    #y = data[selected_columns[j]][::30]
                     fig.add_trace(go.Scatter(x=x, y=y, mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)
                     fig.add_trace(go.Histogram2dContour(x=x, y=y, colorscale='Blues', reversescale=False, showscale=False, ncontours=8, contours=dict(coloring='fill'), line=dict(width=1)), row=j + 1, col=i + 1)
                 else:

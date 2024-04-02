@@ -108,6 +108,9 @@ def get_ttv_file(koi_id, file_path):
     
 
 def load_posteriors(f,n,koi_id):
+    star_id = koi_id.replace("K","S")
+    file_name = star_id + f'_0{n}_quick.ttvs'
+    ttv_file = os.path.join(data_directory, star_id, file_name)
     with fits.open(f) as hduL:
         data = hduL['SAMPLES'].data
         C0 = data[f'C0_{n}']
@@ -122,10 +125,44 @@ def load_posteriors(f,n,koi_id):
         LD_U1 = 2*np.sqrt(LD_Q1)*LD_Q2
         LD_U2 = np.sqrt(LD_Q1)*(1-2*LD_Q2)
 
-        data_return = np.vstack([C0, C1, ROR, IMPACT, DUR14, LD_Q1, LD_Q2, LD_U1, LD_U2]).T
-        labels = f'C0_{n} C1_{n} ROR_{n} IMPACT_{n} DUR14_{n} LD_Q1 LD_Q2 LD_U1 LD_U2'.split()
+        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id,ttv_file)
+        Leg0 = _legendre(koi_id,n,0)
+        Leg1 = _legendre(koi_id,n,1)
+        model = np.array(model, dtype='float64')
+        index = np.array(index, dtype='float64')
+        
+        ephem = model + np.outer(C0,Leg0) + np.outer(C1, Leg1)
+        T0, P = poly.polyfit(index.flatten(),ephem.T,1)
+
+        data_return = np.vstack([C0, C1, ROR, IMPACT, DUR14, T0, P, LD_Q1, LD_Q2, LD_U1, LD_U2]).T
+        labels = f'C0_{n} C1_{n} ROR_{n} IMPACT_{n} DUR14_{n} T0 P LD_Q1 LD_Q2 LD_U1 LD_U2'.split()
         df = pd.DataFrame(data_return, columns=labels)
         return df
+
+def _legendre(koi_id, n, k):
+        star_id = koi_id.replace("K","S")
+        ttv_file_name = star_id + f'_0{n}_quick.ttvs'
+        ttv_file = os.path.join(data_directory, star_id, ttv_file_name)
+        lc_file = star_id + '_lc_filtered.fits'
+        sc_file = star_id + '_sc_filtered.fits'
+        lc_path = os.path.join(data_directory, star_id, lc_file)
+        sc_path = os.path.join(data_directory, star_id, sc_file)
+        index, ttime, model, out_prob, out_flag = get_ttv_file(star_id,ttv_file)
+        data_lc = read_data_from_fits(lc_path)
+        data_sc = read_data_from_fits(sc_path)
+        model= np.array(model, dtype='float64')
+        t = model
+        #t = t.astype(float)
+        if data_lc.TIME.min()< data_sc.TIME.min() and data_lc.TIME.max()> data_sc.TIME.max():
+            x = 2 * (t-data_lc.TIME.min()) / (data_lc.TIME.max() - data_lc.TIME.min()) - 1
+        
+        if k==0:
+            return np.ones_like(x)
+        if k==1:
+            return x
+        else:
+            return ValueError("only configured for 0th and 1st order Legendre polynomials")
+
 
 '''
 def load_posteriors(f,koi_id):

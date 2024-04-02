@@ -119,6 +119,16 @@
             <input type="checkbox" id="LD_U2" onchange="columns()" /> 
             <label for="LD_U2">LD_U2</label>
         </div>
+        <br>
+        <div id="defaultParam" style="display:none;">
+            <label for="selectCornerParams">Quick Params:</label>
+            <select id="selectCornerParams" onchange="updateParams()">
+                <option value="default">Default</option>
+                <option value="physical7">P,T0,ROR,IMPACT,DUR14,U1,U2</option>
+                <option value="physical5">P,T0,ROR,IMPACT,DUR14</option>
+                <option value="physical3">ROR,IMPACT,DUR14</option>
+            </select>
+        </div>
 
         <div id="CornerPlot" data-koi-id="{{ koi_id }}" style="display:none;">
             <!-- folded light curve will display here -->
@@ -410,21 +420,66 @@
         }
 
 
+        function updateParams() {
+            var selectedOption = document.getElementById("selectCornerParams").value;
+
+            // Reset all checkboxes to unchecked
+            var checkboxes = document.querySelectorAll("#cornerVarCheckbox input[type=checkbox]");
+            checkboxes.forEach(function(checkbox) {
+                checkbox.checked = false;
+            });
+
+            // Check checkboxes based on selected option
+            if (selectedOption === "default") {
+                document.getElementById("C0_0").checked = true;
+                document.getElementById("C1_0").checked = true;
+                document.getElementById("ROR_0").checked = true;
+                document.getElementById("IMPACT_0").checked = true;
+                document.getElementById("DUR14_0").checked = true;
+                document.getElementById("LD_U1").checked = true;
+                document.getElementById("LD_U2").checked = true;
+            } else if (selectedOption === "physical7") {
+                document.getElementById("P").checked = true;
+                document.getElementById("T0").checked = true;
+                document.getElementById("ROR_0").checked = true;
+                document.getElementById("IMPACT_0").checked = true;
+                document.getElementById("DUR14_0").checked = true;
+                document.getElementById("LD_U1").checked = true;
+                document.getElementById("LD_U2").checked = true;
+            } else if (selectedOption === "physical5") {
+                document.getElementById("P").checked = true;
+                document.getElementById("T0").checked = true;
+                document.getElementById("ROR_0").checked = true;
+                document.getElementById("IMPACT_0").checked = true;
+                document.getElementById("DUR14_0").checked = true;
+            } else if (selectedOption === "physical3") {
+                document.getElementById("ROR_0").checked = true;
+                document.getElementById("IMPACT_0").checked = true;
+                document.getElementById("DUR14_0").checked = true;
+            }
+
+            // Call columns() function if needed
+            columns();
+        }
+
         function togglePlotVisibilityCorner() {
             const plotContainer = document.getElementById("CornerPlot");
             const plotCheckbox = document.getElementById("CornerCheckbox");
             const plotTitle = document.getElementById("CornerTitle");
             const cornerVar = document.getElementById("cornerVarCheckbox");
-            
+            const defaultParam = document.getElementById("defaultParam");
+
             if (plotCheckbox.checked) {
                 plotTitle.style.display = "block";
                 plotContainer.style.display = "block";  // Show the plot
                 cornerVar.style.display="block";
+                defaultParam.style.display="block";
                 generatePlotCorner(selectedKoiId,selectedColumns);
             } else {
                 plotTitle.style.display = "none";
                 plotContainer.style.display = "none";   // Hide the plot
                 cornerVar.style.display = "none";
+                defaultParam.style.display = "none";
             }
 
         }

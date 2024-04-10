@@ -276,7 +276,17 @@ def planet_options(koi_id):
         options.append(option)
     return jsonify(options)
 
-
+@app.route('/get_transit_file_options_corner/<koi_id>')
+def planet_options_corner(koi_id):
+    star_id = koi_id.replace("K","S")
+    file_name = star_id + '_*_quick.ttvs'
+    file_paths = glob.glob(os.path.join(data_directory,star_id, file_name))
+    options = []
+    for i in range(len(file_paths)):
+        option_value =  f'{i}'
+        option = {'number': f'{i:02d}', 'value': option_value}
+        options.append(option)
+    return jsonify(options)
 
 @app.route('/generate_plot_folded_light_curve/<koi_id>')
 def generate_plot_folded_light_curve(koi_id):
@@ -424,15 +434,15 @@ def generate_plot_OMC(koi_id):
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
     return jsonify(graphJSON)
         
-@app.route('/generate_plot_corner/<koi_id>/<selected_columns>')
-def generate_plot_corner(koi_id,selected_columns):
+@app.route('/generate_plot_corner/<koi_id>/<selected_columns>/<planet_num>')
+def generate_plot_corner(koi_id,selected_columns, planet_num):
     selected_columns = selected_columns.split(',')
     star_id = koi_id.replace("K","S")
     file =star_id + '-results.fits'
     file_path = os.path.join(data_directory, star_id, file)
 
     if os.path.isfile(file_path):
-        data = data_load.load_posteriors(file_path,0,koi_id)
+        data = data_load.load_posteriors(file_path,planet_num,koi_id)
         LN_WT = data['LN_WT'][::5].values
         weight = np.exp(LN_WT- LN_WT.max())
 

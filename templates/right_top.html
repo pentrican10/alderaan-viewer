@@ -23,7 +23,7 @@
         <label for="singleTransitCheckbox">Single Transit</label>
 
         <input type="checkbox" id="OMCCheckbox" onchange="togglePlotVisibilityOMC()"/>
-        <label for="OMCCheckbox">O-C</label>
+        <label for="OMCCheckbox">TTV</label>
 
         <input type="checkbox" id="CornerCheckbox" onchange="togglePlotVisibilityCorner()"/>
         <label for="CornerCheckbox">Corner</label>
@@ -122,11 +122,14 @@
         </div>
         <br>
 
+        
         <div id="planetNum" style="display:none;">
-            <label for="selectPlanetNumber">Select planet:</label>
-            <select id="selectPlanetNumber" onchange="updatePlanetNumber()">
-                
-            </select>
+            <div>
+                <label for="selectPlanetNumber">Select Planet:</label>
+                <select id="selectPlanetNumber" onchange="updateCorner()">
+                    <!-- planet options will display here -->
+                </select>
+            </div>
         </div>
 
         <div id="defaultParam" style="display:none;">
@@ -287,7 +290,7 @@
                         select.appendChild(opt);
                     });
                     // Trigger plot update when options are updated
-                    updatePlot();
+                    //updatePlot();
                 })
                 .catch(error => console.error('Error fetching transit file options:', error));
         }
@@ -387,12 +390,13 @@
         }
 
         // corner plot
-        let selectedColumns = ['C0_0', 'C1_0','ROR_0','IMPACT_0','DUR14_0']; // Initial selection
+        let planetNumCorner = 0
+        let selectedColumns = [`C0_${planetNumCorner}`, `C1_${planetNumCorner}`,`ROR_${planetNumCorner}`,`IMPACT_${planetNumCorner}`,`DUR14_${planetNumCorner}`]; // Initial selection
 
-        function generatePlotCorner(koiId,selectedColumns) {
+        function generatePlotCorner(koiId,selectedColumns,planetNumCorner) {
             // Fetch the Plotly figure data from the server
             const encodedColumns = encodeURIComponent(selectedColumns.join(','));
-            fetch(`/generate_plot_corner/${koiId}/${encodedColumns}`)
+            fetch(`/generate_plot_corner/${koiId}/${encodedColumns}/${planetNumCorner}`)
                 .then(response => response.json())
                 .then(data => {
                     console.log("Received data:", data); // Log the received data
@@ -426,11 +430,11 @@
             });
             
             // Regenerate the plot with updated selected columns
-            generatePlotCorner(selectedKoiId, selectedColumns);
+            generatePlotCorner(selectedKoiId, selectedColumns, planetNumCorner);
         }
 
-        function updatePlanetSelectOptions(koi_id) {
-            fetch(`/get_transit_file_options/${koi_id}`)
+        function updatePlanetOptionsCorner(koi_id) {
+            fetch(`/get_transit_file_options_corner/${koi_id}`)
                 .then(response => response.json())
                 .then(options => {
                     const select = document.getElementById("selectPlanetNumber");
@@ -441,24 +445,11 @@
                         opt.innerHTML = option.number;
                         select.appendChild(opt);
                     });
-                    updatePlanetNumber();
+                    //updatePlanetNumber();
                 })
                 .catch(error => console.error('Error fetching transit file options:', error));
         }
 
-        function updatePlanetNumber() {
-            var planetNumber = document.getElementById("selectPlanetNumber").value;
-
-            // Loop through checkbox inputs and update their IDs
-            var checkboxes = document.querySelectorAll("#cornerVarCheckbox input[type=checkbox]");
-            var extractedNumber = planetNumber.match(/__(\d{2})/)[1];
-            checkboxes.forEach(function(checkbox) {
-                checkbox.id = checkbox.id.replace(/_\d+$/, "_" + extractedNumber);
-            });
-
-            // Call columns() function if needed
-            columns();
-        }
 
         function updateParams() {
             var selectedOption = document.getElementById("selectCornerParams").value;
@@ -471,36 +462,55 @@
 
             // Check checkboxes based on selected option
             if (selectedOption === "default") {
-                document.getElementById("C0_0").checked = true;
-                document.getElementById("C1_0").checked = true;
-                document.getElementById("ROR_0").checked = true;
-                document.getElementById("IMPACT_0").checked = true;
-                document.getElementById("DUR14_0").checked = true;
+                document.getElementById(`C0_${planetNumCorner}`).checked = true;
+                document.getElementById(`C1_${planetNumCorner}`).checked = true;
+                document.getElementById(`ROR_${planetNumCorner}`).checked = true;
+                document.getElementById(`IMPACT_${planetNumCorner}`).checked = true;
+                document.getElementById(`DUR14_${planetNumCorner}`).checked = true;
                 document.getElementById("LD_U1").checked = true;
                 document.getElementById("LD_U2").checked = true;
             } else if (selectedOption === "physical7") {
                 document.getElementById("P").checked = true;
                 document.getElementById("T0").checked = true;
-                document.getElementById("ROR_0").checked = true;
-                document.getElementById("IMPACT_0").checked = true;
-                document.getElementById("DUR14_0").checked = true;
+                document.getElementById(`ROR_${planetNumCorner}`).checked = true;
+                document.getElementById(`IMPACT_${planetNumCorner}`).checked = true;
+                document.getElementById(`DUR14_${planetNumCorner}`).checked = true;
                 document.getElementById("LD_U1").checked = true;
                 document.getElementById("LD_U2").checked = true;
             } else if (selectedOption === "physical5") {
                 document.getElementById("P").checked = true;
                 document.getElementById("T0").checked = true;
-                document.getElementById("ROR_0").checked = true;
-                document.getElementById("IMPACT_0").checked = true;
-                document.getElementById("DUR14_0").checked = true;
+                document.getElementById(`ROR_${planetNumCorner}`).checked = true;
+                document.getElementById(`IMPACT_${planetNumCorner}`).checked = true;
+                document.getElementById(`DUR14_${planetNumCorner}`).checked = true;
             } else if (selectedOption === "physical3") {
-                document.getElementById("ROR_0").checked = true;
-                document.getElementById("IMPACT_0").checked = true;
-                document.getElementById("DUR14_0").checked = true;
+                document.getElementById(`ROR_${planetNumCorner}`).checked = true;
+                document.getElementById(`IMPACT_${planetNumCorner}`).checked = true;
+                document.getElementById(`DUR14_${planetNumCorner}`).checked = true;
             }
 
             // Call columns() function if needed
             columns();
         }
+
+        function updateCorner() {
+            const planetSelect = document.getElementById("selectPlanetNumber");
+            planetNumCorner = parseInt(planetSelect.value);
+            console.log(planetNumCorner)
+            
+            // Loop through checkbox inputs and update their IDs
+            var checkboxes = document.querySelectorAll("#cornerVarCheckbox input[type=checkbox]");
+            //var extractedNumber = planetNumber.match(/__(\d{2})/)[1];
+            checkboxes.forEach(function(checkbox) {
+                checkbox.id = checkbox.id.replace(/_\d+$/, "_" + planetNumCorner);
+                checkbox.nextElementSibling.setAttribute("for", checkbox.id); // Update the label's 'for' attribute
+                checkbox.nextElementSibling.textContent = checkbox.id; // Update the label text
+            });
+
+            // Call columns() function if needed
+            columns();
+        }
+
 
         function togglePlotVisibilityCorner() {
             const plotContainer = document.getElementById("CornerPlot");
@@ -516,7 +526,7 @@
                 cornerVar.style.display="block";
                 defaultParam.style.display="block";
                 planetNum.style.display="block";
-                generatePlotCorner(selectedKoiId,selectedColumns);
+                generatePlotCorner(selectedKoiId,selectedColumns, planetNumCorner);
             } else {
                 plotTitle.style.display = "none";
                 plotContainer.style.display = "none";   // Hide the plot

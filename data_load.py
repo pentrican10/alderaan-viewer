@@ -120,6 +120,8 @@ def load_posteriors(f,n,koi_id):
         DUR14 = data[f'DUR14_{n}']
         LD_Q1 = data[f'LD_Q1']
         LD_Q2 = data[f'LD_Q2']
+        LN_WT = data[f'LN_WT']
+        LN_LIKE = data[f'LN_LIKE']
 
         ### calculate P, T0, U1, U2
         LD_U1 = 2*np.sqrt(LD_Q1)*LD_Q2
@@ -130,12 +132,12 @@ def load_posteriors(f,n,koi_id):
         Leg1 = _legendre(koi_id,n,1)
         model = np.array(model, dtype='float64')
         index = np.array(index, dtype='float64')
-        
+
         ephem = model + np.outer(C0,Leg0) + np.outer(C1, Leg1)
         T0, P = poly.polyfit(index.flatten(),ephem.T,1)
 
-        data_return = np.vstack([C0, C1, ROR, IMPACT, DUR14, T0, P, LD_Q1, LD_Q2, LD_U1, LD_U2]).T
-        labels = f'C0_{n} C1_{n} ROR_{n} IMPACT_{n} DUR14_{n} T0 P LD_Q1 LD_Q2 LD_U1 LD_U2'.split()
+        data_return = np.vstack([C0, C1, ROR, IMPACT, DUR14, T0, P, LD_Q1, LD_Q2, LD_U1, LD_U2, LN_WT, LN_LIKE]).T
+        labels = f'C0_{n} C1_{n} ROR_{n} IMPACT_{n} DUR14_{n} T0 P LD_Q1 LD_Q2 LD_U1 LD_U2 LN_WT LN_LIKE'.split()
         df = pd.DataFrame(data_return, columns=labels)
         return df
 

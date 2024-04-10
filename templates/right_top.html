@@ -90,6 +90,12 @@
             <input type="checkbox" id="C1_0" onchange="columns()" checked/> 
             <label for="C1_0">C1_0</label>
 
+            <input type="checkbox" id="P" onchange="columns()" /> 
+            <label for="P">P</label>
+
+            <input type="checkbox" id="T0" onchange="columns()" /> 
+            <label for="T0">T0</label>
+
             <input type="checkbox" id="ROR_0" onchange="columns()" checked/> 
             <label for="ROR_0">ROR_0</label>
 
@@ -99,11 +105,6 @@
             <input type="checkbox" id="DUR14_0" onchange="columns()" checked/> 
             <label for="DUR14_0">DUR14_0</label>
 
-            <input type="checkbox" id="P" onchange="columns()" /> 
-            <label for="P">P</label>
-
-            <input type="checkbox" id="T0" onchange="columns()" /> 
-            <label for="T0">T0</label>
 
             <br>
 
@@ -120,7 +121,16 @@
             <label for="LD_U2">LD_U2</label>
         </div>
         <br>
+
+        <div id="planetNum" style="display:none;">
+            <label for="selectPlanetNumber">Select planet:</label>
+            <select id="selectPlanetNumber" onchange="updatePlanetNumber()">
+                
+            </select>
+        </div>
+
         <div id="defaultParam" style="display:none;">
+
             <label for="selectCornerParams">Quick Params:</label>
             <select id="selectCornerParams" onchange="updateParams()">
                 <option value="default">Default</option>
@@ -419,6 +429,36 @@
             generatePlotCorner(selectedKoiId, selectedColumns);
         }
 
+        function updatePlanetSelectOptions(koi_id) {
+            fetch(`/get_transit_file_options/${koi_id}`)
+                .then(response => response.json())
+                .then(options => {
+                    const select = document.getElementById("selectPlanetNumber");
+                    select.innerHTML = ""; // Clear previous options
+                    options.forEach(option => {
+                        const opt = document.createElement("option");
+                        opt.value = option.value;
+                        opt.innerHTML = option.number;
+                        select.appendChild(opt);
+                    });
+                    updatePlanetNumber();
+                })
+                .catch(error => console.error('Error fetching transit file options:', error));
+        }
+
+        function updatePlanetNumber() {
+            var planetNumber = document.getElementById("selectPlanetNumber").value;
+
+            // Loop through checkbox inputs and update their IDs
+            var checkboxes = document.querySelectorAll("#cornerVarCheckbox input[type=checkbox]");
+            var extractedNumber = planetNumber.match(/__(\d{2})/)[1];
+            checkboxes.forEach(function(checkbox) {
+                checkbox.id = checkbox.id.replace(/_\d+$/, "_" + extractedNumber);
+            });
+
+            // Call columns() function if needed
+            columns();
+        }
 
         function updateParams() {
             var selectedOption = document.getElementById("selectCornerParams").value;
@@ -468,18 +508,21 @@
             const plotTitle = document.getElementById("CornerTitle");
             const cornerVar = document.getElementById("cornerVarCheckbox");
             const defaultParam = document.getElementById("defaultParam");
+            const planetNum = document.getElementById("planetNum");
 
             if (plotCheckbox.checked) {
                 plotTitle.style.display = "block";
                 plotContainer.style.display = "block";  // Show the plot
                 cornerVar.style.display="block";
                 defaultParam.style.display="block";
+                planetNum.style.display="block";
                 generatePlotCorner(selectedKoiId,selectedColumns);
             } else {
                 plotTitle.style.display = "none";
                 plotContainer.style.display = "none";   // Hide the plot
                 cornerVar.style.display = "none";
                 defaultParam.style.display = "none";
+                planetNum.style.display = "none";
             }
 
         }

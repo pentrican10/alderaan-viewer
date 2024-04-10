@@ -276,7 +276,17 @@ def planet_options(koi_id):
         options.append(option)
     return jsonify(options)
 
-
+@app.route('/get_transit_file_options_corner/<koi_id>')
+def planet_options_corner(koi_id):
+    star_id = koi_id.replace("K","S")
+    file_name = star_id + '_*_quick.ttvs'
+    file_paths = glob.glob(os.path.join(data_directory,star_id, file_name))
+    options = []
+    for i in range(len(file_paths)):
+        option_value =  f'{i}'
+        option = {'number': f'{i:02d}', 'value': option_value}
+        options.append(option)
+    return jsonify(options)
 
 @app.route('/generate_plot_folded_light_curve/<koi_id>')
 def generate_plot_folded_light_curve(koi_id):
@@ -361,8 +371,6 @@ def generate_plot_folded_light_curve(koi_id):
     return jsonify(graphJSON)
     
 
-
-
 @app.route('/generate_plot_OMC/<koi_id>')
 def generate_plot_OMC(koi_id):
     star_id = koi_id.replace("K","S")
@@ -426,17 +434,17 @@ def generate_plot_OMC(koi_id):
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
     return jsonify(graphJSON)
         
-@app.route('/generate_plot_corner/<koi_id>/<selected_columns>')
-def generate_plot_corner(koi_id,selected_columns):
+@app.route('/generate_plot_corner/<koi_id>/<selected_columns>/<planet_num>')
+def generate_plot_corner(koi_id,selected_columns, planet_num):
     selected_columns = selected_columns.split(',')
     star_id = koi_id.replace("K","S")
     file =star_id + '-results.fits'
     file_path = os.path.join(data_directory, star_id, file)
 
     if os.path.isfile(file_path):
-        data = data_load.load_posteriors(file_path)
-        
-        #selected_columns = ['C0_0', 'C1_0','IMPACT_0']
+        data = data_load.load_posteriors(file_path,planet_num,koi_id)
+        LN_WT = data['LN_WT'][::5].values
+        weight = np.exp(LN_WT- LN_WT.max())
 
         data = data[selected_columns]
 
@@ -446,27 +454,64 @@ def generate_plot_corner(koi_id,selected_columns):
 
         for i in range(len(selected_columns)):
             for j in range(i, len(selected_columns)):
-                x = data[selected_columns[i]]
-                y = data[selected_columns[j]]
+                # x = data[selected_columns[i]]
+                # y = data[selected_columns[j]]
+                
+                x = data[selected_columns[i]][::5]
+                y = data[selected_columns[j]][::5]
+                w = weight/ np.sum(weight)
+                x = np.random.choice(x,p=w,size=len(x))
+                y = np.random.choice(y,p=w,size=len(y))
 
                 if i != j:
-                    x = data[selected_columns[i]][::30]
-                    y = data[selected_columns[j]][::30]
+                    #x = data[selected_columns[i]][::30]
+                    #y = data[selected_columns[j]][::30]
                     fig.add_trace(go.Scatter(x=x, y=y, mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)
                     fig.add_trace(go.Histogram2dContour(x=x, y=y, colorscale='Blues', reversescale=False, showscale=False, ncontours=8, contours=dict(coloring='fill'), line=dict(width=1)), row=j + 1, col=i + 1)
                 else:
-                    kde = gaussian_kde(x)
-                    x_vals = np.linspace(min(x), max(x), 1000)
+                    kde = gaussian_kde(x, weights=weight) #, weights=weights
+                    x_vals = np.linspace(min(x)*0.95, max(x)*1.05, 1000)
                     y_vals = kde(x_vals)
                     fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', line=dict(color='blue'), name=labels[i], showlegend=False), row=j + 1, col=i + 1)
 
+                ### add labels to x and y axes
                 if (i == 0) and (i != j):
                     fig.update_yaxes(title_text=labels[j], row=j + 1, col=i + 1)
                 if j == len(selected_columns) - 1:
                     fig.update_xaxes(title_text=labels[i], row=j + 1, col=i + 1)
 
+                ### only have 3 ticks and only show axis at left-most column and bottom-most row
+                if i != j:
+                    tick_values_x = np.linspace(min(x), max(x), 3)
+                    tick_values_y = np.linspace(min(y), max(y), 3)
+                    tick_format = '.2f'
+                    tick_text_x = [f"{val:{tick_format}}" for val in tick_values_x]
+                    tick_text_y = [f"{val:{tick_format}}" for val in tick_values_y]
+                    ### update which axes show
+                    if (i==0):
+                        fig.update_yaxes(tickvals=tick_values_y, ticktext=tick_text_y, row=j + 1, col=i + 1, tickangle=0)
+                    else:
+                        fig.update_yaxes(showticklabels=False, tickvals=tick_values_y, ticktext=tick_text_y, row=j + 1, col=i + 1, tickangle=0)
+                    if j == len(selected_columns) - 1:
+                        fig.update_xaxes(tickvals=tick_values_x, ticktext=tick_text_x, row=j + 1, col=i + 1, tickangle=0)
+                    else:
+                        fig.update_xaxes(showticklabels=False, tickvals=tick_values_x, ticktext=tick_text_x, row=j + 1, col=i + 1, tickangle=0)
+                else:
+                    ### histograms only have x axes
+                    tick_values_x = np.linspace(min(x_vals), max(x_vals), 3)
+                    tick_values_y = np.linspace(min(y_vals), max(y_vals), 3)
+                    tick_format = '.2f'
+                    tick_text_x = [f"{val:{tick_format}}" for val in tick_values_x]
+                    tick_text_y = [f"{val:{tick_format}}" for val in tick_values_y]
+                    # showticklabels=False,
+                    fig.update_xaxes(tickvals=tick_values_x, ticktext=tick_text_x, row=j + 1, col=i + 1, tickangle=0)
+                    fig.update_yaxes(showticklabels=False,tickvals=tick_values_y, row=j + 1, col=i + 1, tickangle=0)
+
                 fig.update_xaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1, tickangle=0)
-                fig.update_yaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1)
+                fig.update_yaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1, tickangle=0)
+
+                  
+
         fig.update_layout(height=800, width=900)
         graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
         return jsonify(graphJSON)

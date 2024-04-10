@@ -107,14 +107,156 @@ def get_ttv_file(koi_id, file_path):
         return index, ttime, model, out_prob, out_flag
     
 
-def load_posteriors(f):
+def load_posteriors(f,n,koi_id):
+    star_id = koi_id.replace("K","S")
+    file_name = star_id + f'_0{n}_quick.ttvs'
+    ttv_file = os.path.join(data_directory, star_id, file_name)
+    with fits.open(f) as hduL:
+        data = hduL['SAMPLES'].data
+        C0 = data[f'C0_{n}']
+        C1 = data[f'C1_{n}']
+        ROR = data[f'ROR_{n}']
+        IMPACT = data[f'IMPACT_{n}']
+        DUR14 = data[f'DUR14_{n}']
+        LD_Q1 = data[f'LD_Q1']
+        LD_Q2 = data[f'LD_Q2']
+        LN_WT = data[f'LN_WT']
+        LN_LIKE = data[f'LN_LIKE']
+
+        ### calculate P, T0, U1, U2
+        LD_U1 = 2*np.sqrt(LD_Q1)*LD_Q2
+        LD_U2 = np.sqrt(LD_Q1)*(1-2*LD_Q2)
+
+        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id,ttv_file)
+        Leg0 = _legendre(koi_id,n,0)
+        Leg1 = _legendre(koi_id,n,1)
+        model = np.array(model, dtype='float64')
+        index = np.array(index, dtype='float64')
+
+        ephem = model + np.outer(C0,Leg0) + np.outer(C1, Leg1)
+        T0, P = poly.polyfit(index.flatten(),ephem.T,1)
+
+        data_return = np.vstack([C0, C1, ROR, IMPACT, DUR14, T0, P, LD_Q1, LD_Q2, LD_U1, LD_U2, LN_WT, LN_LIKE]).T
+        labels = f'C0_{n} C1_{n} ROR_{n} IMPACT_{n} DUR14_{n} T0 P LD_Q1 LD_Q2 LD_U1 LD_U2 LN_WT LN_LIKE'.split()
+        df = pd.DataFrame(data_return, columns=labels)
+        return df
+
+def _legendre(koi_id, n, k):
+        star_id = koi_id.replace("K","S")
+        ttv_file_name = star_id + f'_0{n}_quick.ttvs'
+        ttv_file = os.path.join(data_directory, star_id, ttv_file_name)
+        lc_file = star_id + '_lc_filtered.fits'
+        sc_file = star_id + '_sc_filtered.fits'
+        lc_path = os.path.join(data_directory, star_id, lc_file)
+        sc_path = os.path.join(data_directory, star_id, sc_file)
+        index, ttime, model, out_prob, out_flag = get_ttv_file(star_id,ttv_file)
+        data_lc = read_data_from_fits(lc_path)
+        data_sc = read_data_from_fits(sc_path)
+        model= np.array(model, dtype='float64')
+        t = model
+        #t = t.astype(float)
+        if data_lc.TIME.min()< data_sc.TIME.min() and data_lc.TIME.max()> data_sc.TIME.max():
+            x = 2 * (t-data_lc.TIME.min()) / (data_lc.TIME.max() - data_lc.TIME.min()) - 1
+        
+        if k==0:
+            return np.ones_like(x)
+        if k==1:
+            return x
+        else:
+            return ValueError("only configured for 0th and 1st order Legendre polynomials")
+
+
+'''
+def load_posteriors(f,koi_id):
+    with fits.open(f) as hduL:
+        data = hduL['SAMPLES'].data
+        keys = data.names
+        
+        _posteriors = []
+        for k in keys:
+            _posteriors.append(data[k])
+        LD_U1 = data.ROR_0
+        # Add calculated values as new columns
+        keys += ['LD_U1']
+        _posteriors.extend([LD_U1])
+
+
+        return pd.DataFrame(np.array(_posteriors).T, columns=keys)
+
+'''
+
+'''
+def load_posteriors(f,koi_id):
     with fits.open(f) as hduL:
         data = hduL['SAMPLES'].data
         keys = data.names
         _posteriors = []
         for k in keys:
             _posteriors.append(data[k])
+
+        # Calculate T0, P, u1, and u2
+        index, ttime, model, out_prob, out_flag=get_ttv_file(koi_id,file_path)
+        n_samples = len(data)
+        n_transits = len(keys) // 2  # Assuming each transit has its epoch and period
+        T0 = np.zeros(n_samples)
+        P = np.zeros(n_samples)
+        u1 = np.zeros(n_samples)
+        u2 = np.zeros(n_samples)
+        def _legendre(n,k):
+            star_id = koi_id.replace("K","S")
+            ttv_path = 
+            fits_path = 
+            index, ttime, model, out_prob, out_flag=get_ttv_file(koi_id,ttv_path)
+            t = model[n]
+            data = read_data_from_fits(fits_path)
+            x = 2*(t-data.time.min())/(data.time.max()-data.time.min()) - 1
+                
+            if k==0:
+                return np.ones_like(x)
+            if k==1:
+                return x
+            else:
+                return ValueError("only configured for 0th and 1st order Legendre polynomials")
+
+        for n in range(n_transits):
+            epoch_samples = data[f'T0_{n}']  # Assuming epoch columns are named as E0_0, E1_0, ...
+            period_samples = data[f'P_{n}']  # Assuming period columns are named as P0_0, P1_0, ...
+            q1_samples = data[f'LD_Q1']
+            q2_samples = data[f'LD_Q2']
+
+            for i in range(n_samples):
+                # least squares period and epoch
+                Leg0 = _legendre(n, 0)
+                Leg1 = _legendre(n, 1)
+                ephem = epoch_samples[i] + np.outer(period_samples[i], Leg0) + np.outer(period_samples[i], Leg1)
+                t0, p = poly.polyfit(ttime.index[n], ephem.T, 1)
+                T0[i] = t0
+                P[i] = p
+
+                # limb darkening
+                u1[i] = 2 * np.sqrt(q1_samples[i]) * q2_samples[i]
+                u2[i] = np.sqrt(q1_samples[i]) * (1 - 2 * q2_samples[i])
+
+        # Add calculated values as new columns
+        keys += ['T0', 'P', 'u1', 'u2']
+        _posteriors.extend([T0, P, u1, u2])
+
         return pd.DataFrame(np.array(_posteriors).T, columns=keys)
+
+'''
+# def _legendre(n,k):
+#     index, ttime, model, out_prob, out_flag=get_ttv_file(koi_id,ttv_path)
+#     t = model[n]
+#     data = read_data_from_fits(fits_path)
+#     x = 2*(t-data.time.min())/(data.time.max()-data.time.min()) - 1
+        
+#     if k==0:
+#         return np.ones_like(x)
+#     if k==1:
+#         return x
+#     else:
+#         return ValueError("only configured for 0th and 1st order Legendre polynomials")
+
 
 def single_transit_data(koi_id, line_number, ttv_file):
     star_id = koi_id.replace("K","S")

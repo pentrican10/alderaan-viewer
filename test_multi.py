@@ -1,49 +1,36 @@
+
 '''
-import os
-import sys
-PROJECT_DIR = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
-sys.path.append(PROJECT_DIR)
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
-from astropy.io import fits
-import plotly.express as px
-from plotly.subplots import make_subplots
+import matplotlib.pyplot as plt
+from   scipy import stats
+import seaborn as sns
 
-file = os.path.join(PROJECT_DIR, '2023-05-19_singles\\S00333\\S00333-results.fits')
-def load_posteriors(f):
-    with fits.open(f) as hduL:
-        data = hduL['SAMPLES'].data
-        keys = data.names
-        _posteriors = []
-        for k in keys:
-            _posteriors.append(data[k])
-        return pd.DataFrame(np.array(_posteriors).T, columns=keys)
-data = load_posteriors(file)
-#data
-import corner
-#_ = corner.corner(data, var_names=['C0_0', 'C1_0', 'ROR_0', 'IMPACT_0', 'DUR14_0'])
-fig = make_subplots(rows=2,cols=2)
-contour = px.density_contour(data, x="C0_0", y="C1_0")#, marginal_x="histogram", marginal_y="histogram")
-hist1 = px.histogram(data, x="C0_0")
-hist2 = px.histogram(data,x="C1_0")
+# simulate data
+N = int(1e5)
+mu = np.random.uniform(1,2,size=2)
+cov = np.eye(2) + np.random.uniform(0,1)*(1.0-np.eye(2))
 
-for trace in contour.data:
-    fig.add_trace(trace, row=2, col=1)
+x, y = stats.multivariate_normal(mu, cov).rvs(size=N).T
+df = pd.DataFrame({'x':x, 'y':y})
 
-for trace in hist1.data:
-    fig.add_trace(trace, row=1, col=1)
+# make 2D density plot
+thin = 100
 
-for trace in hist2.data:
-    fig.add_trace(trace, row=2, col=2)
+X = df.x[::thin].values
+Y = df.y[::thin].values
 
-# fig.add_trace(contour, row=2,col=1)
-# fig.add_trace(hist1, row=1, col=1)
-# fig.add_trace(hist2, row=2,col=2)
-fig.show()
-#plt.show()
+density = stats.gaussian_kde([X,Y])([df.x,df.y])
+cutoff  = 4
+low_density = density < np.percentile(density, cutoff)
 
+plt.figure()
+sns.kdeplot(df[::thin], x='x', y='y', fill=True, levels=4)
+plt.scatter(df.x[low_density], df.y[low_density], color='C0', s=3)
+plt.show()
 '''
+
+
 
 import os
 import numpy as np
@@ -58,19 +45,64 @@ PROJECT_DIR = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
 
 file = os.path.join(PROJECT_DIR, '2023-05-19_singles\\S00333\\S00333-results.fits')
 
-def load_posteriors(f):
+# def load_posteriors(f):
+#     with fits.open(f) as hduL:
+#         data = hduL['SAMPLES'].data
+#         keys = data.names
+#         _posteriors = []
+#         for k in keys:
+#             _posteriors.append(data[k])
+
+#         # LD_U1 = np.ones(len(data.C0_0))
+#         # # Add calculated values as new columns
+#         # keys.append('LD_U1')
+#         # _posteriors.append([LD_U1])
+#         return pd.DataFrame(np.array(_posteriors).T, columns=keys)
+
+
+def load_posteriors(f,n,koi_id):
+    ''' gets params for planet number n
+        f = file path
+        n = planet number
+        koi_id = koi id
+
+    '''
     with fits.open(f) as hduL:
         data = hduL['SAMPLES'].data
-        keys = data.names
-        _posteriors = []
-        for k in keys:
-            _posteriors.append(data[k])
-        return pd.DataFrame(np.array(_posteriors).T, columns=keys)
+        C0 = data[f'C0_{n}']
+        C1 = data[f'C1_{n}']
+        ROR = data[f'ROR_{n}']
+        IMPACT = data[f'IMPACT_{n}']
+        DUR14 = data[f'DUR14_{n}']
+        LD_Q1 = data[f'LD_Q1']
+        LD_Q2 = data[f'LD_Q2']
+        LN_WT = data[f'LN_WT']
+        LN_LIKE = data[f'LN_LIKE']
 
-data = load_posteriors(file)
-data = load_posteriors(file)
+        ### calculate P, T0, U1, U2
+        LD_U1 = 2*np.sqrt(LD_Q1)*LD_Q2
+        LD_U2 = np.sqrt(LD_Q1)*(1-2*LD_Q2)
 
-selected_columns = ['C0_0','C1_0','ROR_0','IMPACT_0','DUR14_0']
+        data_return = np.vstack([C0, C1, ROR, IMPACT, DUR14, LD_Q1, LD_Q2, LD_U1, LD_U2, LN_WT, LN_LIKE]).T
+        labels = f'C0_{n} C1_{n} ROR_{n} IMPACT_{n} DUR14_{n} LD_Q1 LD_Q2 LD_U1 LD_U2 LN_WT LN_LIKE'.split()
+        df = pd.DataFrame(data_return, columns=labels)
+        return df
+
+
+
+
+# with fits.open(file) as hduL:
+#         data = hduL['SAMPLES'].data
+#         keys = data.names
+#         print(data['C0_0'])
+#         #print(keys)
+#         print(data)
+
+
+data = load_posteriors(file,0,2)
+print(data['LN_WT'].mean())
+assert 1==0
+selected_columns = ['C0_0','C1_0','ROR_0','IMPACT_0','DUR14_0','LD_U1','LD_Q1']
 
 data = data[selected_columns]
 
@@ -105,6 +137,7 @@ for i in range(len(selected_columns)):
         fig.update_yaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1)
 
 fig.show()
+
 
 '''
 Nvar = 5  # Set the number of variables to 5
@@ -153,37 +186,3 @@ for i in range(1, Nvar + 1):
 fig.show() 
 '''
 
-'''
-#scatter = go.Scatter(x=x, y=y, mode='markers',marker=dict(size=1))
-            #fig.add_trace(scatter, row=j, col=i)
-            #fig.add_trace(go.Scatter(x=x, y=y, mode='markers',marker=dict(size=1)), row=j, col=i)
-
-            # Add density contour
-            #hist_data = np.histogram2d(x, y, bins=6, density=True)
-            #fig.add_trace(go.Contour(z=hist_data[0], x=hist_data[1][:-1], y=hist_data[2][:-1], contours_coloring='lines', showscale=False), row=j, col=i)
-            # Calculate density using Gaussian KDE
-            kde = gaussian_kde(np.vstack([x, y]))
-            xi, yi = np.mgrid[x.min():x.max():50j, y.min():y.max():50j]
-            zi = kde(np.vstack([xi.flatten(), yi.flatten()]))
-
-            # Transpose zi for correct orientation of contours
-            zi = zi.reshape(xi.shape).T
-
-            # Plot contours
-            contour = go.Contour(z=zi, x=xi[:, 0], y=yi[0, :], contours_coloring='lines', line_width=1, ncontours=8)
-            fig.add_trace(contour, row=j, col=i)
-            #fig.add_trace(scatter, row=j, col=i)
-            # Select scatter points outside the contour lines
-            threshold = np.percentile(zi, 90)  # Adjust the percentile threshold as needed
-            x_outside = []
-            y_outside = []
-
-            for m in range(len(xi)):
-                for n in range(len(yi)):
-                    if zi[m, n] < threshold:
-                        x_outside.append(xi[m, n])
-                        y_outside.append(yi[m, n])
-
-            # Plot scatter points outside the contour lines
-            fig.add_trace(go.Scatter(x=x_outside, y=y_outside, mode='markers', marker=dict(size=1)), row=j, col=i)
-'''

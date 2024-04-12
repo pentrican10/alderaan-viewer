@@ -85,10 +85,10 @@
         <h3>Corner Plot:</h3>
         <div id="cornerVarCheckbox" style="display:none;">
             <input type="checkbox" id="C0_0" onchange="columns()" checked/> 
-            <label for="C0_0">C0_0</label>
+            <label for="C0_0">C0</label>
 
             <input type="checkbox" id="C1_0" onchange="columns()" checked/> 
-            <label for="C1_0">C1_0</label>
+            <label for="C1_0">C1</label>
 
             <input type="checkbox" id="P" onchange="columns()" /> 
             <label for="P">P</label>
@@ -97,13 +97,13 @@
             <label for="T0">T0</label>
 
             <input type="checkbox" id="ROR_0" onchange="columns()" checked/> 
-            <label for="ROR_0">ROR_0</label>
+            <label for="ROR_0">ROR</label>
 
             <input type="checkbox" id="IMPACT_0" onchange="columns()" checked/> 
-            <label for="IMPACT_0">IMPACT_0</label>
+            <label for="IMPACT_0">IMPACT</label>
 
             <input type="checkbox" id="DUR14_0" onchange="columns()" checked/> 
-            <label for="DUR14_0">DUR14_0</label>
+            <label for="DUR14_0">DUR14</label>
 
 
             <br>
@@ -504,7 +504,7 @@
             checkboxes.forEach(function(checkbox) {
                 checkbox.id = checkbox.id.replace(/_\d+$/, "_" + planetNumCorner);
                 checkbox.nextElementSibling.setAttribute("for", checkbox.id); // Update the label's 'for' attribute
-                checkbox.nextElementSibling.textContent = checkbox.id; // Update the label text
+                //checkbox.nextElementSibling.textContent = checkbox.id; // Update the label text
             });
 
             // Call columns() function if needed

@@ -1,3 +1,55 @@
+import numpy as np
+import plotly.graph_objs as go
+from sklearn.neighbors import KernelDensity
+
+# Generate sample data
+np.random.seed(0)
+x = np.random.randn(1000)
+y = np.random.randn(1000)
+
+# Combine x and y into a single array
+data = np.vstack([x, y]).T
+
+# Perform kernel density estimation
+kde = KernelDensity(bandwidth=0.5, kernel='gaussian')
+kde.fit(data)
+
+# Generate grid points for density estimation
+x_grid, y_grid = np.meshgrid(np.linspace(min(x), max(x), 100),
+                              np.linspace(min(y), max(y), 100))
+grid_points = np.vstack([x_grid.ravel(), y_grid.ravel()]).T
+
+# Calculate density values for the grid points
+log_dens = kde.score_samples(grid_points)
+dens = np.exp(log_dens)
+
+# Calculate threshold for the top 90% percentile based on density
+threshold = np.percentile(dens, 90)
+
+# Separate data into top 90% and last 10% percentiles based on density
+x_top = grid_points[dens >= threshold, 0]
+y_top = grid_points[dens >= threshold, 1]
+
+# Sub-sample scatter points for last 10% percentile data
+sample_indices = np.random.choice(np.sum(dens < threshold), size=min(100, np.sum(dens < threshold)), replace=False)
+x_bottom = grid_points[dens < threshold][sample_indices, 0]
+y_bottom = grid_points[dens < threshold][sample_indices, 1]
+
+# Create density contour plot for top 90% percentile data
+density_contour = go.Contour(x=x_top, y=y_top, z=dens[dens >= threshold], colorscale='Viridis', showscale=False)
+
+# Add scatter points for last 10% percentile data
+scatter_points = go.Scatter(x=x_bottom, y=y_bottom, mode='markers', marker=dict(color='red', size=5), name='Last 10%')
+
+# Create layout
+layout = go.Layout(title='Density Contour Plot with Scatter for Last 10% Percentile (based on density)',
+                   xaxis=dict(title='X'),
+                   yaxis=dict(title='Y'))
+
+# Plot
+fig = go.Figure(data=[density_contour, scatter_points], layout=layout)
+fig.show()
+
 
 '''
 import numpy as np
@@ -31,7 +83,7 @@ plt.show()
 '''
 
 
-
+"""
 import os
 import numpy as np
 import pandas as pd
@@ -137,7 +189,7 @@ for i in range(len(selected_columns)):
         fig.update_yaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1)
 
 fig.show()
-
+"""
 
 '''
 Nvar = 5  # Set the number of variables to 5

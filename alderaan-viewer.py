@@ -17,7 +17,9 @@ import glob
 import plotly.graph_objects as go
 import re
 from scipy.stats import gaussian_kde
-
+from scipy import stats
+from sklearn.neighbors import KernelDensity
+from sklearn.decomposition import PCA
 
 from plotly.subplots import make_subplots
 
@@ -445,29 +447,44 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
         data = data_load.load_posteriors(file_path,planet_num,koi_id)
         LN_WT = data['LN_WT'][::5].values
         weight = np.exp(LN_WT- LN_WT.max())
+        w = weight/ np.sum(weight)
+        index = np.arange(len(LN_WT))
+        rand_index = np.random.choice(index,p=w,size=len(LN_WT))
 
         data = data[selected_columns]
 
         labels = data.columns.tolist()
 
         fig = make_subplots(rows=len(selected_columns), cols=len(selected_columns))
-
+        tick_values_y_c0 = None
+        tick_values_x_c0 = None
         for i in range(len(selected_columns)):
             for j in range(i, len(selected_columns)):
                 # x = data[selected_columns[i]]
                 # y = data[selected_columns[j]]
                 
-                x = data[selected_columns[i]][::5]
-                y = data[selected_columns[j]][::5]
-                w = weight/ np.sum(weight)
-                x = np.random.choice(x,p=w,size=len(x))
-                y = np.random.choice(y,p=w,size=len(y))
+                x1 = data[selected_columns[i]][::5].values
+                y1 = data[selected_columns[j]][::5].values
+                ### trim with random indicies 
+                x = x1[rand_index]
+                y = y1[rand_index]
+                
 
                 if i != j:
-                    #x = data[selected_columns[i]][::30]
-                    #y = data[selected_columns[j]][::30]
-                    fig.add_trace(go.Scatter(x=x, y=y, mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)
-                    fig.add_trace(go.Histogram2dContour(x=x, y=y, colorscale='Blues', reversescale=False, showscale=False, ncontours=8, contours=dict(coloring='fill'), line=dict(width=1)), row=j + 1, col=i + 1)
+                    # Calculate the density of the points
+                    xy = np.vstack([x, y])
+                    z = gaussian_kde(xy)(xy)
+                    # Select the top 90th percentile based on density
+                    threshold = np.percentile(z, 10)
+                    # Plot points below the threshold as scatter plot
+                    fig.add_trace(go.Scatter(x=x[z < threshold], y=y[z < threshold], mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)
+                    # Plot points above the threshold in the contour
+                    fig.add_trace(go.Histogram2dContour(x=x[z >= threshold], y=y[z >= threshold], colorscale='Blues', reversescale=False, showscale=False, ncontours=8, contours=dict(coloring='fill'), line=dict(width=1)), row=j + 1, col=i + 1)
+                    
+                    
+                    #fig.add_trace(go.Scatter(x=x, y=y, mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)
+                    #fig.add_trace(go.Scatter(x=x, y=y, mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)
+                    #fig.add_trace(go.Histogram2dContour(x=x, y=y, colorscale='Blues', reversescale=False, showscale=False, ncontours=8, contours=dict(coloring='fill'), line=dict(width=1)), row=j + 1, col=i + 1)
                 else:
                     kde = gaussian_kde(x, weights=weight) #, weights=weights
                     x_vals = np.linspace(min(x)*0.95, max(x)*1.05, 1000)
@@ -482,15 +499,66 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
 
                 ### only have 3 ticks and only show axis at left-most column and bottom-most row
                 if i != j:
-                    tick_values_x = np.linspace(min(x), max(x), 3)
-                    tick_values_y = np.linspace(min(y), max(y), 3)
+                    #tick_values_x = np.linspace(min(x), max(x), 3)
+                    #tick_values_y = np.linspace(min(y), max(y), 3)
                     tick_format = '.2f'
-                    tick_text_x = [f"{val:{tick_format}}" for val in tick_values_x]
-                    tick_text_y = [f"{val:{tick_format}}" for val in tick_values_y]
+                    #tick_text_x = [f"{val:{tick_format}}" for val in tick_values_x]
+                    #tick_text_y = [f"{val:{tick_format}}" for val in tick_values_y]
                     ### update which axes show
+                    plot_range=None
                     if (i==0):
+                        if labels[j]==f'IMPACT_{planet_num}':
+                            tick_values_y = np.linspace(0, 1.2, 3)
+                            plot_range = [0,1.2]
+                        elif labels[j]==f'LD_Q1':
+                            tick_values_y = np.linspace(0, 1, 3)
+                            plot_range = [0,1]
+                        elif labels[j]==f'LD_Q2':
+                            tick_values_y = np.linspace(0, 1, 3)
+                            plot_range = [0,1]
+                        elif labels[j]==f'LD_U1':
+                            tick_values_y = np.linspace(0, 2, 3)
+                            plot_range = [0,2]
+                        elif labels[j]==f'LD_U2':
+                            tick_values_y = np.linspace(-1, 1, 3)
+                            plot_range = [-1,1]
+                        elif labels[j]==f'C0_{planet_num}' or labels[j]==f'C1_{planet_num}':
+                            #tick_values_y_c0 = np.linspace(min(y), max(y), 3)
+                            if tick_values_y_c0 is None:
+                                tick_values_y_c0 = np.linspace(min(y), max(y), 3)
+                                tick_values_y = tick_values_y_c0  # Use the same tick values for C0 and C1
+                            tick_values_y = tick_values_y_c0
+                        else:
+                            tick_values_y = np.linspace(min(y), max(y), 3)
+                            plot_range = [min(y),max(y)]
+                        tick_text_y = [f"{val:{tick_format}}" for val in tick_values_y]
                         fig.update_yaxes(tickvals=tick_values_y, ticktext=tick_text_y, row=j + 1, col=i + 1, tickangle=0)
                     else:
+                        if labels[i]==f'IMPACT_{planet_num}':
+                            tick_values_x = np.linspace(0, 1.2, 3)
+                            plot_range = [0,1.2]
+                        elif labels[i]==f'LD_Q1':
+                            tick_values_x = np.linspace(0, 1, 3)
+                            plot_range = [0,1]
+                        elif labels[i]==f'LD_Q2':
+                            tick_values_x = np.linspace(0, 1, 3)
+                            plot_range = [0,1]
+                        elif labels[i]==f'LD_U1':
+                            tick_values_x = np.linspace(0, 2, 3)
+                            plot_range = [0,2]
+                        elif labels[i]==f'LD_U2':
+                            tick_values_x = np.linspace(-1, 1, 3)
+                            plot_range = [-1,1]
+                        elif labels[i]==f'C0_{planet_num}' or labels[j]==f'C1_{planet_num}':
+                            #tick_values_y_c0 = np.linspace(min(y), max(y), 3)
+                            if tick_values_x_c0 is None:
+                                tick_values_x_c0 = np.linspace(min(x), max(x), 3)
+                                tick_values_x = tick_values_x_c0  # Use the same tick values for C0 and C1
+                            tick_values_x = tick_values_x_c0
+                        else:
+                            tick_values_x = np.linspace(min(x), max(x), 3)
+                            plot_range = [min(x),max(x)]
+                        tick_text_x = [f"{val:{tick_format}}" for val in tick_values_x]
                         fig.update_yaxes(showticklabels=False, tickvals=tick_values_y, ticktext=tick_text_y, row=j + 1, col=i + 1, tickangle=0)
                     if j == len(selected_columns) - 1:
                         fig.update_xaxes(tickvals=tick_values_x, ticktext=tick_text_x, row=j + 1, col=i + 1, tickangle=0)
@@ -506,18 +574,19 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                     # showticklabels=False,
                     fig.update_xaxes(tickvals=tick_values_x, ticktext=tick_text_x, row=j + 1, col=i + 1, tickangle=0)
                     fig.update_yaxes(showticklabels=False,tickvals=tick_values_y, row=j + 1, col=i + 1, tickangle=0)
-
+                # if i!=j:
+                #     fig.update_layout(plot_bgcolor='white')
                 fig.update_xaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1, tickangle=0)
                 fig.update_yaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1, tickangle=0)
-
-                  
-
+        
+        
         fig.update_layout(height=800, width=900)
         graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
         return jsonify(graphJSON)
     else:
         error_message = f'No data found for {koi_id}'
         return jsonify(error_message=error_message)
+    
     
     
 # def generate_plot_corner(koi_id):

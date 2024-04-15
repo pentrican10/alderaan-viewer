@@ -437,6 +437,9 @@ def generate_plot_OMC(koi_id):
     return jsonify(graphJSON)
         
 @app.route('/generate_plot_corner/<koi_id>/<selected_columns>/<planet_num>')
+
+
+
 def generate_plot_corner(koi_id,selected_columns, planet_num):
     selected_columns = selected_columns.split(',')
     star_id = koi_id.replace("K","S")
@@ -458,6 +461,8 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
         fig = make_subplots(rows=len(selected_columns), cols=len(selected_columns))
         tick_values_y_c0 = None
         tick_values_x_c0 = None
+        plot_range_y_c0 = None
+        plot_range_x_c0 = None
         for i in range(len(selected_columns)):
             for j in range(i, len(selected_columns)):
                 # x = data[selected_columns[i]]
@@ -481,7 +486,6 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                     # Plot points above the threshold in the contour
                     fig.add_trace(go.Histogram2dContour(x=x[z >= threshold], y=y[z >= threshold], colorscale='Blues', reversescale=False, showscale=False, ncontours=8, contours=dict(coloring='fill'), line=dict(width=1)), row=j + 1, col=i + 1)
                     
-                    
                     #fig.add_trace(go.Scatter(x=x, y=y, mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)
                     #fig.add_trace(go.Scatter(x=x, y=y, mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)
                     #fig.add_trace(go.Histogram2dContour(x=x, y=y, colorscale='Blues', reversescale=False, showscale=False, ncontours=8, contours=dict(coloring='fill'), line=dict(width=1)), row=j + 1, col=i + 1)
@@ -499,81 +503,123 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
 
                 ### only have 3 ticks and only show axis at left-most column and bottom-most row
                 if i != j:
-                    #tick_values_x = np.linspace(min(x), max(x), 3)
-                    #tick_values_y = np.linspace(min(y), max(y), 3)
                     tick_format = '.2f'
-                    #tick_text_x = [f"{val:{tick_format}}" for val in tick_values_x]
-                    #tick_text_y = [f"{val:{tick_format}}" for val in tick_values_y]
-                    ### update which axes show
-                    plot_range=None
-                    if (i==0):
-                        if labels[j]==f'IMPACT_{planet_num}':
+                    plot_range = None
+                    ### set y axes
+                    ### make C0 and C1 symmetric
+                    if labels[j] in [f'C0_{planet_num}', f'C1_{planet_num}']:
+                        if tick_values_y_c0 is None:
+                            tick_values_y_c0 = np.linspace(-max(y), max(y), 3)
+                            plot_range_y_c0 = [-max(y), max(y)]
+
+                        tick_values_y = tick_values_y_c0
+                        plot_range = plot_range_y_c0
+                    else:
+                        if labels[j] == f'IMPACT_{planet_num}':
                             tick_values_y = np.linspace(0, 1.2, 3)
-                            plot_range = [0,1.2]
-                        elif labels[j]==f'LD_Q1':
+                            plot_range = [0, 1.2]
+                            tick_format = '.1f'
+                        elif labels[j] in [f'LD_Q1', f'LD_Q2']:
                             tick_values_y = np.linspace(0, 1, 3)
-                            plot_range = [0,1]
-                        elif labels[j]==f'LD_Q2':
-                            tick_values_y = np.linspace(0, 1, 3)
-                            plot_range = [0,1]
-                        elif labels[j]==f'LD_U1':
+                            plot_range = [0, 1]
+                            tick_format = '.1f'
+                        elif labels[j] == f'LD_U1':
                             tick_values_y = np.linspace(0, 2, 3)
-                            plot_range = [0,2]
-                        elif labels[j]==f'LD_U2':
+                            plot_range = [0, 2]
+                            tick_format = '.1f'
+                        elif labels[j] == f'LD_U2':
                             tick_values_y = np.linspace(-1, 1, 3)
-                            plot_range = [-1,1]
-                        elif labels[j]==f'C0_{planet_num}' or labels[j]==f'C1_{planet_num}':
-                            #tick_values_y_c0 = np.linspace(min(y), max(y), 3)
-                            if tick_values_y_c0 is None:
-                                tick_values_y_c0 = np.linspace(min(y), max(y), 3)
-                                tick_values_y = tick_values_y_c0  # Use the same tick values for C0 and C1
-                            tick_values_y = tick_values_y_c0
+                            plot_range = [-1, 1]
+                            tick_format = '.1f'
                         else:
+                            if labels[j] == f'ROR_{planet_num}':
+                                tick_format = '.3f'
                             tick_values_y = np.linspace(min(y), max(y), 3)
-                            plot_range = [min(y),max(y)]
-                        tick_text_y = [f"{val:{tick_format}}" for val in tick_values_y]
-                        fig.update_yaxes(tickvals=tick_values_y, ticktext=tick_text_y, row=j + 1, col=i + 1, tickangle=0)
+                            plot_range = [min(y), max(y)]
+
+                    tick_text_y = [f"{val:{tick_format}}" for val in tick_values_y]
+                    fig.update_yaxes(tickvals=tick_values_y, ticktext=tick_text_y, range=plot_range, row=j + 1, col=i + 1, tickangle=0)
+
+                    ### set x axes
+                    ### make C0 and C1 symmetric
+                    if labels[i] in [f'C0_{planet_num}', f'C1_{planet_num}']:
+                        if tick_values_x_c0 is None:
+                            tick_values_x_c0 = np.linspace(-max(x), max(x), 3)
+                            plot_range_x_c0 = [-max(x), max(x)]
+
+                        tick_values_x = tick_values_x_c0
+                        plot_range = plot_range_x_c0
                     else:
-                        if labels[i]==f'IMPACT_{planet_num}':
+                        if labels[i] == f'IMPACT_{planet_num}':
                             tick_values_x = np.linspace(0, 1.2, 3)
-                            plot_range = [0,1.2]
-                        elif labels[i]==f'LD_Q1':
+                            plot_range = [0, 1.2]
+                            tick_format = '.1f'
+                        elif labels[i] in [f'LD_Q1', f'LD_Q2']:
                             tick_values_x = np.linspace(0, 1, 3)
-                            plot_range = [0,1]
-                        elif labels[i]==f'LD_Q2':
-                            tick_values_x = np.linspace(0, 1, 3)
-                            plot_range = [0,1]
-                        elif labels[i]==f'LD_U1':
+                            plot_range = [0, 1]
+                            tick_format = '.1f'
+                        elif labels[i] == f'LD_U1':
                             tick_values_x = np.linspace(0, 2, 3)
-                            plot_range = [0,2]
-                        elif labels[i]==f'LD_U2':
+                            plot_range = [0, 2]
+                            tick_format = '.1f'
+                        elif labels[i] == f'LD_U2':
                             tick_values_x = np.linspace(-1, 1, 3)
-                            plot_range = [-1,1]
-                        elif labels[i]==f'C0_{planet_num}' or labels[j]==f'C1_{planet_num}':
-                            #tick_values_y_c0 = np.linspace(min(y), max(y), 3)
-                            if tick_values_x_c0 is None:
-                                tick_values_x_c0 = np.linspace(min(x), max(x), 3)
-                                tick_values_x = tick_values_x_c0  # Use the same tick values for C0 and C1
-                            tick_values_x = tick_values_x_c0
+                            plot_range = [-1, 1]
+                            tick_format = '.1f'
                         else:
+                            if labels[i] == f'ROR_{planet_num}':
+                                tick_format = '.3f'
                             tick_values_x = np.linspace(min(x), max(x), 3)
-                            plot_range = [min(x),max(x)]
-                        tick_text_x = [f"{val:{tick_format}}" for val in tick_values_x]
+                            plot_range = [min(x), max(x)]
+                    tick_text_x = [f"{val:{tick_format}}" for val in tick_values_x]
+                    if (i!=0):
                         fig.update_yaxes(showticklabels=False, tickvals=tick_values_y, ticktext=tick_text_y, row=j + 1, col=i + 1, tickangle=0)
+                    fig.update_xaxes(range=plot_range, row=j + 1, col=i + 1)
+                        
                     if j == len(selected_columns) - 1:
-                        fig.update_xaxes(tickvals=tick_values_x, ticktext=tick_text_x, row=j + 1, col=i + 1, tickangle=0)
+                        fig.update_xaxes(tickvals=tick_values_x, ticktext=tick_text_x, row=j + 1, col=i + 1, tickangle=90)
                     else:
-                        fig.update_xaxes(showticklabels=False, tickvals=tick_values_x, ticktext=tick_text_x, row=j + 1, col=i + 1, tickangle=0)
+                        fig.update_xaxes(showticklabels=False, tickvals=tick_values_x, ticktext=tick_text_x, row=j + 1, col=i + 1, tickangle=90)
                 else:
-                    ### histograms only have x axes
-                    tick_values_x = np.linspace(min(x_vals), max(x_vals), 3)
-                    tick_values_y = np.linspace(min(y_vals), max(y_vals), 3)
                     tick_format = '.2f'
+                    ### histograms only have x axes
+                    if labels[i] in [f'C0_{planet_num}', f'C1_{planet_num}']:
+                        if tick_values_x_c0 is None:
+                            tick_values_x_c0 = np.linspace(-max(x), max(x), 3)
+                            plot_range_x_c0 = [-max(x), max(x)]
+
+                        tick_values_x = tick_values_x_c0
+                        plot_range = plot_range_x_c0
+                    else:
+                        if labels[i] == f'IMPACT_{planet_num}':
+                            tick_values_x = np.linspace(0, 1.2, 3)
+                            plot_range = [0, 1.2]
+                            tick_format = '.1f'
+                        elif labels[i] in [f'LD_Q1', f'LD_Q2']:
+                            tick_values_x = np.linspace(0, 1, 3)
+                            plot_range = [0, 1]
+                            tick_format = '.1f'
+                        elif labels[i] == f'LD_U1':
+                            tick_values_x = np.linspace(0, 2, 3)
+                            plot_range = [0, 2]
+                            tick_format = '.1f'
+                        elif labels[i] == f'LD_U2':
+                            tick_values_x = np.linspace(-1, 1, 3)
+                            plot_range = [-1, 1]
+                            tick_format = '.1f'
+                        else:
+                            if labels[i] == f'ROR_{planet_num}':
+                                tick_format = '.3f'
+                            tick_values_x = np.linspace(min(x), max(x), 3)
+                            plot_range = [min(x), max(x)]
+                    tick_values_y = np.linspace(min(y_vals), max(y_vals), 3)
                     tick_text_x = [f"{val:{tick_format}}" for val in tick_values_x]
                     tick_text_y = [f"{val:{tick_format}}" for val in tick_values_y]
                     # showticklabels=False,
                     fig.update_xaxes(tickvals=tick_values_x, ticktext=tick_text_x, row=j + 1, col=i + 1, tickangle=0)
                     fig.update_yaxes(showticklabels=False,tickvals=tick_values_y, row=j + 1, col=i + 1, tickangle=0)
+                    fig.update_xaxes(range=plot_range, row=j + 1, col=i + 1)
+                    
                 # if i!=j:
                 #     fig.update_layout(plot_bgcolor='white')
                 fig.update_xaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1, tickangle=0)
@@ -587,7 +633,7 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
         error_message = f'No data found for {koi_id}'
         return jsonify(error_message=error_message)
     
-    
+
     
 # def generate_plot_corner(koi_id):
 #     star_id = koi_id.replace("K","S")

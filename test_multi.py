@@ -1,88 +1,86 @@
+
 import numpy as np
-import plotly.graph_objs as go
+import plotly.graph_objects as go
 from sklearn.neighbors import KernelDensity
+from scipy.spatial import ConvexHull
 
-# Generate sample data
-np.random.seed(0)
-x = np.random.randn(1000)
-y = np.random.randn(1000)
+# Generate random data centered around 0
+np.random.seed(42)  # for reproducibility
+num_points = 1000
+x = np.random.randn(num_points)
+y = np.random.randn(num_points)
 
-# Combine x and y into a single array
-data = np.vstack([x, y]).T
-
-# Perform kernel density estimation
+# Fit kernel density estimation
+data = np.column_stack((x, y))
 kde = KernelDensity(bandwidth=0.5, kernel='gaussian')
 kde.fit(data)
 
-# Generate grid points for density estimation
-x_grid, y_grid = np.meshgrid(np.linspace(min(x), max(x), 100),
-                              np.linspace(min(y), max(y), 100))
-grid_points = np.vstack([x_grid.ravel(), y_grid.ravel()]).T
+# Evaluate KDE on a grid
+x_grid, y_grid = np.meshgrid(np.linspace(x.min(), x.max(), 100),
+                             np.linspace(y.min(), y.max(), 100))
+xy_grid = np.column_stack((x_grid.ravel(), y_grid.ravel()))
+density = np.exp(kde.score_samples(xy_grid))
+density_grid = density.reshape(x_grid.shape)
 
-# Calculate density values for the grid points
-log_dens = kde.score_samples(grid_points)
-dens = np.exp(log_dens)
+# Determine threshold densities corresponding to the percentiles
+percentiles = [25, 50, 75, 90]  # Reversed order
+threshold_densities = np.percentile(density, percentiles)
 
-# Calculate threshold for the top 90% percentile based on density
-threshold = np.percentile(dens, 90)
+# Create a plotly figure
+fig = go.Figure()
 
-# Separate data into top 90% and last 10% percentiles based on density
-x_top = grid_points[dens >= threshold, 0]
-y_top = grid_points[dens >= threshold, 1]
+# Add scatter plot for all points
+fig.add_trace(go.Scatter(
+    x=x,
+    y=y,
+    mode='markers',
+    marker=dict(
+        color='blue',
+        opacity=0.3
+    ),
+    name='All Points'
+))
 
-# Sub-sample scatter points for last 10% percentile data
-sample_indices = np.random.choice(np.sum(dens < threshold), size=min(100, np.sum(dens < threshold)), replace=False)
-x_bottom = grid_points[dens < threshold][sample_indices, 0]
-y_bottom = grid_points[dens < threshold][sample_indices, 1]
+# Define shades of blue for each percentile
+blue_shades = ['rgba(0, 0, 100, 1)', 'rgba(0, 0, 150, 1)', 'rgba(0, 0, 200, 1)', 'rgba(0, 0, 255, 1)']  # Adjusted order
 
-# Create density contour plot for top 90% percentile data
-density_contour = go.Contour(x=x_top, y=y_top, z=dens[dens >= threshold], colorscale='Viridis', showscale=False)
+# Iterate over each percentile in reversed order
+for percentile, threshold_density, shade in zip(percentiles, threshold_densities, blue_shades):
+    # Select points within the percentile density
+    selected_points = (density >= threshold_density)
 
-# Add scatter points for last 10% percentile data
-scatter_points = go.Scatter(x=x_bottom, y=y_bottom, mode='markers', marker=dict(color='red', size=5), name='Last 10%')
+    # Find the convex hull of the selected points
+    selected_x = xy_grid[selected_points][:, 0]
+    selected_y = xy_grid[selected_points][:, 1]
+    hull = ConvexHull(np.column_stack((selected_x, selected_y)))
 
-# Create layout
-layout = go.Layout(title='Density Contour Plot with Scatter for Last 10% Percentile (based on density)',
-                   xaxis=dict(title='X'),
-                   yaxis=dict(title='Y'))
+    # Extract the vertices of the convex hull
+    hull_vertices_x = selected_x[hull.vertices]
+    hull_vertices_y = selected_y[hull.vertices]
 
-# Plot
-fig = go.Figure(data=[density_contour, scatter_points], layout=layout)
+    # Add shaded region for the convex hull
+    fig.add_trace(go.Scatter(
+        x=hull_vertices_x,
+        y=hull_vertices_y,
+        fill='toself',
+        fillcolor=shade,  # Varying shades of blue
+        line=dict(color=shade),  # Match fill color
+        mode='lines',
+        name=f'{percentile}th Percentile Density Region'
+    ))
+
+# Update layout
+fig.update_layout(
+    title='Shaded Regions Enclosing Percentiles of Points by Density',
+    xaxis_title='X',
+    yaxis_title='Y',
+    showlegend=True,
+    legend=dict(x=0.02, y=0.98),
+    hovermode='closest'
+)
+
+# Show plot
 fig.show()
-
-
-'''
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-from   scipy import stats
-import seaborn as sns
-
-# simulate data
-N = int(1e5)
-mu = np.random.uniform(1,2,size=2)
-cov = np.eye(2) + np.random.uniform(0,1)*(1.0-np.eye(2))
-
-x, y = stats.multivariate_normal(mu, cov).rvs(size=N).T
-df = pd.DataFrame({'x':x, 'y':y})
-
-# make 2D density plot
-thin = 100
-
-X = df.x[::thin].values
-Y = df.y[::thin].values
-
-density = stats.gaussian_kde([X,Y])([df.x,df.y])
-cutoff  = 4
-low_density = density < np.percentile(density, cutoff)
-
-plt.figure()
-sns.kdeplot(df[::thin], x='x', y='y', fill=True, levels=4)
-plt.scatter(df.x[low_density], df.y[low_density], color='C0', s=3)
-plt.show()
-'''
-
-
 """
 import os
 import numpy as np
@@ -152,7 +150,7 @@ def load_posteriors(f,n,koi_id):
 
 
 data = load_posteriors(file,0,2)
-print(data['LN_WT'].mean())
+print(data['LN_LIKE'])
 assert 1==0
 selected_columns = ['C0_0','C1_0','ROR_0','IMPACT_0','DUR14_0','LD_U1','LD_Q1']
 

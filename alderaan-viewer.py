@@ -20,6 +20,7 @@ from scipy.stats import gaussian_kde
 from scipy import stats
 from sklearn.neighbors import KernelDensity
 from sklearn.decomposition import PCA
+from scipy.spatial import ConvexHull
 
 from plotly.subplots import make_subplots
 
@@ -437,9 +438,6 @@ def generate_plot_OMC(koi_id):
     return jsonify(graphJSON)
         
 @app.route('/generate_plot_corner/<koi_id>/<selected_columns>/<planet_num>')
-
-
-
 def generate_plot_corner(koi_id,selected_columns, planet_num):
     selected_columns = selected_columns.split(',')
     star_id = koi_id.replace("K","S")
@@ -480,11 +478,63 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                     xy = np.vstack([x, y])
                     z = gaussian_kde(xy)(xy)
                     # Select the top 90th percentile based on density
-                    threshold = np.percentile(z, 10)
+                    threshold_s = np.percentile(z, 10) # scatter threshhold
+                    # threshold_c0 = np.percentile(z,25)
+                    # threshold_c1 = np.percentile(z,50)
+                    # threshold_c2 = np.percentile(z,75)
+                    # threshold_c3 = np.percentile(z,90)
                     # Plot points below the threshold as scatter plot
-                    fig.add_trace(go.Scatter(x=x[z < threshold], y=y[z < threshold], mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)
+                    fig.add_trace(go.Scatter(x=x[z < threshold_s], y=y[z < threshold_s], mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)
+                    
+                    # Determine threshold densities corresponding to the percentiles
+                    percentiles = [10, 25, 50, 75, 90]  # Reversed order
+                    threshold_densities = np.percentile(z, percentiles)
+
+                    # Define shades of blue for each percentile
+                    #blue_shades = ['rgba(0, 0, 100, 1)', 'rgba(0, 0, 150, 1)', 'rgba(0, 0, 200, 1)', 'rgba(0, 0, 255, 1)', 'rgba(0, 0, 300, 1)']  # Adjusted order
+                    #blue_shades = ['rgba(0, 200, 233, 0.8)','rgba(0, 174, 197, 0.8)','rgba(0, 141, 173, 0.8)','rgba(0, 116, 141, 0.8)','rgba(0, 59, 89, 0.8)']
+                    blue_shades = ['rgba(0, 151, 236, 0.8)','rgba(0, 151, 189, 0.8)','rgba(0, 129, 156, 0.8)','rgba(0, 75, 134, 0.8)','rgba(0, 36, 119, 0.8)']
+                    # Iterate over each percentile in reversed order
+                    for percentile, threshold_density, shade in zip(percentiles, threshold_densities, blue_shades):
+                        # Select points within the percentile density
+                        selected_points = (z >= threshold_density)
+
+                        # Find the convex hull of the selected points
+                        selected_x = x[selected_points]
+                        selected_y = y[selected_points]
+                        hull = ConvexHull(np.column_stack((selected_x, selected_y)))
+
+                        # Extract the vertices of the convex hull
+                        hull_vertices_x = selected_x[hull.vertices]
+                        hull_vertices_y = selected_y[hull.vertices]
+
+                        # Add shaded region for the convex hull
+                        fig.add_trace(go.Scatter(
+                            x=hull_vertices_x,
+                            y=hull_vertices_y,
+                            fill='toself',
+                            fillcolor=shade,  # Varying shades of blue
+                            line=dict(color=shade, shape='spline'),  # Match fill color
+                            mode='lines',
+                            showlegend=False
+                        ), row=j + 1, col=i + 1)
+
+
+                    # Contour for points between threshold_s and threshold_c0
+                    #fig.add_trace(go.Contour(x=x[(z >= threshold_s)], y=y[(z >= threshold_s)], colorscale='Viridis',opacity=1), row=j + 1, col=i + 1)
+                    
+
+
+                    # Contour for points between threshold_c1 and threshold_c2
+                    #fig.add_trace(go.Contour(x=x[(z >= threshold_c1) & (z < threshold_c2)], y=y[(z >= threshold_c1) & (z < threshold_c2)], line=dict(width=1), contours=dict(start=threshold_c1, end=threshold_c2, size=2, coloring='fill')))
+                    # Contour for points between threshold_c1 and threshold_c2
+                    #fig.add_trace(go.Contour(x=x[(z >= threshold_c2)], y=y[(z >= threshold_c2)], line=dict(width=1), contours=dict(start=threshold_c3, end=np.max(z), size=2, coloring='fill')))
+
+                    # Scatter plot for points above threshold_c3
+                    #fig.add_trace(go.Scatter(x=x[z >= threshold_c3], y=y[z >= threshold_c3], mode='markers', marker=dict(color='gray', size=1), showlegend=False))
+
                     # Plot points above the threshold in the contour
-                    fig.add_trace(go.Histogram2dContour(x=x[z >= threshold], y=y[z >= threshold], colorscale='Blues', reversescale=False, showscale=False, ncontours=8, contours=dict(coloring='fill'), line=dict(width=1)), row=j + 1, col=i + 1)
+                    #fig.add_trace(go.Histogram2dContour(x=x[z >= threshold], y=y[z >= threshold], colorscale='Blues', reversescale=False, showscale=False, ncontours=8, contours=dict(coloring='fill'), line=dict(width=1)), row=j + 1, col=i + 1)
                     
                     #fig.add_trace(go.Scatter(x=x, y=y, mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)
                     #fig.add_trace(go.Scatter(x=x, y=y, mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)

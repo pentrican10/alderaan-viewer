@@ -258,42 +258,42 @@ def load_posteriors(f,koi_id):
 #         return ValueError("only configured for 0th and 1st order Legendre polynomials")
 
 
-def single_transit_data(koi_id, line_number, ttv_file):
-    star_id = koi_id.replace("K","S")
-    file_name_lc = star_id + '_lc_filtered.fits'
-    file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
+# def single_transit_data(koi_id, line_number, ttv_file):
+#     star_id = koi_id.replace("K","S")
+#     file_name_lc = star_id + '_lc_filtered.fits'
+#     file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
     
-    file_name_sc = star_id + '_sc_filtered.fits'
-    file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
+#     file_name_sc = star_id + '_sc_filtered.fits'
+#     file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
 
-    file_path = os.path.join(data_directory, star_id, ttv_file)
+#     file_path = os.path.join(data_directory, star_id, ttv_file)
 
-    combined_data = None
-    #get data and create detrended light curve
-    if os.path.isfile(file_path_lc):
-        photometry_data_lc = read_data_from_fits(file_path_lc) #descriptive names
-        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
+#     combined_data = None
+#     #get data and create detrended light curve
+#     if os.path.isfile(file_path_lc):
+#         photometry_data_lc = read_data_from_fits(file_path_lc) #descriptive names
+#         index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
 
-        if line_number < len(index):
-            center_time = ttime[line_number]
-            transit_number = index[line_number]
+#         if line_number < len(index):
+#             center_time = ttime[line_number]
+#             transit_number = index[line_number]
         
-            start_time = float(center_time) - 0.25
-            end_time= float(center_time) + 0.25
+#             start_time = float(center_time) - 0.25
+#             end_time= float(center_time) + 0.25
 
-            use_lc = (photometry_data_lc['TIME'] > start_time) & (photometry_data_lc['TIME'] < end_time)
-            lc_data = photometry_data_lc[use_lc]
-            combined_data = lc_data
-    if os.path.isfile(file_path_sc):
-            photometry_data_sc = read_data_from_fits(file_path_sc)
-            if combined_data is not None:
-                use_sc = (photometry_data_sc['TIME'] > start_time) & (photometry_data_sc['TIME'] < end_time)
-                sc_data = photometry_data_sc[use_sc]
-                combined_data= pd.concat([combined_data, sc_data],ignore_index=True)
-            else:
-                combined_data = photometry_data_sc
+#             use_lc = (photometry_data_lc['TIME'] > start_time) & (photometry_data_lc['TIME'] < end_time)
+#             lc_data = photometry_data_lc[use_lc]
+#             combined_data = lc_data
+#     if os.path.isfile(file_path_sc):
+#             photometry_data_sc = read_data_from_fits(file_path_sc)
+#             if combined_data is not None:
+#                 use_sc = (photometry_data_sc['TIME'] > start_time) & (photometry_data_sc['TIME'] < end_time)
+#                 sc_data = photometry_data_sc[use_sc]
+#                 combined_data= pd.concat([combined_data, sc_data],ignore_index=True)
+#             else:
+#                 combined_data = photometry_data_sc
 
-    return combined_data, transit_number, center_time ############
+#     return combined_data, transit_number, center_time ############
 
 
 def get_min_max(koi_id):
@@ -315,7 +315,7 @@ def get_min_max(koi_id):
         return lc_min,lc_max,sc_min,sc_max
 
 
-def single_data(koi_id, line_number, ttv_file):
+def single_data(koi_id, line_number, num, ttv_file):
     star_id = koi_id.replace("K","S")
     file_name_lc = star_id + '_lc_filtered.fits'
     file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
@@ -324,6 +324,13 @@ def single_data(koi_id, line_number, ttv_file):
     file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
 
     file_path = os.path.join(data_directory, star_id, ttv_file)
+
+    file_results =star_id + '-results.fits'
+    file_path_results = os.path.join(data_directory, star_id, file_results)
+    data_post = load_posteriors(file_path_results,num,koi_id)
+    ### get max likelihood
+    max_index = data_post['LN_LIKE'].idxmax()
+    DUR14 = data_post[f'DUR14_{num}'][max_index]
 
     combined_data = None
     #get data and create detrended light curve
@@ -336,8 +343,10 @@ def single_data(koi_id, line_number, ttv_file):
             center_time = ttime[line_number]
             transit_number = index[line_number]
         
-            start_time = float(center_time) - 0.25
-            end_time= float(center_time) + 0.25
+            # start_time = float(center_time) - 0.25
+            # end_time= float(center_time) + 0.25
+            start_time = float(center_time) - DUR14
+            end_time= float(center_time) + DUR14
 
             use_lc = (photometry_data_lc['TIME'] > start_time) & (photometry_data_lc['TIME'] < end_time)
             lc_data = photometry_data_lc[use_lc]
@@ -385,13 +394,20 @@ def single_data(koi_id, line_number, ttv_file):
 
     
 
-def folded_data(koi_id, file_path):
+def folded_data(koi_id,planet_num, file_path):
     star_id = koi_id.replace("K","S")
     file_name_lc = star_id + '_lc_detrended.fits'
     file_path_lc = os.path.join(data_directory, star_id, file_name_lc)
     
     file_name_sc = star_id + '_sc_filtered.fits'
     file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
+
+    file_results =star_id + '-results.fits'
+    file_path_results = os.path.join(data_directory, star_id, file_results)
+    data_post = load_posteriors(file_path_results,planet_num,koi_id)
+    ### get max likelihood
+    max_index = data_post['LN_LIKE'].idxmax()
+    DUR14 = data_post[f'DUR14_{planet_num}'][max_index]
 
     fold_data_time = []
     fold_data_flux = []
@@ -407,8 +423,8 @@ def folded_data(koi_id, file_path):
         for i in range(len(index)):
             center_time = ttime[i]
         
-            start_time = float(center_time) - 0.25
-            end_time= float(center_time) + 0.25
+            start_time = float(center_time) - DUR14
+            end_time= float(center_time) + DUR14
 
             use = (photometry_data_lc['TIME'] > start_time) & (photometry_data_lc['TIME'] < end_time)
             transit_data = photometry_data_lc[use]
@@ -429,8 +445,8 @@ def folded_data(koi_id, file_path):
         for i in range(len(index)):
             center_time = ttime[i]
         
-            start_time = float(center_time) - 0.25
-            end_time= float(center_time) + 0.25
+            start_time = float(center_time) - DUR14
+            end_time= float(center_time) + DUR14
             use_sc = (photometry_data_sc['TIME']>start_time) & (photometry_data_sc['TIME']<end_time)
             transit_data_sc = photometry_data_sc[use_sc]
             transit_data_sc['TIME'] = pd.to_numeric(transit_data_sc['TIME'], errors='coerce')

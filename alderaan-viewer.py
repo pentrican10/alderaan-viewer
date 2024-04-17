@@ -227,12 +227,26 @@ def generate_plot_single_transit(koi_id, line_number,planet):
     num = planet_num[0][1]
     int_num = int(num)
     title = period[int_num]
-    
+
+    ### posteriors for most likely model
+    file_results =star_id + '-results.fits'
+    file_path_results = os.path.join(data_directory, star_id, file_results)
+    data_post = data_load.load_posteriors(file_path_results,num,koi_id)
+    ### get max likelihood
+    max_index = data_post['LN_LIKE'].idxmax()
+    ### get most likely params {P, t0, Rp/Rs, b, T14, q1, q2}
+    P = data_post[f'P'][max_index]
+    T0 = data_post[f'T0'][max_index]
+    ROR = data_post[f'ROR_{num}'][max_index]
+    IMPACT = data_post[f'IMPACT_{num}'][max_index]
+    DUR14 = data_post[f'DUR14_{num}'][max_index]
+    LD_Q1 = data_post[f'LD_Q1'][max_index]
+    LD_Q2 = data_post[f'LD_Q2'][max_index]
     ### initialize figure
     fig = make_subplots(rows=1, cols=1)
 
-    if (data_load.single_transit_data(koi_id, line_number,ttv_file)):
-        photometry_data_lc,photometry_data_sc, transit_number, center_time = data_load.single_data(koi_id, line_number,ttv_file)
+    if (data_load.single_data(koi_id, line_number,num,ttv_file)):
+        photometry_data_lc,photometry_data_sc, transit_number, center_time = data_load.single_data(koi_id, line_number, num, ttv_file)
         transit_lc = px.scatter(photometry_data_lc, x="TIME", y="FLUX").data[0]
 
         fig.add_trace(transit_lc, row=1, col=1)
@@ -309,7 +323,8 @@ def generate_plot_folded_light_curve(koi_id):
                         vertical_spacing=0.15)
     
     for i, file_path in enumerate(file_paths):
-        fold_data_lc, fold_data_sc, binned_avg = data_load.folded_data(koi_id,file_path)
+        planet_num = 0+i
+        fold_data_lc, fold_data_sc, binned_avg = data_load.folded_data(koi_id,planet_num,file_path)
 
         if fold_data_lc is not None and fold_data_sc is not None:
             ### short cadence
@@ -479,10 +494,7 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                     z = gaussian_kde(xy)(xy)
                     # Select the top 90th percentile based on density
                     threshold_s = np.percentile(z, 10) # scatter threshhold
-                    # threshold_c0 = np.percentile(z,25)
-                    # threshold_c1 = np.percentile(z,50)
-                    # threshold_c2 = np.percentile(z,75)
-                    # threshold_c3 = np.percentile(z,90)
+
                     # Plot points below the threshold as scatter plot
                     fig.add_trace(go.Scatter(x=x[z < threshold_s], y=y[z < threshold_s], mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)
                     
@@ -491,9 +503,8 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                     threshold_densities = np.percentile(z, percentiles)
 
                     # Define shades of blue for each percentile
-                    #blue_shades = ['rgba(0, 0, 100, 1)', 'rgba(0, 0, 150, 1)', 'rgba(0, 0, 200, 1)', 'rgba(0, 0, 255, 1)', 'rgba(0, 0, 300, 1)']  # Adjusted order
-                    #blue_shades = ['rgba(0, 200, 233, 0.8)','rgba(0, 174, 197, 0.8)','rgba(0, 141, 173, 0.8)','rgba(0, 116, 141, 0.8)','rgba(0, 59, 89, 0.8)']
-                    blue_shades = ['rgba(0, 151, 236, 0.8)','rgba(0, 151, 189, 0.8)','rgba(0, 129, 156, 0.8)','rgba(0, 75, 134, 0.8)','rgba(0, 36, 119, 0.8)']
+                    #blue_shades = ['rgba(0, 151, 236, 0.8)','rgba(0, 151, 189, 0.8)','rgba(0, 129, 156, 0.8)','rgba(0, 75, 134, 0.8)','rgba(0, 36, 119, 0.8)']
+                    blue_shades = ['rgba(153,190,222,1.00)','rgba(116,167,210,1.00)','rgba(79,143,198,1.00)','rgba(55,118,172,1.00)',' rgba(43,93,136,1.00)']
                     # Iterate over each percentile in reversed order
                     for percentile, threshold_density, shade in zip(percentiles, threshold_densities, blue_shades):
                         # Select points within the percentile density
@@ -507,35 +518,25 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                         # Extract the vertices of the convex hull
                         hull_vertices_x = selected_x[hull.vertices]
                         hull_vertices_y = selected_y[hull.vertices]
+                        # Append the first coordinate to the end to close the loop
+                        hull_vertices_x_closed = np.append(hull_vertices_x, hull_vertices_x[0])
+                        hull_vertices_y_closed = np.append(hull_vertices_y, hull_vertices_y[0])
 
                         # Add shaded region for the convex hull
                         fig.add_trace(go.Scatter(
-                            x=hull_vertices_x,
-                            y=hull_vertices_y,
+                            x=hull_vertices_x_closed,
+                            y=hull_vertices_y_closed,
                             fill='toself',
                             fillcolor=shade,  # Varying shades of blue
-                            line=dict(color=shade, shape='spline'),  # Match fill color
+                            line=dict(color='black', shape='spline', width=0.8),  # Match fill color
                             mode='lines',
                             showlegend=False
                         ), row=j + 1, col=i + 1)
 
-
-                    # Contour for points between threshold_s and threshold_c0
-                    #fig.add_trace(go.Contour(x=x[(z >= threshold_s)], y=y[(z >= threshold_s)], colorscale='Viridis',opacity=1), row=j + 1, col=i + 1)
-                    
+                       
 
 
-                    # Contour for points between threshold_c1 and threshold_c2
-                    #fig.add_trace(go.Contour(x=x[(z >= threshold_c1) & (z < threshold_c2)], y=y[(z >= threshold_c1) & (z < threshold_c2)], line=dict(width=1), contours=dict(start=threshold_c1, end=threshold_c2, size=2, coloring='fill')))
-                    # Contour for points between threshold_c1 and threshold_c2
-                    #fig.add_trace(go.Contour(x=x[(z >= threshold_c2)], y=y[(z >= threshold_c2)], line=dict(width=1), contours=dict(start=threshold_c3, end=np.max(z), size=2, coloring='fill')))
-
-                    # Scatter plot for points above threshold_c3
-                    #fig.add_trace(go.Scatter(x=x[z >= threshold_c3], y=y[z >= threshold_c3], mode='markers', marker=dict(color='gray', size=1), showlegend=False))
-
-                    # Plot points above the threshold in the contour
-                    #fig.add_trace(go.Histogram2dContour(x=x[z >= threshold], y=y[z >= threshold], colorscale='Blues', reversescale=False, showscale=False, ncontours=8, contours=dict(coloring='fill'), line=dict(width=1)), row=j + 1, col=i + 1)
-                    
+                    ### old
                     #fig.add_trace(go.Scatter(x=x, y=y, mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)
                     #fig.add_trace(go.Scatter(x=x, y=y, mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)
                     #fig.add_trace(go.Histogram2dContour(x=x, y=y, colorscale='Blues', reversescale=False, showscale=False, ncontours=8, contours=dict(coloring='fill'), line=dict(width=1)), row=j + 1, col=i + 1)
@@ -684,60 +685,6 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
         return jsonify(error_message=error_message)
     
 
-    
-# def generate_plot_corner(koi_id):
-#     star_id = koi_id.replace("K","S")
-#     file =star_id + '-results.fits'
-#     file_path = os.path.join(data_directory, star_id, file)
-#     if os.path.isfile(file_path):
-#         data = data_load.load_posteriors(file_path)
-#         Nvar = 5  # Set the number of variables to 5
-
-#         # Slice the DataFrame to include only the first 5 columns
-#         data = data.iloc[:, :Nvar]
-#         # Subsample the data to every 100th data point
-#         #data = data.iloc[::30, :]
-#         labels = data.columns.tolist()
-
-#         fig = make_subplots(rows=Nvar, cols=Nvar, horizontal_spacing=0.04, vertical_spacing=0.05)
-
-#         for i in range(1, Nvar + 1):
-#             for j in range(i, Nvar + 1):
-#                 #x = data.iloc[:, i - 1]
-#                 #y = data.iloc[:, j - 1]
-#                 x = data.iloc[::30, i-1]
-#                 y=data.iloc[::30, j-1]
-
-#                 # plot the data
-#                 if i != j:
-#                     # x = data.iloc[::30, i-1]
-#                     # y=data.iloc[::30, j-1]
-#                     fig.add_trace(go.Scatter(x=x, y=y, mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j, col=i)
-#                     fig.add_trace(go.Histogram2dContour(x=x,y=y,colorscale='Blues',reversescale=False,showscale=False,ncontours=8, contours=dict(coloring='fill'),line=dict(width=1)),row=j,col=i)
-                    
-#                 else:
-#                     # here's where you put the histogram/kde
-#                     #fig.add_trace(go.Histogram(x=x), row=j, col=i)
-#                     kde = gaussian_kde(x)
-#                     x_vals = np.linspace(min(x), max(x), 1000)
-#                     y_vals = kde(x_vals)
-#                     #fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', line=dict(color='blue'),name=labels[i-1]), row=j, col=i)
-#                     fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', line=dict(color='blue'), showlegend=False), row=j, col=i)
-
-#                 # add axes labels
-#                 if (i == 1) and (i != j):
-#                     fig.update_yaxes(title_text=labels[j - 1], row=j, col=i)
-#                 if j == Nvar:
-#                     fig.update_xaxes(title_text=labels[i - 1], row=j, col=i)
-#                 # Add border to each subplot
-#                 fig.update_xaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j, col=i, tickangle=0)
-#                 fig.update_yaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j, col=i)
-#         fig.update_layout(height=800, width=900)
-#         graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
-#         return jsonify(graphJSON)
-#     else:
-#         error_message = f'No data found for {koi_id}'
-#         return jsonify(error_message=error_message)
 
 if __name__ == '__main__':
     app.run(debug=True)

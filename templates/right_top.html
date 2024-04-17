@@ -136,10 +136,10 @@
 
             <label for="selectCornerParams">Quick Params:</label>
             <select id="selectCornerParams" onchange="updateParams()">
-                <option value="default">Default</option>
-                <option value="physical7">P,T0,ROR,IMPACT,DUR14,U1,U2</option>
-                <option value="physical5">P,T0,ROR,IMPACT,DUR14</option>
-                <option value="physical3">ROR,IMPACT,DUR14</option>
+                <option value="default">Default: C0,C1,ROR,IMPACT,DUR14</option>
+                <option value="physical7">Physical 7: P,T0,ROR,IMPACT,DUR14,U1,U2</option>
+                <option value="physical5">Physical 5: P,T0,ROR,IMPACT,DUR14</option>
+                <option value="physical3">Physical 3: ROR,IMPACT,DUR14</option>
             </select>
         </div>
 
@@ -467,8 +467,8 @@
                 document.getElementById(`ROR_${planetNumCorner}`).checked = true;
                 document.getElementById(`IMPACT_${planetNumCorner}`).checked = true;
                 document.getElementById(`DUR14_${planetNumCorner}`).checked = true;
-                document.getElementById("LD_U1").checked = true;
-                document.getElementById("LD_U2").checked = true;
+                //document.getElementById("LD_U1").checked = true;
+                //document.getElementById("LD_U2").checked = true;
             } else if (selectedOption === "physical7") {
                 document.getElementById("P").checked = true;
                 document.getElementById("T0").checked = true;

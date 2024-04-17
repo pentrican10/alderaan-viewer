@@ -70,11 +70,11 @@ def load_posteriors(f,n,koi_id):
 
 data = load_posteriors(file,0,2)
 #print(data['LN_LIKE'])
-print(data['LN_LIKE'].max())
-max_index = data['LN_LIKE'].idxmax()
-print(max_index)
-print(data['IMPACT_0'][max_index])
-print(data['DUR14_0'][max_index])
+# print(data['LN_LIKE'].max())
+# max_index = data['LN_LIKE'].idxmax()
+# print(max_index)
+# print(data['IMPACT_0'][max_index])
+print(data['DUR14_0'])
 assert 1==0
 selected_columns = ['C0_0','C1_0','ROR_0','IMPACT_0','DUR14_0','LD_U1','LD_Q1']
 

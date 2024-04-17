@@ -492,6 +492,7 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                     # Calculate the density of the points
                     xy = np.vstack([x, y])
                     z = gaussian_kde(xy)(xy)
+
                     # Select the top 90th percentile based on density
                     threshold_s = np.percentile(z, 10) # scatter threshhold
 
@@ -510,10 +511,22 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                         # Select points within the percentile density
                         selected_points = (z >= threshold_density)
 
+                        # Check if there are enough points to form a convex hull (at least 3 points in 2D)
+                        if np.sum(selected_points) < 3:
+                            continue  # Skip this percentile if there are not enough points
+
                         # Find the convex hull of the selected points
                         selected_x = x[selected_points]
                         selected_y = y[selected_points]
-                        hull = ConvexHull(np.column_stack((selected_x, selected_y)))
+                        # Perform PCA for dimensionality reduction on the selected data
+                        selected_xy = np.vstack([selected_x, selected_y])
+                        # Perform PCA for dimensionality reduction on the selected data
+                        pca = PCA()  # Instantiate PCA
+                        selected_xy_pca = pca.fit_transform(selected_xy.T)
+
+                        # Find the convex hull of the selected points after PCA
+                        hull = ConvexHull(selected_xy_pca, qhull_options="QJ")
+                        #hull = ConvexHull(np.column_stack((selected_x, selected_y)), qhull_options="QJ")
 
                         # Extract the vertices of the convex hull
                         hull_vertices_x = selected_x[hull.vertices]
@@ -594,12 +607,12 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                     ### set x axes
                     ### make C0 and C1 symmetric
                     if labels[i] in [f'C0_{planet_num}', f'C1_{planet_num}']:
-                        if tick_values_x_c0 is None:
-                            tick_values_x_c0 = np.linspace(-max(x), max(x), 3)
-                            plot_range_x_c0 = [-max(x), max(x)]
+                        if tick_values_y_c0 is None:
+                            tick_values_y_c0 = np.linspace(-max(x), max(x), 3)
+                            plot_range_y_c0 = [-max(x), max(x)]
 
-                        tick_values_x = tick_values_x_c0
-                        plot_range = plot_range_x_c0
+                        tick_values_x = tick_values_y_c0
+                        plot_range = plot_range_y_c0
                     else:
                         if labels[i] == f'IMPACT_{planet_num}':
                             tick_values_x = np.linspace(0, 1.2, 3)
@@ -635,12 +648,12 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                     tick_format = '.2f'
                     ### histograms only have x axes
                     if labels[i] in [f'C0_{planet_num}', f'C1_{planet_num}']:
-                        if tick_values_x_c0 is None:
-                            tick_values_x_c0 = np.linspace(-max(x), max(x), 3)
-                            plot_range_x_c0 = [-max(x), max(x)]
+                        if tick_values_y_c0 is None:
+                            tick_values_y_c0 = np.linspace(-max(x), max(x), 3)
+                            plot_range_y_c0 = [-max(x), max(x)]
 
-                        tick_values_x = tick_values_x_c0
-                        plot_range = plot_range_x_c0
+                        tick_values_x = tick_values_y_c0
+                        plot_range = plot_range_y_c0
                     else:
                         if labels[i] == f'IMPACT_{planet_num}':
                             tick_values_x = np.linspace(0, 1.2, 3)
@@ -671,9 +684,9 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                     fig.update_yaxes(showticklabels=False,tickvals=tick_values_y, row=j + 1, col=i + 1, tickangle=0)
                     fig.update_xaxes(range=plot_range, row=j + 1, col=i + 1)
                     
-                # if i!=j:
-                #     fig.update_layout(plot_bgcolor='white')
-                fig.update_xaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1, tickangle=0)
+                
+                
+                fig.update_xaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1, tickangle=30)
                 fig.update_yaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1, tickangle=0)
         
         

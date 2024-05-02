@@ -21,6 +21,9 @@ from scipy import stats
 from sklearn.neighbors import KernelDensity
 from sklearn.decomposition import PCA
 from scipy.spatial import ConvexHull
+import batman
+import matplotlib.pyplot as plt, mpld3
+import seaborn as sns
 
 from plotly.subplots import make_subplots
 
@@ -235,33 +238,57 @@ def generate_plot_single_transit(koi_id, line_number,planet):
     ### get max likelihood
     max_index = data_post['LN_LIKE'].idxmax()
     ### get most likely params {P, t0, Rp/Rs, b, T14, q1, q2}
-    P = data_post[f'P'][max_index]
-    T0 = data_post[f'T0'][max_index]
-    ROR = data_post[f'ROR_{num}'][max_index]
-    IMPACT = data_post[f'IMPACT_{num}'][max_index]
-    DUR14 = data_post[f'DUR14_{num}'][max_index]
-    LD_Q1 = data_post[f'LD_Q1'][max_index]
-    LD_Q2 = data_post[f'LD_Q2'][max_index]
+    theta = batman.TransitParams()
+    theta.per = data_post[f'P'][max_index]
+    theta.t0 = 0.
+    theta.rp = data_post[f'ROR_{num}'][max_index]
+    theta.b = data_post[f'IMPACT_{num}'][max_index]
+    theta.T14 = data_post[f'DUR14_{num}'][max_index]
+    LD_U1 = data_post[f'LD_U1'][max_index]
+    LD_U2 = data_post[f'LD_U2'][max_index]
+    theta.u = [LD_U1, LD_U2]
+    theta.limb_dark = 'quadratic'
+    
     ### initialize figure
     fig = make_subplots(rows=1, cols=1)
 
     if (data_load.single_data(koi_id, line_number,num,ttv_file)):
         photometry_data_lc,photometry_data_sc, transit_number, center_time = data_load.single_data(koi_id, line_number, num, ttv_file)
-        transit_lc = px.scatter(photometry_data_lc, x="TIME", y="FLUX").data[0]
-
+        center_time = np.asarray(center_time, dtype=np.float64)
+        #transit_lc = px.scatter(photometry_data_lc, x="TIME", y="FLUX").data[0]
+        transit_lc = go.Scatter(x=photometry_data_lc.TIME, y=photometry_data_lc.FLUX, mode='markers')
         fig.add_trace(transit_lc, row=1, col=1)
 
-        transit_sc = px.scatter(photometry_data_sc, x="TIME", y="FLUX").data[0]
+        #transit_sc = px.scatter(photometry_data_sc, x="TIME", y="FLUX").data[0]
+        transit_sc = go.Scatter(x=photometry_data_sc.TIME, y=photometry_data_sc.FLUX, mode='markers')
         fig.add_trace(transit_sc,row=1,col=1)
 
         lc_min,lc_max,sc_min,sc_max = data_load.get_min_max(koi_id)
 
+       
         if len(photometry_data_sc)>0:
+            ### transit model
+            scit = 1.15e-5
+            t = np.arange(photometry_data_sc.TIME.min(), photometry_data_sc.TIME.max(),scit)
+            m = batman.TransitModel(theta, t-center_time)    #initializes model
+            flux = m.light_curve(theta)          #calculates light curve
+            mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
+            fig.add_trace(mod,row=1,col=1)
+
+
             fig.update_layout(xaxis_title=f"TIME (DAYS)", 
                           yaxis_title="FLUX",
                           yaxis=dict(range=[sc_min, sc_max])
             )
         else:
+            ### transit model
+            scit = 1.15e-5
+            t = np.arange(photometry_data_lc.TIME.min(), photometry_data_lc.TIME.max(),scit)
+            m = batman.TransitModel(theta, t-center_time)    #initializes model
+            flux = m.light_curve(theta)          #calculates light curve
+            mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
+            fig.add_trace(mod,row=1,col=1)
+
             fig.update_layout(xaxis_title=f"TIME (DAYS)", 
                           yaxis_title="FLUX",
                           yaxis=dict(range=[lc_min, lc_max])
@@ -313,10 +340,14 @@ def generate_plot_folded_light_curve(koi_id):
     ext = os.path.basename(data_directory) +'.csv'
     csv_file_path = os.path.join(data_directory, ext)
 
+    file_results =star_id + '-results.fits'
+    file_path_results = os.path.join(data_directory, star_id, file_results)
+
     ### number of planets from number of ttv files
     npl = len(file_paths)
     subplot_height=350
     titles = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
+    
     fig = make_subplots(rows=npl, cols=1,
                         subplot_titles = titles,
                         row_heights=[subplot_height]*npl,
@@ -324,9 +355,26 @@ def generate_plot_folded_light_curve(koi_id):
     
     for i, file_path in enumerate(file_paths):
         planet_num = 0+i
-        fold_data_lc, fold_data_sc, binned_avg = data_load.folded_data(koi_id,planet_num,file_path)
+        fold_data_lc, fold_data_sc, binned_avg,center_time = data_load.folded_data(koi_id,planet_num,file_path)
 
-        if fold_data_lc is not None and fold_data_sc is not None:
+        ### posteriors for most likely model
+        
+        data_post = data_load.load_posteriors(file_path_results,planet_num,koi_id)
+        ### get max likelihood
+        max_index = data_post['LN_LIKE'].idxmax()
+        ### get most likely params {P, t0, Rp/Rs, b, T14, q1, q2}
+        theta = batman.TransitParams()
+        theta.per = data_post[f'P'][max_index]
+        theta.t0 = 0.
+        theta.rp = data_post[f'ROR_{planet_num}'][max_index]
+        theta.b = data_post[f'IMPACT_{planet_num}'][max_index]
+        theta.T14 = data_post[f'DUR14_{planet_num}'][max_index]*24
+        LD_U1 = data_post[f'LD_U1'][max_index]
+        LD_U2 = data_post[f'LD_U2'][max_index]
+        theta.u = [LD_U1, LD_U2]
+        theta.limb_dark = 'quadratic'
+
+        if fold_data_lc is not None and fold_data_sc is not None: 
             ### short cadence
             fold_sc = go.Scatter(x=fold_data_sc.TIME, y=fold_data_sc.FLUX, mode='markers')
             fold_sc.marker.update(symbol="circle", size=4, color="gray")
@@ -345,6 +393,17 @@ def generate_plot_folded_light_curve(koi_id):
             bin_avg.name = "Binned Average"
             bin_avg.legendgroup=f'{i}'
             fig.add_trace(bin_avg, row=i+1, col=1)
+
+            ### model
+            scit = 1.15e-5
+            t = np.arange(fold_data_lc.TIME.min(), fold_data_lc.TIME.max(),scit)
+            m = batman.TransitModel(theta, t)    #initializes model
+            flux = (m.light_curve(theta))        #calculates light curve
+            mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
+            mod.name = "Model"
+            mod.legendgroup=f'{i}'
+            fig.add_trace(mod, row=i+1, col=1)
+
             ### Update x-axis and y-axis labels for each subplot
             fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
             fig.update_yaxes(title_text="FLUX", row=i+1, col=1)
@@ -359,6 +418,15 @@ def generate_plot_folded_light_curve(koi_id):
             bin_avg.marker.update(symbol="square", size=10, color="orange")
             bin_avg.name = "Binned Average"
             fig.add_trace(bin_avg, row=i+1, col=1)
+            ### model
+            scit = 1.15e-5
+            t = np.arange(fold_data_lc.TIME.min(), fold_data_lc.TIME.max(),scit)
+            m = batman.TransitModel(theta, t)    #initializes model
+            flux = m.light_curve(theta)          #calculates light curve
+            mod = go.Scatter(x=t, y=flux, mode="lines")
+            mod.name = "Model"
+            mod.legendgroup=f'{i}'
+            fig.add_trace(mod, row=i+1, col=1)
             ### Update x-axis and y-axis labels for each subplot
             fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
             fig.update_yaxes(title_text="FLUX", row=i+1, col=1)
@@ -373,6 +441,15 @@ def generate_plot_folded_light_curve(koi_id):
             bin_avg.marker.update(symbol="square", size=10, color="orange")
             bin_avg.name = "Binned Average"
             fig.add_trace(bin_avg, row=i+1, col=1)
+            ### model
+            scit = 1.15e-5
+            t = np.arange(fold_data_sc.TIME.min(), fold_data_sc.TIME.max(),scit)
+            m = batman.TransitModel(theta, t)    #initializes model
+            flux = (m.light_curve(theta))        #calculates light curve
+            mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
+            mod.name = "Model"
+            mod.legendgroup=f'{i}'
+            fig.add_trace(mod, row=i+1, col=1)
             ### Update x-axis and y-axis labels for each subplot
             fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
             fig.update_yaxes(title_text="FLUX", row=i+1, col=1)
@@ -471,11 +548,102 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
 
         labels = data.columns.tolist()
 
+        fig,axs = plt.subplots(len(selected_columns), len(selected_columns))
+        tick_values_y_c0 = None
+        plot_range_y_c0 = None
+        for i in range(len(selected_columns)):
+            for j in range(len(selected_columns)):
+                # x = data[selected_columns[i]]
+                # y = data[selected_columns[j]]
+                
+                x1 = data[selected_columns[i]][::5].values
+                y1 = data[selected_columns[j]][::5].values
+                ### trim with random indicies 
+                x = x1[rand_index]
+                y = y1[rand_index]
+                df = pd.DataFrame({'x':x, 'y':y})
+
+                # make 2D density plot
+                thin = 5
+
+                X = df.x[::thin].values
+                Y = df.y[::thin].values
+
+                #density = stats.gaussian_kde([X,Y], bw_method='scott')([df.x,df.y])
+                std_dev = np.std(x1)
+                bw = std_dev * 0.05
+                density = stats.gaussian_kde([x,y], bw_method=bw)([x1,y1])
+                cutoff  = 4
+                low_density = density < np.percentile(density, cutoff)
+
+
+                data1 = [df['x'], df['y']]
+                
+                
+                ax = axs[i, j]
+                # Diagonal plots are histograms
+                if i == j:
+                    #ax.hist(data[i], bins=10, color='skyblue')
+                    
+                    kde = gaussian_kde(x, weights=weight)
+                    x_vals = np.linspace(min(x)*0.95, max(x)*1.05, 1000)
+                    y_vals = kde(x_vals)
+                    ax.plot(x_vals,y_vals)
+                    #ax.set_xlabel(labels[i]) 
+                    
+                # Lower triangle plots are scatter plots or line plots
+                elif i > j:
+                    #ax.plot(data[j], data[i], 'o', color='orange')  # Scatter plot
+                    sns.kdeplot(df[::thin], x='x', y='y', fill=True, levels=4, ax=axs[i,j])
+                    ax.scatter(df.x[low_density], df.y[low_density], color='gray', s=1)
+                    ax.set_xlabel(labels[j])
+                    ax.set_ylabel(labels[i])
+                    #ax.set_xlim(-1,1)
+                    
+                else:
+                    ax.remove()
+                
+                ### add labels to x and y axes
+                if (i == 0) and (i != j):
+                    #fig.update_yaxes(title_text=labels[j], row=j + 1, col=i + 1)
+                    ax.set_ylabel(labels[i])
+                if j == len(selected_columns) - 1:
+                    #fig.update_xaxes(title_text=labels[i], row=j + 1, col=i + 1)
+                    ax.set_xlabel(labels[j])
+        
+        #fig.update_layout(height=800, width=900)
+        mpld3_plot = mpld3.fig_to_html(fig)
+        graphJSON = json.dumps(mpld3_plot)#, cls=plotly.utils.PlotlyJSONEncoder) 
+        return jsonify(graphJSON)
+    else:
+        error_message = f'No data found for {koi_id}'
+        return jsonify(error_message=error_message)
+
+
+
+
+"""
+def generate_plot_corner(koi_id,selected_columns, planet_num):
+    selected_columns = selected_columns.split(',')
+    star_id = koi_id.replace("K","S")
+    file =star_id + '-results.fits'
+    file_path = os.path.join(data_directory, star_id, file)
+
+    if os.path.isfile(file_path):
+        data = data_load.load_posteriors(file_path,planet_num,koi_id)
+        LN_WT = data['LN_WT'][::5].values
+        weight = np.exp(LN_WT- LN_WT.max())
+        w = weight/ np.sum(weight)
+        index = np.arange(len(LN_WT))
+        rand_index = np.random.choice(index,p=w,size=len(LN_WT))
+
+        data = data[selected_columns]
+
+        labels = data.columns.tolist()
+
         fig = make_subplots(rows=len(selected_columns), cols=len(selected_columns))
         tick_values_y_c0 = None
-        tick_values_x_c0 = None
         plot_range_y_c0 = None
-        plot_range_x_c0 = None
         for i in range(len(selected_columns)):
             for j in range(i, len(selected_columns)):
                 # x = data[selected_columns[i]]
@@ -487,22 +655,86 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                 x = x1[rand_index]
                 y = y1[rand_index]
                 
+                
+                
 
                 if i != j:
                     # Calculate the density of the points
                     xy = np.vstack([x, y])
+                    
                     z = gaussian_kde(xy)(xy)
-
+                    ### plotting threshold
+                    threshold_p=np.percentile(z,1)
                     # Select the top 90th percentile based on density
                     threshold_s = np.percentile(z, 10) # scatter threshhold
-
+                    mask = (z >= threshold_s) 
+                    mask_s = (z >= threshold_p) & (z < threshold_s)
                     # Plot points below the threshold as scatter plot
-                    fig.add_trace(go.Scatter(x=x[z < threshold_s], y=y[z < threshold_s], mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)
+                    fig.add_trace(go.Scatter(
+                        x=x[mask_s], 
+                        y=y[mask_s], 
+                        mode='markers', 
+                        marker=dict(color='gray', size=1), 
+                        showlegend=False
+                        ), row=j + 1, col=i + 1)
                     
                     # Determine threshold densities corresponding to the percentiles
                     percentiles = [10, 25, 50, 75, 90]  # Reversed order
-                    threshold_densities = np.percentile(z, percentiles)
+                    #threshold_densities = np.percentile(z, percentiles)
+                    #hist, xedges, yedges = np.histogram2d(x[mask], y[mask], bins=100, density=True)
 
+                    # Define contour levels
+                    contour_levels = [10, 68, 98, 99]  # Adjust as needed
+                    fig.add_trace(go.Histogram2dContour(
+                        x=x[mask],
+                        y=y[mask],
+                        colorscale='Blues',
+                        reversescale=False,
+                        xaxis='x',
+                        yaxis='y',
+                        contours=dict(
+                            start=min(contour_levels),
+                            end=max(contour_levels),
+                            size=(max(contour_levels) - min(contour_levels)) / len(contour_levels),
+                        ),
+                        showscale=False,
+                    ), row=j + 1, col=i + 1)
+                    ### old
+                    #fig.add_trace(go.Scatter(x=x, y=y, mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)
+                    #fig.add_trace(go.Scatter(x=x, y=y, mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)
+                    # for percentile, density_threshold in zip(percentiles, threshold_densities):
+                    #     mask_contour = z >= density_threshold
+                    #     fig.add_trace(go.Contour(
+                    #         x=x[mask_contour],
+                    #         y=y[mask_contour],
+                    #         line=dict(width=1),
+                    #         contours=dict(
+                    #             start=percentile,
+                    #             end=percentile,
+                    #             size=0  # Disable interpolation between levels
+                    #         ),
+                    #         showscale=False,
+                    #         hoverinfo='none'
+                    #     ), row=j + 1, col=i + 1)
+                    
+                    # fig.add_trace(go.Histogram2dContour(
+                    #     x=x[z >= threshold_s], 
+                    #     y=y[z >= threshold_s], 
+                    #     #z=z,
+                    #     autocontour=False,
+                    #     colorscale='Blues', 
+                    #     reversescale=False, 
+                    #     showscale=False, 
+                    #     contours=dict(
+                    #         start=min(threshold_densities), 
+                    #         end=max(threshold_densities), 
+                    #         size=0,
+                    #         coloring='fill'), 
+                    #     line=dict(width=1)
+                    #     ), row=j + 1, col=i + 1)
+                        
+
+                    '''
                     # Define shades of blue for each percentile
                     #blue_shades = ['rgba(0, 151, 236, 0.8)','rgba(0, 151, 189, 0.8)','rgba(0, 129, 156, 0.8)','rgba(0, 75, 134, 0.8)','rgba(0, 36, 119, 0.8)']
                     blue_shades = ['rgba(153,190,222,1.00)','rgba(116,167,210,1.00)','rgba(79,143,198,1.00)','rgba(55,118,172,1.00)',' rgba(43,93,136,1.00)']
@@ -512,8 +744,8 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                         selected_points = (z >= threshold_density)
 
                         # Check if there are enough points to form a convex hull (at least 3 points in 2D)
-                        if np.sum(selected_points) < 3:
-                            continue  # Skip this percentile if there are not enough points
+                        # if np.sum(selected_points) < 3:
+                        #     continue  # Skip this percentile if there are not enough points
 
                         # Find the convex hull of the selected points
                         selected_x = x[selected_points]
@@ -546,7 +778,7 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                             showlegend=False
                         ), row=j + 1, col=i + 1)
 
-                       
+                       '''
 
 
                     ### old
@@ -583,18 +815,7 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                             tick_values_y = np.linspace(0, 1.2, 3)
                             plot_range = [0, 1.2]
                             tick_format = '.1f'
-                        elif labels[j] in [f'LD_Q1', f'LD_Q2']:
-                            tick_values_y = np.linspace(0, 1, 3)
-                            plot_range = [0, 1]
-                            tick_format = '.1f'
-                        elif labels[j] == f'LD_U1':
-                            tick_values_y = np.linspace(0, 2, 3)
-                            plot_range = [0, 2]
-                            tick_format = '.1f'
-                        elif labels[j] == f'LD_U2':
-                            tick_values_y = np.linspace(-1, 1, 3)
-                            plot_range = [-1, 1]
-                            tick_format = '.1f'
+                       
                         else:
                             if labels[j] == f'ROR_{planet_num}':
                                 tick_format = '.3f'
@@ -618,18 +839,7 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                             tick_values_x = np.linspace(0, 1.2, 3)
                             plot_range = [0, 1.2]
                             tick_format = '.1f'
-                        elif labels[i] in [f'LD_Q1', f'LD_Q2']:
-                            tick_values_x = np.linspace(0, 1, 3)
-                            plot_range = [0, 1]
-                            tick_format = '.1f'
-                        elif labels[i] == f'LD_U1':
-                            tick_values_x = np.linspace(0, 2, 3)
-                            plot_range = [0, 2]
-                            tick_format = '.1f'
-                        elif labels[i] == f'LD_U2':
-                            tick_values_x = np.linspace(-1, 1, 3)
-                            plot_range = [-1, 1]
-                            tick_format = '.1f'
+                      
                         else:
                             if labels[i] == f'ROR_{planet_num}':
                                 tick_format = '.3f'
@@ -659,18 +869,7 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                             tick_values_x = np.linspace(0, 1.2, 3)
                             plot_range = [0, 1.2]
                             tick_format = '.1f'
-                        elif labels[i] in [f'LD_Q1', f'LD_Q2']:
-                            tick_values_x = np.linspace(0, 1, 3)
-                            plot_range = [0, 1]
-                            tick_format = '.1f'
-                        elif labels[i] == f'LD_U1':
-                            tick_values_x = np.linspace(0, 2, 3)
-                            plot_range = [0, 2]
-                            tick_format = '.1f'
-                        elif labels[i] == f'LD_U2':
-                            tick_values_x = np.linspace(-1, 1, 3)
-                            plot_range = [-1, 1]
-                            tick_format = '.1f'
+                     
                         else:
                             if labels[i] == f'ROR_{planet_num}':
                                 tick_format = '.3f'
@@ -684,7 +883,7 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                     fig.update_yaxes(showticklabels=False,tickvals=tick_values_y, row=j + 1, col=i + 1, tickangle=0)
                     fig.update_xaxes(range=plot_range, row=j + 1, col=i + 1)
                     
-                
+
                 
                 fig.update_xaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1, tickangle=30)
                 fig.update_yaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1, tickangle=0)
@@ -697,7 +896,7 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
         error_message = f'No data found for {koi_id}'
         return jsonify(error_message=error_message)
     
-
+"""
 
 if __name__ == '__main__':
     app.run(debug=True)

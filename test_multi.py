@@ -1,6 +1,222 @@
 
+import batman
+import numpy as np
+import matplotlib.pyplot as plt, mpld3
+
+params = batman.TransitParams()
+params.t0 = 0.                       #time of inferior conjunction
+params.per = 1.                      #orbital period
+params.rp = 0.1                      #planet radius (in units of stellar radii)
+params.b = 0.8                       #impact
+params.T14 = .5                      #transit duration
+#params.a = 15.                       #semi-major axis (in units of stellar radii)
+#params.inc = 87.                     #orbital inclination (in degrees)
+#params.ecc = 0.                      #eccentricity
+#params.w = 90.                       #longitude of periastron (in degrees)
+params.u = [0.1, 0.3]                #limb darkening coefficients [u1, u2]
+params.limb_dark = "quadratic"       #limb darkening model
+t = np.linspace(-0.05, 0.05, 100)
+m = batman.TransitModel(params, t)    #initializes model
+flux = m.light_curve(params)          #calculates light curve
+plt.plot(t, flux)
+plt.xlabel("Time from central transit")
+plt.ylabel("Relative flux")
+#plt.show()
+plt.show()
+'''
+from flask import Flask, render_template
+
+import matplotlib.pyplot as plt, mpld3
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from   scipy import stats
+import seaborn as sns
+from scipy.stats import gaussian_kde
 
 
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    
+    # simulate data
+    N = int(1e5)
+    mu = np.random.uniform(1,2,size=2)
+    cov = np.eye(2) + np.random.uniform(0,1)*(1.0-np.eye(2))
+
+    x, y = stats.multivariate_normal(mu, cov).rvs(size=N).T
+    df = pd.DataFrame({'x':x, 'y':y})
+
+    # make 2D density plot
+    thin = 100
+
+    X = df.x[::thin].values
+    Y = df.y[::thin].values
+
+    density = stats.gaussian_kde([X,Y])([df.x,df.y])
+    cutoff  = 4
+    low_density = density < np.percentile(density, cutoff)
+
+    Nvar = 2   # Number of variables
+
+    data = [df['x'], df['y']]
+    labels = ['x', 'y']
+    fig, axs = plt.subplots(Nvar, Nvar, figsize=(10, 10))
+    # Iterate over each subplot
+    for i in range(Nvar):
+        for j in range(Nvar):
+            ax = axs[i, j]
+            
+            # Diagonal plots are histograms
+            if i == j:
+                #ax.hist(data[i], bins=10, color='skyblue')
+                
+                kde = gaussian_kde(data[i]) #, weights=weights
+                x_vals = np.linspace(min(data[i])*0.95, max(data[i])*1.05, 1000)
+                y_vals = kde(x_vals)
+                ax.plot(x_vals,y_vals)
+                #ax.set_xlabel(labels[i]) 
+                
+            # Lower triangle plots are scatter plots or line plots
+            elif i > j:
+                #ax.plot(data[j], data[i], 'o', color='orange')  # Scatter plot
+                sns.kdeplot(df[::thin], x=f'{labels[j]}', y=f'{labels[i]}', fill=True, levels=4, ax=axs[i,j])
+                ax.scatter(df.x[low_density], df.y[low_density], color='C0', s=3)
+                ax.set_xlabel(labels[j])
+                ax.set_ylabel(labels[i])
+                #ax.set_xlim(-1,1)
+                
+            else:
+                ax.remove()
+            
+            ### add labels to x and y axes
+            if (i == 0) and (i != j):
+                #fig.update_yaxes(title_text=labels[j], row=j + 1, col=i + 1)
+                ax.set_ylabel(labels[i])
+            if j == Nvar - 1:
+                #fig.update_xaxes(title_text=labels[i], row=j + 1, col=i + 1)
+                ax.set_xlabel(labels[j])
+              
+
+    # Adjust layout to prevent overlapping
+    plt.tight_layout()
+
+    # Convert the plot to an mpld3 object
+    mpld3_plot = mpld3.fig_to_html(fig)
+
+    # Render the HTML template with the mpld3 plot
+    return render_template('plot.html', mpld3_plot=mpld3_plot)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+'''
+##########################################################################################
+'''
+import matplotlib.pyplot as plt, mpld3
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from   scipy import stats
+import seaborn as sns
+
+# simulate data
+N = int(1e5)
+mu = np.random.uniform(1,2,size=2)
+cov = np.eye(2) + np.random.uniform(0,1)*(1.0-np.eye(2))
+
+x, y = stats.multivariate_normal(mu, cov).rvs(size=N).T
+df = pd.DataFrame({'x':x, 'y':y})
+
+# make 2D density plot
+thin = 100
+
+X = df.x[::thin].values
+Y = df.y[::thin].values
+
+density = stats.gaussian_kde([X,Y])([df.x,df.y])
+cutoff  = 4
+low_density = density < np.percentile(density, cutoff)
+
+Nvar = 2   # Number of variables
+
+data = [df['x'], df['y']]
+labels = ['x', 'y']
+
+fig, axs = plt.subplots(Nvar, Nvar, figsize=(10, 10))
+
+for i in range(Nvar):
+    for j in range(Nvar):
+        
+
+        # plot the data
+        if i == j:
+            # Add histogram/kde here
+            axs[i, j].hist(data[i], bins=10, color='skyblue')
+            axs[i, j].set_xlabel(labels[i])
+        else:
+            #axs[i, j].scatter(data[j], data[i], color='orange')
+            sns.kdeplot(df[::thin], x=f'{labels[j]}', y=f'{labels[i]}', fill=True, levels=4, ax=[i,j])
+            axs[i, j].scatter(df.x[low_density], df.y[low_density], color='C0', s=3)
+            axs[i, j].set_xlabel(labels[j])
+            axs[i, j].set_ylabel(labels[i])
+
+plt.tight_layout()
+
+
+
+
+#plt.figure()
+#sns.kdeplot(df[::thin], x='x', y='y', fill=True, levels=4)
+#plt.scatter(df.x[low_density], df.y[low_density], color='C0', s=3)
+mpld3.show()
+'''
+
+"""
+import plotly.graph_objects as go
+import numpy as np
+
+# Sample data (replace with your actual data)
+np.random.seed(0)
+x = np.random.normal(0, 1, 1000)
+y = np.random.normal(0, 1, 1000)
+
+# Calculate the density of points
+hist, xedges, yedges = np.histogram2d(x, y, bins=50, density=True)
+
+# Define contour levels
+contour_levels = [10, 25, 50, 75, 90]  # Adjust as needed
+
+# Create the contour plot
+fig = go.Figure()
+
+# Add histogram2dcontour trace
+fig.add_trace(go.Histogram2dContour(
+    x=x,
+    y=y,
+    z=hist.T,  # Transpose the histogram to match Plotly's expectations
+    colorscale='Blues',
+    reversescale=True,
+    xaxis='x',
+    yaxis='y',
+    contours=dict(
+        start=min(contour_levels),
+        end=max(contour_levels),
+        size=(max(contour_levels) - min(contour_levels)) / len(contour_levels),
+    ),
+))
+
+# Update layout
+fig.update_layout(
+    xaxis=dict(title='X-axis'),
+    yaxis=dict(title='Y-axis'),
+    title='Histogram 2D Contour Plot with Manual Contours',
+)
+
+# Show the plot
+fig.show()
+"""
+"""
 import os
 import numpy as np
 import pandas as pd
@@ -111,7 +327,7 @@ for i in range(len(selected_columns)):
         fig.update_yaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1)
 
 fig.show()
-
+"""
 
 """
 import numpy as np

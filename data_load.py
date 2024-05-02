@@ -13,10 +13,12 @@ import sys
 import lightkurve as lk
 import numpy.polynomial.polynomial as poly
 import glob
+import batman
 
 
 #data_directory = 'c:\\Users\\Paige\\Projects\\data\\'
 data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
+
 
 
 def update_data_directory(selected_table):
@@ -166,97 +168,6 @@ def _legendre(koi_id, n, k):
             return ValueError("only configured for 0th and 1st order Legendre polynomials")
 
 
-'''
-def load_posteriors(f,koi_id):
-    with fits.open(f) as hduL:
-        data = hduL['SAMPLES'].data
-        keys = data.names
-        
-        _posteriors = []
-        for k in keys:
-            _posteriors.append(data[k])
-        LD_U1 = data.ROR_0
-        # Add calculated values as new columns
-        keys += ['LD_U1']
-        _posteriors.extend([LD_U1])
-
-
-        return pd.DataFrame(np.array(_posteriors).T, columns=keys)
-
-'''
-
-'''
-def load_posteriors(f,koi_id):
-    with fits.open(f) as hduL:
-        data = hduL['SAMPLES'].data
-        keys = data.names
-        _posteriors = []
-        for k in keys:
-            _posteriors.append(data[k])
-
-        # Calculate T0, P, u1, and u2
-        index, ttime, model, out_prob, out_flag=get_ttv_file(koi_id,file_path)
-        n_samples = len(data)
-        n_transits = len(keys) // 2  # Assuming each transit has its epoch and period
-        T0 = np.zeros(n_samples)
-        P = np.zeros(n_samples)
-        u1 = np.zeros(n_samples)
-        u2 = np.zeros(n_samples)
-        def _legendre(n,k):
-            star_id = koi_id.replace("K","S")
-            ttv_path = 
-            fits_path = 
-            index, ttime, model, out_prob, out_flag=get_ttv_file(koi_id,ttv_path)
-            t = model[n]
-            data = read_data_from_fits(fits_path)
-            x = 2*(t-data.time.min())/(data.time.max()-data.time.min()) - 1
-                
-            if k==0:
-                return np.ones_like(x)
-            if k==1:
-                return x
-            else:
-                return ValueError("only configured for 0th and 1st order Legendre polynomials")
-
-        for n in range(n_transits):
-            epoch_samples = data[f'T0_{n}']  # Assuming epoch columns are named as E0_0, E1_0, ...
-            period_samples = data[f'P_{n}']  # Assuming period columns are named as P0_0, P1_0, ...
-            q1_samples = data[f'LD_Q1']
-            q2_samples = data[f'LD_Q2']
-
-            for i in range(n_samples):
-                # least squares period and epoch
-                Leg0 = _legendre(n, 0)
-                Leg1 = _legendre(n, 1)
-                ephem = epoch_samples[i] + np.outer(period_samples[i], Leg0) + np.outer(period_samples[i], Leg1)
-                t0, p = poly.polyfit(ttime.index[n], ephem.T, 1)
-                T0[i] = t0
-                P[i] = p
-
-                # limb darkening
-                u1[i] = 2 * np.sqrt(q1_samples[i]) * q2_samples[i]
-                u2[i] = np.sqrt(q1_samples[i]) * (1 - 2 * q2_samples[i])
-
-        # Add calculated values as new columns
-        keys += ['T0', 'P', 'u1', 'u2']
-        _posteriors.extend([T0, P, u1, u2])
-
-        return pd.DataFrame(np.array(_posteriors).T, columns=keys)
-
-'''
-# def _legendre(n,k):
-#     index, ttime, model, out_prob, out_flag=get_ttv_file(koi_id,ttv_path)
-#     t = model[n]
-#     data = read_data_from_fits(fits_path)
-#     x = 2*(t-data.time.min())/(data.time.max()-data.time.min()) - 1
-        
-#     if k==0:
-#         return np.ones_like(x)
-#     if k==1:
-#         return x
-#     else:
-#         return ValueError("only configured for 0th and 1st order Legendre polynomials")
-
 
 # def single_transit_data(koi_id, line_number, ttv_file):
 #     star_id = koi_id.replace("K","S")
@@ -330,7 +241,7 @@ def single_data(koi_id, line_number, num, ttv_file):
     data_post = load_posteriors(file_path_results,num,koi_id)
     ### get max likelihood
     max_index = data_post['LN_LIKE'].idxmax()
-    DUR14 = data_post[f'DUR14_{num}'][max_index]
+    DUR14 = 1.5* data_post[f'DUR14_{num}'][max_index]
 
     combined_data = None
     #get data and create detrended light curve
@@ -407,7 +318,8 @@ def folded_data(koi_id,planet_num, file_path):
     data_post = load_posteriors(file_path_results,planet_num,koi_id)
     ### get max likelihood
     max_index = data_post['LN_LIKE'].idxmax()
-    DUR14 = data_post[f'DUR14_{planet_num}'][max_index]
+    ### mult by 1.5 for correct offset
+    DUR14 = 1.5 * data_post[f'DUR14_{planet_num}'][max_index]
 
     fold_data_time = []
     fold_data_flux = []
@@ -483,7 +395,7 @@ def folded_data(koi_id,planet_num, file_path):
         'FLUX': weighted_avg_combined
     })
 
-    return fold_data_lc, fold_data_sc, binned_weighted_avg_combined
+    return fold_data_lc, fold_data_sc, binned_weighted_avg_combined, center_time
 
 
 ########################################################################################

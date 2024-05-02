@@ -257,10 +257,12 @@ def generate_plot_single_transit(koi_id, line_number,planet):
         center_time = np.asarray(center_time, dtype=np.float64)
         #transit_lc = px.scatter(photometry_data_lc, x="TIME", y="FLUX").data[0]
         transit_lc = go.Scatter(x=photometry_data_lc.TIME, y=photometry_data_lc.FLUX, mode='markers')
+        transit_lc.marker.update(color="blue")
         fig.add_trace(transit_lc, row=1, col=1)
 
         #transit_sc = px.scatter(photometry_data_sc, x="TIME", y="FLUX").data[0]
         transit_sc = go.Scatter(x=photometry_data_sc.TIME, y=photometry_data_sc.FLUX, mode='markers')
+        transit_sc.marker.update(color="blue")
         fig.add_trace(transit_sc,row=1,col=1)
 
         lc_min,lc_max,sc_min,sc_max = data_load.get_min_max(koi_id)

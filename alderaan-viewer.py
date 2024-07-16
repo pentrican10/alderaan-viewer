@@ -24,13 +24,16 @@ from scipy.spatial import ConvexHull
 import batman
 import matplotlib.pyplot as plt, mpld3
 import seaborn as sns
+import tempfile
+import base64
+import io
 
 from plotly.subplots import make_subplots
 
 
 #sys.path.append('c:\\Users\\Paige\\Projects\\alderaan\\')
 data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
-
+K_id = True
 
 app = Flask(__name__)
 app.secret_key = 'super_secret'
@@ -61,8 +64,14 @@ def display_table_data():
     Assigns each html file to their respective locations
     Renders Index Template
     """
+    global K_id
     table = request.args.get('table', '2023-05-19_singles.csv')
     update_data_directory(table)
+    ### set switch to use K versus S(simulation data) based on table selected
+    if (table == '2023-05-19_singles.csv') or (table == '2023-05-15_doubles.csv'):
+        K_id = False
+    else: 
+        K_id = True
     table_data = data_load.read_table_data(table)
     left_content = render_template('left.html', table_data=table_data)
     right_top_content = render_template('right_top.html')
@@ -80,7 +89,11 @@ def display_comment_file(koi_id):
     args: 
         koi_id: string, format K00000
     """
-    star_id = koi_id.replace("K","S")
+    global K_id
+    if K_id == False:
+        star_id = koi_id.replace("K","S")
+    else:
+        star_id = koi_id
     path_extension = os.path.join(star_id, f'{star_id}_comments.txt')
     file_path = os.path.join(data_directory, path_extension)
     if os.path.isfile(file_path):
@@ -97,7 +110,11 @@ def save_comment(koi_id):
     Saves with username, date, comment
     Returns the function to display the updated comment file
     """
-    star_id = koi_id.replace("K","S")
+    global K_id
+    if K_id==False:
+        star_id = koi_id.replace("K","S")
+    else:
+        star_id = koi_id
     path_extension = os.path.join(star_id, f'{star_id}_comments.txt')
     file_path = os.path.join(data_directory, path_extension)
     comment = request.form.get('comment').strip()
@@ -114,7 +131,11 @@ def save_file(koi_id):
     """
     saves the file and displays the updated file or an error message
     """
-    star_id = koi_id.replace("K","S")
+    global K_id
+    if K_id==False:
+        star_id = koi_id.replace("K","S")
+    else:
+        star_id = koi_id
     path_extension = os.path.join(star_id, f'{star_id}_comments.txt')
     file_path = os.path.join(data_directory, path_extension)
     content = request.form.get('content')
@@ -130,7 +151,11 @@ def save_file(koi_id):
 
 @app.route('/generate_plot/<koi_id>')
 def generate_plot_Detrended_Light_Curve(koi_id):
-    star_id = koi_id.replace("K","S")
+    global K_id
+    if K_id==False:
+        star_id = koi_id.replace("K","S")
+    else:
+        star_id = koi_id
     file_name_lc = star_id + '_lc_filtered.fits'
     file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
     file_name_sc = star_id + '_sc_filtered.fits'
@@ -219,7 +244,11 @@ def generate_plot_Detrended_Light_Curve(koi_id):
 
 @app.route('/generate_plot_single_transit/<koi_id>/<int:line_number>/<planet>')
 def generate_plot_single_transit(koi_id, line_number,planet):
-    star_id = koi_id.replace("K","S")
+    global K_id
+    if K_id==False:
+        star_id = koi_id.replace("K","S")
+    else:
+        star_id = koi_id
     ttv_file = star_id + planet
     ext = os.path.basename(data_directory) +'.csv'
     csv_file_path = os.path.join(data_directory, ext)
@@ -312,7 +341,11 @@ def generate_plot_single_transit(koi_id, line_number,planet):
     
 @app.route('/get_transit_file_options/<koi_id>')
 def planet_options(koi_id):
-    star_id = koi_id.replace("K","S")
+    global K_id
+    if K_id==False:
+        star_id = koi_id.replace("K","S")
+    else:
+        star_id = koi_id
     file_name = star_id + '_*_quick.ttvs'
     file_paths = glob.glob(os.path.join(data_directory,star_id, file_name))
     options = []
@@ -324,7 +357,11 @@ def planet_options(koi_id):
 
 @app.route('/get_transit_file_options_corner/<koi_id>')
 def planet_options_corner(koi_id):
-    star_id = koi_id.replace("K","S")
+    global K_id
+    if K_id==False:
+        star_id = koi_id.replace("K","S")
+    else:
+        star_id = koi_id
     file_name = star_id + '_*_quick.ttvs'
     file_paths = glob.glob(os.path.join(data_directory,star_id, file_name))
     options = []
@@ -336,7 +373,11 @@ def planet_options_corner(koi_id):
 
 @app.route('/generate_plot_folded_light_curve/<koi_id>')
 def generate_plot_folded_light_curve(koi_id):
-    star_id = koi_id.replace("K","S")
+    global K_id
+    if K_id==False:
+        star_id = koi_id.replace("K","S")
+    else:
+        star_id = koi_id
     file_name = star_id + '_*_quick.ttvs'
     file_paths = glob.glob(os.path.join(data_directory,star_id, file_name))
     ext = os.path.basename(data_directory) +'.csv'
@@ -470,7 +511,11 @@ def generate_plot_folded_light_curve(koi_id):
 
 @app.route('/generate_plot_OMC/<koi_id>')
 def generate_plot_OMC(koi_id):
-    star_id = koi_id.replace("K","S")
+    global K_id
+    if K_id==False:
+        star_id = koi_id.replace("K","S")
+    else:
+        star_id = koi_id
     file_name = star_id + '_*_quick.ttvs'
     file_paths = glob.glob(os.path.join(data_directory,star_id, file_name))
     ext = os.path.basename(data_directory) +'.csv'
@@ -530,104 +575,87 @@ def generate_plot_OMC(koi_id):
     fig.update_coloraxes(colorbar_title_text='Out Probability')#, colorbar_len=0.2)
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
     return jsonify(graphJSON)
-        
+
+"""   
+@app.route('/generate_plot_corner/<koi_id>/<selected_columns>/<planet_num>')
+def generate_plot_corner(koi_id,selected_columns, planet_num):
+    try:
+        selected_columns = selected_columns.split(',')
+        global K_id
+        if K_id==False:
+            star_id = koi_id.replace("K","S")
+        else:
+            star_id = koi_id
+        file =star_id + '-results.fits'
+        file_path = os.path.join(data_directory, star_id, file)
+
+        if os.path.isfile(file_path):
+            data = data_load.load_posteriors(file_path,planet_num,koi_id)
+            # Drop the 'period' column if it exists
+            if f'P_{planet_num}' in data.columns:
+                data = data.drop(columns=[f'P_{planet_num}'])
+
+            LN_WT = data['LN_WT'][::5].values
+            weight = np.exp(LN_WT- LN_WT.max())
+            w = weight/ np.sum(weight)
+            index = np.arange(len(LN_WT))
+            rand_index = np.random.choice(index,p=w,size=len(LN_WT), replace=True)
+
+            data = data[selected_columns]
+
+            labels = data.columns.tolist()
+            
+            # Create a subplot grid for the corner plot
+            fig, axs = plt.subplots(len(selected_columns), len(selected_columns), figsize=(12, 12))
+            
+            for i in range(len(selected_columns)):
+                for j in range(len(selected_columns)):
+                    if i == j:
+                        # Diagonal plot - histogram or KDE plot
+                        x=[1,2,3,4]
+                        y=[1,2,3,4]
+                        ax = axs[i, j]
+                        ax.scatter(x,y)
+                        #ax.set_xlabel(labels[i])
+                        ax.set_ylabel('Density')
+                    elif i > j:
+                        # Lower triangle plot - scatter plot or line plot
+                        ax = axs[i, j]
+                        x = [5,6,7,8]
+                        y=[5,6,7,8]
+                        ax.scatter(x,y)
+                        #ax.set_xlabel(labels[j])
+                        #ax.set_ylabel(labels[i])
+                    else:
+                        # Upper triangle plot - remove axis
+                        axs[i, j].remove()
+            
+            # Adjust layout and convert plot to HTML
+            plt.tight_layout()
+            mpld3_plot = mpld3.fig_to_html(fig)
+            
+            # Convert mpld3 plot to JSON format and return as response
+            #graphJSON = json.dumps(mpld3_plot)
+            # Convert mpld3 plot to JSON format and return as response
+            return jsonify(graphJSON=mpld3_plot)
+            #return jsonify(graphJSON=graphJSON)
+        else:
+            error_message = f'No data found for {koi_id}'
+            return jsonify(error_message=error_message)
+    except Exception as e:
+        error_message = f'An error occurred: {str(e)}'
+        print(error_message)  # Log the error
+        return jsonify(error_message=error_message)
+    
+"""
 @app.route('/generate_plot_corner/<koi_id>/<selected_columns>/<planet_num>')
 def generate_plot_corner(koi_id,selected_columns, planet_num):
     selected_columns = selected_columns.split(',')
-    star_id = koi_id.replace("K","S")
-    file =star_id + '-results.fits'
-    file_path = os.path.join(data_directory, star_id, file)
-
-    if os.path.isfile(file_path):
-        data = data_load.load_posteriors(file_path,planet_num,koi_id)
-        LN_WT = data['LN_WT'][::5].values
-        weight = np.exp(LN_WT- LN_WT.max())
-        w = weight/ np.sum(weight)
-        index = np.arange(len(LN_WT))
-        rand_index = np.random.choice(index,p=w,size=len(LN_WT))
-
-        data = data[selected_columns]
-
-        labels = data.columns.tolist()
-
-        fig,axs = plt.subplots(len(selected_columns), len(selected_columns))
-        tick_values_y_c0 = None
-        plot_range_y_c0 = None
-        for i in range(len(selected_columns)):
-            for j in range(len(selected_columns)):
-                # x = data[selected_columns[i]]
-                # y = data[selected_columns[j]]
-                
-                x1 = data[selected_columns[i]][::5].values
-                y1 = data[selected_columns[j]][::5].values
-                ### trim with random indicies 
-                x = x1[rand_index]
-                y = y1[rand_index]
-                df = pd.DataFrame({'x':x, 'y':y})
-
-                # make 2D density plot
-                thin = 5
-
-                X = df.x[::thin].values
-                Y = df.y[::thin].values
-
-                #density = stats.gaussian_kde([X,Y], bw_method='scott')([df.x,df.y])
-                std_dev = np.std(x1)
-                bw = std_dev * 0.05
-                density = stats.gaussian_kde([x,y], bw_method=bw)([x1,y1])
-                cutoff  = 4
-                low_density = density < np.percentile(density, cutoff)
-
-
-                data1 = [df['x'], df['y']]
-                
-                
-                ax = axs[i, j]
-                # Diagonal plots are histograms
-                if i == j:
-                    #ax.hist(data[i], bins=10, color='skyblue')
-                    
-                    kde = gaussian_kde(x, weights=weight)
-                    x_vals = np.linspace(min(x)*0.95, max(x)*1.05, 1000)
-                    y_vals = kde(x_vals)
-                    ax.plot(x_vals,y_vals)
-                    #ax.set_xlabel(labels[i]) 
-                    
-                # Lower triangle plots are scatter plots or line plots
-                elif i > j:
-                    #ax.plot(data[j], data[i], 'o', color='orange')  # Scatter plot
-                    sns.kdeplot(df[::thin], x='x', y='y', fill=True, levels=4, ax=axs[i,j])
-                    ax.scatter(df.x[low_density], df.y[low_density], color='gray', s=1)
-                    ax.set_xlabel(labels[j])
-                    ax.set_ylabel(labels[i])
-                    #ax.set_xlim(-1,1)
-                    
-                else:
-                    ax.remove()
-                
-                ### add labels to x and y axes
-                if (i == 0) and (i != j):
-                    #fig.update_yaxes(title_text=labels[j], row=j + 1, col=i + 1)
-                    ax.set_ylabel(labels[i])
-                if j == len(selected_columns) - 1:
-                    #fig.update_xaxes(title_text=labels[i], row=j + 1, col=i + 1)
-                    ax.set_xlabel(labels[j])
-        
-        #fig.update_layout(height=800, width=900)
-        mpld3_plot = mpld3.fig_to_html(fig)
-        graphJSON = json.dumps(mpld3_plot)#, cls=plotly.utils.PlotlyJSONEncoder) 
-        return jsonify(graphJSON)
+    global K_id
+    if K_id==False:
+        star_id = koi_id.replace("K","S")
     else:
-        error_message = f'No data found for {koi_id}'
-        return jsonify(error_message=error_message)
-
-
-
-
-"""
-def generate_plot_corner(koi_id,selected_columns, planet_num):
-    selected_columns = selected_columns.split(',')
-    star_id = koi_id.replace("K","S")
+        star_id = koi_id
     file =star_id + '-results.fits'
     file_path = os.path.join(data_directory, star_id, file)
 
@@ -671,7 +699,7 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                     threshold_s = np.percentile(z, 10) # scatter threshhold
                     mask = (z >= threshold_s) 
                     mask_s = (z >= threshold_p) & (z < threshold_s)
-                    # Plot points below the threshold as scatter plot
+                    #Plot points below the threshold as scatter plot
                     fig.add_trace(go.Scatter(
                         x=x[mask_s], 
                         y=y[mask_s], 
@@ -735,52 +763,6 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                     #     line=dict(width=1)
                     #     ), row=j + 1, col=i + 1)
                         
-
-                    '''
-                    # Define shades of blue for each percentile
-                    #blue_shades = ['rgba(0, 151, 236, 0.8)','rgba(0, 151, 189, 0.8)','rgba(0, 129, 156, 0.8)','rgba(0, 75, 134, 0.8)','rgba(0, 36, 119, 0.8)']
-                    blue_shades = ['rgba(153,190,222,1.00)','rgba(116,167,210,1.00)','rgba(79,143,198,1.00)','rgba(55,118,172,1.00)',' rgba(43,93,136,1.00)']
-                    # Iterate over each percentile in reversed order
-                    for percentile, threshold_density, shade in zip(percentiles, threshold_densities, blue_shades):
-                        # Select points within the percentile density
-                        selected_points = (z >= threshold_density)
-
-                        # Check if there are enough points to form a convex hull (at least 3 points in 2D)
-                        # if np.sum(selected_points) < 3:
-                        #     continue  # Skip this percentile if there are not enough points
-
-                        # Find the convex hull of the selected points
-                        selected_x = x[selected_points]
-                        selected_y = y[selected_points]
-                        # Perform PCA for dimensionality reduction on the selected data
-                        selected_xy = np.vstack([selected_x, selected_y])
-                        # Perform PCA for dimensionality reduction on the selected data
-                        pca = PCA()  # Instantiate PCA
-                        selected_xy_pca = pca.fit_transform(selected_xy.T)
-
-                        # Find the convex hull of the selected points after PCA
-                        hull = ConvexHull(selected_xy_pca, qhull_options="QJ")
-                        #hull = ConvexHull(np.column_stack((selected_x, selected_y)), qhull_options="QJ")
-
-                        # Extract the vertices of the convex hull
-                        hull_vertices_x = selected_x[hull.vertices]
-                        hull_vertices_y = selected_y[hull.vertices]
-                        # Append the first coordinate to the end to close the loop
-                        hull_vertices_x_closed = np.append(hull_vertices_x, hull_vertices_x[0])
-                        hull_vertices_y_closed = np.append(hull_vertices_y, hull_vertices_y[0])
-
-                        # Add shaded region for the convex hull
-                        fig.add_trace(go.Scatter(
-                            x=hull_vertices_x_closed,
-                            y=hull_vertices_y_closed,
-                            fill='toself',
-                            fillcolor=shade,  # Varying shades of blue
-                            line=dict(color='black', shape='spline', width=0.8),  # Match fill color
-                            mode='lines',
-                            showlegend=False
-                        ), row=j + 1, col=i + 1)
-
-                       '''
 
 
                     ### old
@@ -886,7 +868,7 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                     fig.update_xaxes(range=plot_range, row=j + 1, col=i + 1)
                     
 
-                
+                fig.update_layout(plot_bgcolor='#F7FBFF')
                 fig.update_xaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1, tickangle=30)
                 fig.update_yaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1, tickangle=0)
         
@@ -897,8 +879,8 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
     else:
         error_message = f'No data found for {koi_id}'
         return jsonify(error_message=error_message)
-    
-"""
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)

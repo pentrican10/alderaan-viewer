@@ -18,7 +18,7 @@ import batman
 
 #data_directory = 'c:\\Users\\Paige\\Projects\\data\\'
 data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
-
+k_id = True
 
 
 def update_data_directory(selected_table):
@@ -32,8 +32,13 @@ def read_table_data(table):
     """
     #file_path = os.path.join(data_directory, '2023-05-19_singles.csv')
     global data_directory
+    global K_id
     #folder = table[:-4]
     update_data_directory(table)
+    if (table == '2023-05-19_singles.csv') or (table == '2023-05-15_doubles.csv'):
+        K_id = False
+    else: 
+        K_id = True
     file_path = os.path.join(data_directory, table)
     table_data = []
     with open(file_path, 'r') as csvfile:
@@ -110,7 +115,11 @@ def get_ttv_file(koi_id, file_path):
     
 
 def load_posteriors(f,n,koi_id):
-    star_id = koi_id.replace("K","S")
+    global K_id
+    if K_id == False:
+        star_id = koi_id.replace("K","S")
+    else:
+        star_id = koi_id
     file_name = star_id + f'_0{n}_quick.ttvs'
     ttv_file = os.path.join(data_directory, star_id, file_name)
     with fits.open(f) as hduL:
@@ -144,7 +153,12 @@ def load_posteriors(f,n,koi_id):
         return df
 
 def _legendre(koi_id, n, k):
-        star_id = koi_id.replace("K","S")
+        global K_id
+        if K_id == False:
+            star_id = koi_id.replace("K","S")
+        else:
+            star_id = koi_id
+        
         ttv_file_name = star_id + f'_0{n}_quick.ttvs'
         ttv_file = os.path.join(data_directory, star_id, ttv_file_name)
         lc_file = star_id + '_lc_filtered.fits'
@@ -208,7 +222,11 @@ def _legendre(koi_id, n, k):
 
 
 def get_min_max(koi_id):
-    star_id = koi_id.replace("K","S")
+    global K_id
+    if K_id == False:
+        star_id = koi_id.replace("K","S")
+    else:
+        star_id = koi_id
     file_name_lc = star_id + '_lc_filtered.fits'
     file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
     
@@ -227,7 +245,11 @@ def get_min_max(koi_id):
 
 
 def single_data(koi_id, line_number, num, ttv_file):
-    star_id = koi_id.replace("K","S")
+    global K_id
+    if K_id == False:
+        star_id = koi_id.replace("K","S")
+    else:
+        star_id = koi_id
     file_name_lc = star_id + '_lc_filtered.fits'
     file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
     
@@ -306,7 +328,11 @@ def single_data(koi_id, line_number, num, ttv_file):
     
 
 def folded_data(koi_id,planet_num, file_path):
-    star_id = koi_id.replace("K","S")
+    global K_id
+    if K_id == False:
+        star_id = koi_id.replace("K","S")
+    else:
+        star_id = koi_id
     file_name_lc = star_id + '_lc_detrended.fits'
     file_path_lc = os.path.join(data_directory, star_id, file_name_lc)
     

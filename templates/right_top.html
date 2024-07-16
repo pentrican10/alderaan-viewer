@@ -414,6 +414,7 @@
                     }
                 })
                 .catch(error => {
+                    const plotContainer = document.getElementById("CornerPlot");
                     plotContainer.innerHTML = "<p>Error loading plot data.</p>";
                     console.error(error);
                 });

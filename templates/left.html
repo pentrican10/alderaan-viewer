@@ -17,7 +17,7 @@
         <select id="tableSelect" onchange="loadTable()">
             <option value="2023-05-19_singles.csv" {% if request.args.get('table') == '2023-05-19_singles.csv' %}selected{% endif %}>2023-05-19_singles</option>
             <option value="2023-05-15_doubles.csv" {% if request.args.get('table') == '2023-05-15_doubles.csv' %}selected{% endif %}>2023-05-15_doubles</option>
-            <option value="eccentricity-gap.csv" {% if request.args.get('table') == 'eccentricity-gap.csv' %}selected{% endif %}>Eccentricity Gap</option>
+            <option value="eccentricity-gap.csv" {% if request.args.get('table') == 'eccentricity-gap.csv' %}selected{% endif %}>eccentricity-gap</option>
         </select>
     
     </div>

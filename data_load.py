@@ -171,13 +171,13 @@ def _legendre(koi_id, n, k):
         model= np.array(model, dtype='float64')
         t = model
         #t = t.astype(float)
-        if data_lc.TIME.min()< data_sc.TIME.min() and data_lc.TIME.max()> data_sc.TIME.max():
-            x = 2 * (t-data_lc.TIME.min()) / (data_lc.TIME.max() - data_lc.TIME.min()) - 1
+        #if data_lc.TIME.min()< data_sc.TIME.min() and data_lc.TIME.max()> data_sc.TIME.max():
+        x = 2 * (t-data_lc.TIME.min()) / (data_lc.TIME.max() - data_lc.TIME.min()) - 1 
         
         if k==0:
-            return np.ones_like(x)
+            return np.ones_like(t)
         if k==1:
-            return x
+            return np.zeros_like(t)
         else:
             return ValueError("only configured for 0th and 1st order Legendre polynomials")
 
@@ -427,7 +427,7 @@ def folded_data(koi_id,planet_num, file_path):
 ########################################################################################
 # Binned weighted average function
 def calculate_binned_weighted_average(time, flux, flux_err, bin_size):
-    bins = np.arange(time.min(), time.max() + bin_size, bin_size)
+    bins = np.arange(time.min(), time.max(), bin_size)
     indices = np.digitize(time, bins)
         
     weighted_avg = []

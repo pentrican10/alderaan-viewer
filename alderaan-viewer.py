@@ -399,7 +399,11 @@ def generate_plot_folded_light_curve(koi_id):
     for i, file_path in enumerate(file_paths):
         planet_num = 0+i
         fold_data_lc, fold_data_sc, binned_avg,center_time = data_load.folded_data(koi_id,planet_num,file_path)
-
+        N_samp = 1000
+        if len(fold_data_lc) > N_samp:
+            fold_data_lc = fold_data_lc.sample(N_samp)
+        if len(fold_data_sc) > N_samp:
+            fold_data_sc = fold_data_sc.sample(N_samp)
         ### posteriors for most likely model
         
         data_post = data_load.load_posteriors(file_path_results,planet_num,koi_id)
@@ -407,7 +411,7 @@ def generate_plot_folded_light_curve(koi_id):
         max_index = data_post['LN_LIKE'].idxmax()
         ### get most likely params {P, t0, Rp/Rs, b, T14, q1, q2}
         theta = batman.TransitParams()
-        theta.per = data_post[f'P'][max_index]
+        theta.per = 1000 # data_post[f'P'][max_index]
         theta.t0 = 0.
         theta.rp = data_post[f'ROR_{planet_num}'][max_index]
         theta.b = data_post[f'IMPACT_{planet_num}'][max_index]
@@ -661,31 +665,31 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
 
     if os.path.isfile(file_path):
         data = data_load.load_posteriors(file_path,planet_num,koi_id)
-        LN_WT = data['LN_WT'][::5].values
+        
+        #set target # samples
+        N_samp = 1000
+        LN_WT = data['LN_WT'].values
         weight = np.exp(LN_WT- LN_WT.max())
         w = weight/ np.sum(weight)
-        index = np.arange(len(LN_WT))
-        rand_index = np.random.choice(index,p=w,size=len(LN_WT))
 
-        data = data[selected_columns]
+        data = data.sample(N_samp, replace=True, ignore_index=True, weights=w)
+        #data = data[selected_columns]
+        LN_WT = data['LN_WT'].values
+        weight = np.exp(LN_WT- LN_WT.max())
+        w = weight/ np.sum(weight)
+        data['WEIGHTS'] = w
 
         labels = data.columns.tolist()
 
         fig = make_subplots(rows=len(selected_columns), cols=len(selected_columns))
         tick_values_y_c0 = None
         plot_range_y_c0 = None
+        
         for i in range(len(selected_columns)):
             for j in range(i, len(selected_columns)):
-                # x = data[selected_columns[i]]
-                # y = data[selected_columns[j]]
                 
-                x1 = data[selected_columns[i]][::5].values
-                y1 = data[selected_columns[j]][::5].values
-                ### trim with random indicies 
-                x = x1[rand_index]
-                y = y1[rand_index]
-                
-                
+                x = data[selected_columns[i]].values
+                y = data[selected_columns[j]].values
                 
 
                 if i != j:
@@ -710,8 +714,6 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                     
                     # Determine threshold densities corresponding to the percentiles
                     percentiles = [10, 25, 50, 75, 90]  # Reversed order
-                    #threshold_densities = np.percentile(z, percentiles)
-                    #hist, xedges, yedges = np.histogram2d(x[mask], y[mask], bins=100, density=True)
 
                     # Define contour levels
                     contour_levels = [10, 68, 98, 99]  # Adjust as needed
@@ -729,48 +731,9 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                         ),
                         showscale=False,
                     ), row=j + 1, col=i + 1)
-                    ### old
-                    #fig.add_trace(go.Scatter(x=x, y=y, mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)
-                    #fig.add_trace(go.Scatter(x=x, y=y, mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)
-                    # for percentile, density_threshold in zip(percentiles, threshold_densities):
-                    #     mask_contour = z >= density_threshold
-                    #     fig.add_trace(go.Contour(
-                    #         x=x[mask_contour],
-                    #         y=y[mask_contour],
-                    #         line=dict(width=1),
-                    #         contours=dict(
-                    #             start=percentile,
-                    #             end=percentile,
-                    #             size=0  # Disable interpolation between levels
-                    #         ),
-                    #         showscale=False,
-                    #         hoverinfo='none'
-                    #     ), row=j + 1, col=i + 1)
                     
-                    # fig.add_trace(go.Histogram2dContour(
-                    #     x=x[z >= threshold_s], 
-                    #     y=y[z >= threshold_s], 
-                    #     #z=z,
-                    #     autocontour=False,
-                    #     colorscale='Blues', 
-                    #     reversescale=False, 
-                    #     showscale=False, 
-                    #     contours=dict(
-                    #         start=min(threshold_densities), 
-                    #         end=max(threshold_densities), 
-                    #         size=0,
-                    #         coloring='fill'), 
-                    #     line=dict(width=1)
-                    #     ), row=j + 1, col=i + 1)
-                        
-
-
-                    ### old
-                    #fig.add_trace(go.Scatter(x=x, y=y, mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)
-                    #fig.add_trace(go.Scatter(x=x, y=y, mode='markers', marker=dict(color='gray', size=1), showlegend=False), row=j + 1, col=i + 1)
-                    #fig.add_trace(go.Histogram2dContour(x=x, y=y, colorscale='Blues', reversescale=False, showscale=False, ncontours=8, contours=dict(coloring='fill'), line=dict(width=1)), row=j + 1, col=i + 1)
                 else:
-                    kde = gaussian_kde(x, weights=weight) #, weights=weights
+                    kde = gaussian_kde(x, weights=data['WEIGHTS']) 
                     x_vals = np.linspace(min(x)*0.95, max(x)*1.05, 1000)
                     y_vals = kde(x_vals)
                     fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', line=dict(color='blue'), name=labels[i], showlegend=False), row=j + 1, col=i + 1)
@@ -783,53 +746,30 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
 
                 ### only have 3 ticks and only show axis at left-most column and bottom-most row
                 if i != j:
-                    tick_format = '.2f'
+                    tick_format = '.3f'
                     plot_range = None
                     ### set y axes
-                    ### make C0 and C1 symmetric
-                    if labels[j] in [f'C0_{planet_num}', f'C1_{planet_num}']:
-                        if tick_values_y_c0 is None:
-                            tick_values_y_c0 = np.linspace(-max(y), max(y), 3)
-                            plot_range_y_c0 = [-max(y), max(y)]
-
-                        tick_values_y = tick_values_y_c0
-                        plot_range = plot_range_y_c0
+                    if labels[j] == f'IMPACT_{planet_num}':
+                        tick_values_y = np.linspace(0, 1.2, 3)
+                        plot_range = [0, 1.2]
+                        tick_format = '.1f'
                     else:
-                        if labels[j] == f'IMPACT_{planet_num}':
-                            tick_values_y = np.linspace(0, 1.2, 3)
-                            plot_range = [0, 1.2]
-                            tick_format = '.1f'
-                       
-                        else:
-                            if labels[j] == f'ROR_{planet_num}':
-                                tick_format = '.3f'
-                            tick_values_y = np.linspace(min(y), max(y), 3)
-                            plot_range = [min(y), max(y)]
+                        tick_values_y = np.linspace(min(y), max(y), 3)
+                        plot_range = [min(y), max(y)]
 
                     tick_text_y = [f"{val:{tick_format}}" for val in tick_values_y]
                     fig.update_yaxes(tickvals=tick_values_y, ticktext=tick_text_y, range=plot_range, row=j + 1, col=i + 1, tickangle=0)
 
                     ### set x axes
-                    ### make C0 and C1 symmetric
-                    if labels[i] in [f'C0_{planet_num}', f'C1_{planet_num}']:
-                        if tick_values_y_c0 is None:
-                            tick_values_y_c0 = np.linspace(-max(x), max(x), 3)
-                            plot_range_y_c0 = [-max(x), max(x)]
-
-                        tick_values_x = tick_values_y_c0
-                        plot_range = plot_range_y_c0
+                    if labels[i] == f'IMPACT_{planet_num}':
+                        tick_values_x = np.linspace(0, 1.2, 3)
+                        plot_range = [0, 1.2]
+                        tick_format = '.1f'
                     else:
-                        if labels[i] == f'IMPACT_{planet_num}':
-                            tick_values_x = np.linspace(0, 1.2, 3)
-                            plot_range = [0, 1.2]
-                            tick_format = '.1f'
-                      
-                        else:
-                            if labels[i] == f'ROR_{planet_num}':
-                                tick_format = '.3f'
-                            tick_values_x = np.linspace(min(x), max(x), 3)
-                            plot_range = [min(x), max(x)]
+                        tick_values_x = np.linspace(min(x), max(x), 3)
+                        plot_range = [min(x), max(x)]
                     tick_text_x = [f"{val:{tick_format}}" for val in tick_values_x]
+
                     if (i!=0):
                         fig.update_yaxes(showticklabels=False, tickvals=tick_values_y, ticktext=tick_text_y, row=j + 1, col=i + 1, tickangle=0)
                     fig.update_xaxes(range=plot_range, row=j + 1, col=i + 1)
@@ -839,30 +779,19 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                     else:
                         fig.update_xaxes(showticklabels=False, tickvals=tick_values_x, ticktext=tick_text_x, row=j + 1, col=i + 1, tickangle=90)
                 else:
-                    tick_format = '.2f'
+                    tick_format = '.3f'
                     ### histograms only have x axes
-                    if labels[i] in [f'C0_{planet_num}', f'C1_{planet_num}']:
-                        if tick_values_y_c0 is None:
-                            tick_values_y_c0 = np.linspace(-max(x), max(x), 3)
-                            plot_range_y_c0 = [-max(x), max(x)]
-
-                        tick_values_x = tick_values_y_c0
-                        plot_range = plot_range_y_c0
+                    if labels[i] == f'IMPACT_{planet_num}':
+                        tick_values_x = np.linspace(0, 1.2, 3)
+                        plot_range = [0, 1.2]
+                        tick_format = '.1f'
                     else:
-                        if labels[i] == f'IMPACT_{planet_num}':
-                            tick_values_x = np.linspace(0, 1.2, 3)
-                            plot_range = [0, 1.2]
-                            tick_format = '.1f'
-                     
-                        else:
-                            if labels[i] == f'ROR_{planet_num}':
-                                tick_format = '.3f'
-                            tick_values_x = np.linspace(min(x), max(x), 3)
-                            plot_range = [min(x), max(x)]
+                        tick_values_x = np.linspace(min(x), max(x), 3)
+                        plot_range = [min(x), max(x)]
                     tick_values_y = np.linspace(min(y_vals), max(y_vals), 3)
                     tick_text_x = [f"{val:{tick_format}}" for val in tick_values_x]
                     tick_text_y = [f"{val:{tick_format}}" for val in tick_values_y]
-                    # showticklabels=False,
+
                     fig.update_xaxes(tickvals=tick_values_x, ticktext=tick_text_x, row=j + 1, col=i + 1, tickangle=0)
                     fig.update_yaxes(showticklabels=False,tickvals=tick_values_y, row=j + 1, col=i + 1, tickangle=0)
                     fig.update_xaxes(range=plot_range, row=j + 1, col=i + 1)

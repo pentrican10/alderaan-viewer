@@ -8,6 +8,16 @@
 
     <div class="split-container">
         <div class="left-pane">
+
+            <div class="dropdown-menu">
+                <label for="review_status">Review Status:</label>
+                <select id="review_status" onchange="handleReviewStatusChange(this)">
+                    <option value="None">Not Reviewed</option>
+                    <option value="Looks good">Reviewed and Looks Good</option>
+                    <option value="revisit">Reviewed and Revisit</option>
+                </select>
+            </div>
+
             <h2>Add Comments:</h2>
             <form id="comment_form" method="POST" action="/star/{{ koi_id }}/save_comment">
                 <textarea name="comment" rows="4" cols="50" placeholder="Type your comment here..."></textarea>
@@ -41,6 +51,46 @@
     <script>
         // Global variable to store the selected KOI_ID
         let selectedKoiId = null;
+
+        function handleReviewStatusChange() {
+            var reviewStatus = document.getElementById("review_status").value;
+
+            const koiId = selectedKoiId;
+            
+            fetch(`/review_status/${koiId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ reviewStatus }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Success:', data);
+                updateTableUI(koiId, reviewStatus);
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+        }
+
+        function updateTableUI(koiId, reviewStatus) {
+            // Find the table row by koi_id and update its class
+            var row = document.getElementById(`row-${koiId}`);
+            if (row) {
+                // Remove existing classes first
+                row.classList.remove('not-reviewed', 'looks-good', 'revisit');
+
+                // Add class based on review status
+                if (reviewStatus === 'None') {
+                    row.classList.add('not-reviewed');
+                } else if (reviewStatus === 'Looks good') {
+                    row.classList.add('looks-good');
+                } else if (reviewStatus === 'revisit') {
+                    row.classList.add('revisit');
+                }
+            }
+        }
 
         //function to set action value
         function setAction(action) {

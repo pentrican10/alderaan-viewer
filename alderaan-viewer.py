@@ -34,6 +34,7 @@ from plotly.subplots import make_subplots
 #sys.path.append('c:\\Users\\Paige\\Projects\\alderaan\\')
 data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
 K_id = True
+table = '2023-05-19_singles.csv'
 
 app = Flask(__name__)
 app.secret_key = 'super_secret'
@@ -80,7 +81,32 @@ def display_table_data():
 
 def update_data_directory(selected_table):
     global data_directory
+    global table
     data_directory = os.path.join('c:\\Users\\Paige\\Projects\\data\\alderaan_results', selected_table[:-4])
+    table = selected_table
+
+@app.route('/review_status/<koi_id>', methods=['POST'])
+def review_status(koi_id):
+    global data_directory
+    global table
+    ### get review status from dropdown
+    data = request.json
+    review_status = data['reviewStatus']
+    file_path = os.path.join(data_directory, table)
+    table_data = []
+    with open(file_path, 'r') as file:
+        reader = csv.DictReader(file)
+        fieldnames = reader.fieldnames
+        for row in reader:
+            if row['koi_id'] == koi_id:
+                row['review'] = review_status
+            table_data.append(row)
+    with open(file_path, 'w', newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(table_data)
+    
+    return jsonify({'status': 'success'})
 
 @app.route('/star/<koi_id>')
 def display_comment_file(koi_id):
@@ -197,8 +223,9 @@ def generate_plot_Detrended_Light_Curve(koi_id):
                 index, center_time, model, out_prob, out_flag = data_load.get_ttv_file(koi_id, file_path)
 
                 # Add a dot for each center time
+                minimum = data_sc.FLUX.min() -0.00001
                 offset = 0.0001*i
-                y_pts = 0.998* np.ones(len(center_time)) + offset
+                y_pts = minimum* np.ones(len(center_time)) + offset
                 c_time = px.scatter(x=center_time, y=y_pts).data[0]
                 color = colors[i]
                 c_time.marker.update(symbol="circle", size=4, color=color)
@@ -240,7 +267,6 @@ def generate_plot_Detrended_Light_Curve(koi_id):
     else:
         error_message = f'No data found for {koi_id}'
         return jsonify(error_message=error_message)
-
 
 @app.route('/generate_plot_single_transit/<koi_id>/<int:line_number>/<planet>')
 def generate_plot_single_transit(koi_id, line_number,planet):
@@ -337,8 +363,6 @@ def generate_plot_single_transit(koi_id, line_number,planet):
         error_message = f'No data found for {koi_id}'
         return jsonify(error_message=error_message)
     
-
-    
 @app.route('/get_transit_file_options/<koi_id>')
 def planet_options(koi_id):
     global K_id
@@ -378,6 +402,10 @@ def generate_plot_folded_light_curve(koi_id):
         star_id = koi_id.replace("K","S")
     else:
         star_id = koi_id
+    file_name_lc = star_id + '_lc_filtered.fits'
+    file_path_lc = os.path.join(data_directory, star_id, file_name_lc)
+    file_name_sc = star_id + '_sc_filtered.fits'
+    file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
     file_name = star_id + '_*_quick.ttvs'
     file_paths = glob.glob(os.path.join(data_directory,star_id, file_name))
     ext = os.path.basename(data_directory) +'.csv'
@@ -421,7 +449,7 @@ def generate_plot_folded_light_curve(koi_id):
         theta.u = [LD_U1, LD_U2]
         theta.limb_dark = 'quadratic'
 
-        if fold_data_lc is not None and fold_data_sc is not None: 
+        if os.path.exists(file_path_lc) and os.path.exists(file_path_sc):
             ### short cadence
             fold_sc = go.Scatter(x=fold_data_sc.TIME, y=fold_data_sc.FLUX, mode='markers')
             fold_sc.marker.update(symbol="circle", size=4, color="gray")
@@ -455,7 +483,7 @@ def generate_plot_folded_light_curve(koi_id):
             fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
             fig.update_yaxes(title_text="FLUX", row=i+1, col=1)
         
-        elif fold_data_lc is not None and fold_data_sc is None:
+        elif os.path.exists(file_path_lc) and not os.path.exists(file_path_sc):
             fold_lc = go.Scatter(x=fold_data_lc.TIME, y=fold_data_lc.FLUX, mode='markers')
             fold_lc.marker.update(symbol="circle", size=5, color="blue")
             fold_lc.name = "Long Cadence"
@@ -471,6 +499,7 @@ def generate_plot_folded_light_curve(koi_id):
             m = batman.TransitModel(theta, t)    #initializes model
             flux = m.light_curve(theta)          #calculates light curve
             mod = go.Scatter(x=t, y=flux, mode="lines")
+            mod.line.update(color="red")
             mod.name = "Model"
             mod.legendgroup=f'{i}'
             fig.add_trace(mod, row=i+1, col=1)
@@ -478,7 +507,7 @@ def generate_plot_folded_light_curve(koi_id):
             fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
             fig.update_yaxes(title_text="FLUX", row=i+1, col=1)
 
-        elif fold_data_sc is not None and fold_data_lc is None:
+        elif not os.path.exists(file_path_lc) and os.path.exists(file_path_sc):
             fold_sc = go.Scatter(x=fold_data_sc.TIME, y=fold_data_sc.FLUX, mode='markers')
             fold_sc.marker.update(symbol="circle", size=4, color="gray")
             fold_sc.name = "Short Cadence"
@@ -494,6 +523,7 @@ def generate_plot_folded_light_curve(koi_id):
             m = batman.TransitModel(theta, t)    #initializes model
             flux = (m.light_curve(theta))        #calculates light curve
             mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
+            mod.line.update(color="red")
             mod.name = "Model"
             mod.legendgroup=f'{i}'
             fig.add_trace(mod, row=i+1, col=1)
@@ -797,7 +827,7 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                     fig.update_xaxes(range=plot_range, row=j + 1, col=i + 1)
                     
 
-                fig.update_layout(plot_bgcolor='#F7FBFF')
+                fig.update_layout(plot_bgcolor='#F7FBFF') # match background with the back contour color
                 fig.update_xaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1, tickangle=30)
                 fig.update_yaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1, tickangle=0)
         

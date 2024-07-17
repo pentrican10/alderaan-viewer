@@ -41,8 +41,15 @@ def read_table_data(table):
         K_id = True
     file_path = os.path.join(data_directory, table)
     table_data = []
+    review_column_added = False
     with open(file_path, 'r') as csvfile:
         reader = csv.DictReader(csvfile)
+        ### Check if 'review' column exists, otherwise add it
+        fieldnames = reader.fieldnames
+        if 'review' not in fieldnames:
+            fieldnames.append('review')
+            review_column_added = True
+
         for row in reader:
             #round table values
             row['kep_mag'] = round(float(row['kep_mag']), 2)
@@ -50,7 +57,15 @@ def read_table_data(table):
             row['logrho'] = round(float(row['logrho']), 2)
             row['Teff'] = round(float(row['Teff']))
             row['logg'] = round(float(row['logg']), 2)
+            # Ensure 'review' column exists in each row
+            if 'review' not in row:
+                row['review'] = ''
             table_data.append(row)
+    if review_column_added:
+        with open(file_path, 'w', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(table_data)
             
     ### Remove duplicates based on koi_id
     unique_data = []
@@ -79,6 +94,7 @@ def get_periods_for_koi_id(file_path, koi_id):
 
     return periods if periods else None
 
+               
 
 def read_data_from_fits(file_path):
     with fits.open(file_path) as fits_file:
@@ -166,8 +182,10 @@ def _legendre(koi_id, n, k):
         lc_path = os.path.join(data_directory, star_id, lc_file)
         sc_path = os.path.join(data_directory, star_id, sc_file)
         index, ttime, model, out_prob, out_flag = get_ttv_file(star_id,ttv_file)
-        data_lc = read_data_from_fits(lc_path)
-        data_sc = read_data_from_fits(sc_path)
+        if os.path.isfile(lc_path):
+            data_lc = read_data_from_fits(lc_path)
+        if os.path.isfile(sc_path):
+            data_sc = read_data_from_fits(sc_path)
         model= np.array(model, dtype='float64')
         t = model
         #t = t.astype(float)
@@ -333,7 +351,7 @@ def folded_data(koi_id,planet_num, file_path):
         star_id = koi_id.replace("K","S")
     else:
         star_id = koi_id
-    file_name_lc = star_id + '_lc_detrended.fits'
+    file_name_lc = star_id + '_lc_filtered.fits'
     file_path_lc = os.path.join(data_directory, star_id, file_name_lc)
     
     file_name_sc = star_id + '_sc_filtered.fits'

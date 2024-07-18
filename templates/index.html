@@ -4,6 +4,17 @@
     <title>Kepler Data</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        .koi-row.not-reviewed {
+            background-color: #f9f9f9; /* Light grey */
+        }
+        .koi-row.looks-good {
+            background-color: #d4edda; /* Light green */
+        }
+        .koi-row.revisit {
+            background-color: #f8d7da; /* Light red */
+        }
+    </style>
 </head>
 
     <div style="display: flex;">
@@ -56,6 +67,7 @@
                 koiIdContainer.innerHTML = `<h2>Selected koi_id: ${koiId}</h2>`;
                 selectedKoiId = koiId;
                 displayCommentFile(koiId);
+                //tableColor();
 
                 //show checkbox container
                 const checkboxContainer= document.getElementById("checkbox_container");

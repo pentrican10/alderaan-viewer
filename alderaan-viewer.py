@@ -27,8 +27,8 @@ import seaborn as sns
 import tempfile
 import base64
 import io
-
 from plotly.subplots import make_subplots
+
 
 
 #sys.path.append('c:\\Users\\Paige\\Projects\\alderaan\\')
@@ -107,6 +107,26 @@ def review_status(koi_id):
         writer.writerows(table_data)
     
     return jsonify({'status': 'success'})
+
+
+@app.route('/table_color/')
+def table_color():
+    global data_directory
+    global table
+    file_path = os.path.join(data_directory, table)
+    
+    # Read CSV and prepare review status data
+    table_data = []
+    with open(file_path, 'r') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            table_data.append({
+                'koi_id': row['koi_id'],
+                'review': row['review']
+            })
+    
+    return jsonify(table_data)
+
 
 @app.route('/star/<koi_id>')
 def display_comment_file(koi_id):

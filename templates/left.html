@@ -1,5 +1,18 @@
 <!DOCTYPE html>
 <html>
+    <head>
+        <style>
+            .koi-row.not-reviewed {
+                background-color: #f9f9f9; /* Light grey */
+            }
+            .koi-row.looks-good {
+                background-color: #d4edda; /* Light green */
+            }
+            .koi-row.revisit {
+                background-color: #f8d7da; /* Light red */
+            }
+        </style>
+    </head>
     <body>
         <div id="username-container">
             {% if 'username' in session %}
@@ -41,14 +54,14 @@
             <th>review</th>
         </tr>
         {% for row in table_data %}
-        <tr class="koi-row">
+        <tr id="row-{{ row['koi_id'] }}" class="koi-row">
             <td class="koi-id-cell"><a href="/star/{{ row['koi_id'] }}">{{ row['koi_id'] }}</a></td>
             <td>{{ row['kep_mag'] }}</td>
             <td>{{ row['Rstar'] }}</td>
             <td>{{ row['logrho'] }}</td>
             <td>{{ row['Teff'] }}</td>
             <td>{{ row['logg'] }}</td>
-            <td>{{ row['review'] }}</td>
+            <td class="review-cell">{{ row['review'] }}</td>
         </tr>
         {% endfor %}
     </table>
@@ -60,6 +73,7 @@
         function loadTable(){
             const selectedTable = document.getElementById('tableSelect').value;
             window.location.href = "/home?table=" + selectedTable;
+            tableColor();
 
             // Update the selected option in the dropdown
             const dropdown = document.getElementById('tableSelect');
@@ -71,7 +85,7 @@
             }
         }
 
-
+        
         // Function to handle the search
         function searchKoi() {
             const input = document.getElementById("searchInput");
@@ -107,7 +121,11 @@
         // Event listener for input on the search bar
         const searchInput = document.getElementById("searchInput");
         searchInput.addEventListener("input", searchKoi);
+        // document.addEventListener('DOMContentLoaded', (event) => {
+        //     tableColor();
+        // });
 
+        
     
     </script>
 </html>

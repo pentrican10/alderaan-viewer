@@ -77,14 +77,13 @@ table {
   th {
     background-color: #f0f0f0;
   }
-  
-
-  .not-reviewed {
-      background-color: #ffffff; /* white background for not reviewed */
-  }
-  .looks-good {
-      background-color: #c3e6cb; /* light green background for looks good */
-  }
-  .revisit {
-      background-color: #f5c6cb; /* light red background for revisit */
-  }
+/*   
+    .not-reviewed {
+        background-color: #ffffff; /* white background for not reviewed */
+    /* }
+    .looks-good {
+        background-color: #c3e6cb; /* light green background for looks good */
+    /* }
+    .revisit {
+        background-color: #f5c6cb; /* light red background for revisit */
+    /* } */

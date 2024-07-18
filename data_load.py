@@ -16,6 +16,7 @@ import glob
 import batman
 
 
+
 #data_directory = 'c:\\Users\\Paige\\Projects\\data\\'
 data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
 k_id = True
@@ -59,9 +60,11 @@ def read_table_data(table):
             row['logg'] = round(float(row['logg']), 2)
             # Ensure 'review' column exists in each row
             if 'review' not in row:
-                row['review'] = ''
+                row['review'] = 'None'
+            elif row['review'] == '':
+                row['review'] = 'None'
             table_data.append(row)
-    if review_column_added:
+    if review_column_added==True:
         with open(file_path, 'w', newline='') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()

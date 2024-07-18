@@ -3,6 +3,17 @@
 <head>
     <title>Right Section</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        .koi-row.not-reviewed {
+            background-color: #f9f9f9; /* Light grey */
+        }
+        .koi-row.looks-good {
+            background-color: #d4edda; /* Light green */
+        }
+        .koi-row.revisit {
+            background-color: #f8d7da; /* Light red */
+        }
+    </style>
 </head>
 <body>
 
@@ -14,7 +25,7 @@
                 <select id="review_status" onchange="handleReviewStatusChange(this)">
                     <option value="None">Not Reviewed</option>
                     <option value="Looks good">Reviewed and Looks Good</option>
-                    <option value="revisit">Reviewed and Revisit</option>
+                    <option value="Revisit">Reviewed and Revisit</option>
                 </select>
             </div>
 
@@ -50,12 +61,13 @@
     
     <script>
         // Global variable to store the selected KOI_ID
-        let selectedKoiId = null;
+        //let selectedKoiId = null;
 
         function handleReviewStatusChange() {
             var reviewStatus = document.getElementById("review_status").value;
 
-            const koiId = selectedKoiId;
+            var koiId = selectedKoiId;  
+            console.log(selectedKoiId)
             
             fetch(`/review_status/${koiId}`, {
                 method: 'POST',
@@ -68,29 +80,147 @@
             .then(data => {
                 console.log('Success:', data);
                 updateTableUI(koiId, reviewStatus);
+                
             })
             .catch((error) => {
                 console.error('Error:', error);
             });
         }
 
+        // function updateTableUI(koiId, reviewStatus) {
+        //     // Find the table row by koi_id and update its class
+        //     var row = document.getElementById(`row-${koiId}`);
+        //     if (row) {
+        //         // Remove existing classes first
+        //         row.classList.remove('not-reviewed', 'looks-good', 'revisit');
+
+        //         // Add class based on review status
+        //         if (reviewStatus === 'None') {
+        //             row.classList.add('not-reviewed');
+        //         } else if (reviewStatus === 'Looks good') {
+        //             row.classList.add('looks-good');
+        //         } else if (reviewStatus === 'Revisit') {
+        //             row.classList.add('revisit');
+        //         }
+
+        //         // Find the cell in the review column and update its text
+        //         var reviewCell = row.querySelector('.review-cell'); // Update the class or selector to match your table structure
+        //         if (reviewCell) {
+        //             reviewCell.textContent = reviewStatus;
+        //         }
+        //     }
+        // }
+
         function updateTableUI(koiId, reviewStatus) {
-            // Find the table row by koi_id and update its class
             var row = document.getElementById(`row-${koiId}`);
+            
             if (row) {
+                // Debugging: Log the row's current class list
+                console.log(`Current classes for row-${koiId}: ${row.className}`);
+                
                 // Remove existing classes first
                 row.classList.remove('not-reviewed', 'looks-good', 'revisit');
+                console.log(`Removing classes: not-reviewed, looks-good, revisit`);
 
                 // Add class based on review status
                 if (reviewStatus === 'None') {
                     row.classList.add('not-reviewed');
+                    console.log('Adding class: not-reviewed');
                 } else if (reviewStatus === 'Looks good') {
                     row.classList.add('looks-good');
-                } else if (reviewStatus === 'revisit') {
+                    console.log('Adding class: looks-good');
+                } else if (reviewStatus === 'Revisit') {
                     row.classList.add('revisit');
+                    console.log('Adding class: revisit');
                 }
+
+                // Debugging: Log the row's updated class list
+                console.log(`Updated classes for row-${koiId}: ${row.className}`);
+                
+                // Find the cell in the review column and update its text
+                var reviewCell = row.querySelector('.review-cell');
+                if (reviewCell) {
+                    reviewCell.textContent = reviewStatus;
+                }
+            } else {
+                console.warn(`Row with KOI ID ${koiId} not found.`);
             }
         }
+
+        // function tableColor() {
+        //     fetch('/table_color/')
+        //         .then(response => response.json())
+        //         .then(data => {
+        //             // Create a mapping from koi_id to review status
+        //             const reviewStatusMap = {};
+        //             data.forEach(item => {
+        //                 reviewStatusMap[item.koi_id] = item.review;
+        //             });
+
+        //             // Apply classes based on review status
+        //             var rows = document.querySelectorAll(".koi-row");
+        //             rows.forEach(row => {
+        //                 var koiId = row.id.split('-')[1];
+        //                 var reviewStatus = reviewStatusMap[koiId];
+
+        //                 // Remove existing classes first
+        //                 row.classList.remove('not-reviewed', 'looks-good', 'revisit');
+
+        //                 // Add class based on review status
+        //                 if (reviewStatus === 'None') {
+        //                     row.classList.add('not-reviewed');
+        //                 } else if (reviewStatus === 'Looks good') {
+        //                     row.classList.add('looks-good');
+        //                 } else if (reviewStatus === 'Revisit') {
+        //                     row.classList.add('revisit');
+        //                 }
+        //             });
+        //         })
+        //         .catch(error => {
+        //             console.error('Error fetching review status:', error);
+        //         });
+        // }
+
+        // function tableColor() {
+        //     fetch('/table_color/')
+        //         .then(response => response.json())
+        //         .then(data => {
+        //             // Iterate over the fetched data
+        //             data.forEach(item => {
+        //                 // Find the row that corresponds to the current item
+        //                 const row = document.querySelector(`#row-${item.koi_id}`);
+
+        //                 if (row) {
+        //                     // Remove existing classes first
+        //                     row.classList.remove('not-reviewed', 'looks-good', 'revisit');
+
+        //                     // Add class based on review status
+        //                     switch (item.review) {
+        //                         case 'None':
+        //                             row.classList.add('not-reviewed');
+        //                             break;
+        //                         case 'Looks good':
+        //                             row.classList.add('looks-good');
+        //                             break;
+        //                         case 'Revisit':
+        //                             row.classList.add('revisit');
+        //                             break;
+        //                         default:
+        //                             console.warn(`Unknown review status: ${item.review}`);
+        //                     }
+        //                 }
+        //             });
+        //         })
+        //         .catch(error => {
+        //             console.error('Error fetching review status:', error);
+        //         });
+        // }
+        // // Ensure tableColor() runs after the DOM is fully loaded
+        // document.addEventListener('DOMContentLoaded', (event) => {
+        //     tableColor();
+        // });
+
+        
 
         //function to set action value
         function setAction(action) {
@@ -224,7 +354,7 @@
         saveChangesButton.addEventListener("click", handleSaveChangesButtonClick);
 
 
-
+        
 
 
     </script>

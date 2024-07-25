@@ -10,8 +10,14 @@
         .koi-row.looks-good {
             background-color: #d4edda; /* Light green */
         }
-        .koi-row.revisit {
+        .koi-row.minor-issues {
+            background-color: #fbf5a8; /* Light yellow */
+        }
+        .koi-row.major-issues {
             background-color: #f8d7da; /* Light red */
+        }
+        .koi-row.critical-issues {
+            background-color: #ed3a49; /* Darker red */
         }
     </style>
 </head>
@@ -24,8 +30,10 @@
                 <label for="review_status">Review Status:</label>
                 <select id="review_status" onchange="handleReviewStatusChange(this)">
                     <option value="None">Not Reviewed</option>
-                    <option value="Looks good">Reviewed and Looks Good</option>
-                    <option value="Revisit">Reviewed and Revisit</option>
+                    <option value="Looks good">Looks Good</option>
+                    <option value="Minor Issues">Minor Issues</option>
+                    <option value="Major Issues">Major Issues</option>
+                    <option value="Critical Issues">Critical Issues</option>
                 </select>
             </div>
 
@@ -80,6 +88,7 @@
             .then(data => {
                 console.log('Success:', data);
                 updateTableUI(koiId, reviewStatus);
+                document.getElementById("review_status").value = "None";
                 
             })
             .catch((error) => {
@@ -87,29 +96,6 @@
             });
         }
 
-        // function updateTableUI(koiId, reviewStatus) {
-        //     // Find the table row by koi_id and update its class
-        //     var row = document.getElementById(`row-${koiId}`);
-        //     if (row) {
-        //         // Remove existing classes first
-        //         row.classList.remove('not-reviewed', 'looks-good', 'revisit');
-
-        //         // Add class based on review status
-        //         if (reviewStatus === 'None') {
-        //             row.classList.add('not-reviewed');
-        //         } else if (reviewStatus === 'Looks good') {
-        //             row.classList.add('looks-good');
-        //         } else if (reviewStatus === 'Revisit') {
-        //             row.classList.add('revisit');
-        //         }
-
-        //         // Find the cell in the review column and update its text
-        //         var reviewCell = row.querySelector('.review-cell'); // Update the class or selector to match your table structure
-        //         if (reviewCell) {
-        //             reviewCell.textContent = reviewStatus;
-        //         }
-        //     }
-        // }
 
         function updateTableUI(koiId, reviewStatus) {
             var row = document.getElementById(`row-${koiId}`);
@@ -119,8 +105,8 @@
                 console.log(`Current classes for row-${koiId}: ${row.className}`);
                 
                 // Remove existing classes first
-                row.classList.remove('not-reviewed', 'looks-good', 'revisit');
-                console.log(`Removing classes: not-reviewed, looks-good, revisit`);
+                row.classList.remove('not-reviewed', 'looks-good', 'minor-issues', 'major-issues', 'critical-issues');
+                console.log(`Removing classes: not-reviewed, looks-good, minor-issues, major-issues, critical-issues`);
 
                 // Add class based on review status
                 if (reviewStatus === 'None') {
@@ -129,9 +115,15 @@
                 } else if (reviewStatus === 'Looks good') {
                     row.classList.add('looks-good');
                     console.log('Adding class: looks-good');
-                } else if (reviewStatus === 'Revisit') {
-                    row.classList.add('revisit');
-                    console.log('Adding class: revisit');
+                } else if (reviewStatus === 'Minor Issues') {
+                    row.classList.add('minor-issues');
+                    console.log('Adding class: minor-issues');
+                } else if (reviewStatus === 'Major Issues') {
+                    row.classList.add('major-issues');
+                    console.log('Adding class: major-issues');
+                } else if (reviewStatus === 'Critical Issues') {
+                    row.classList.add('critical-issues');
+                    console.log('Adding class: critical-issues');
                 }
 
                 // Debugging: Log the row's updated class list
@@ -171,7 +163,7 @@
         //                     row.classList.add('not-reviewed');
         //                 } else if (reviewStatus === 'Looks good') {
         //                     row.classList.add('looks-good');
-        //                 } else if (reviewStatus === 'Revisit') {
+        //                 } else if (reviewStatus === 'Major Issues') {
         //                     row.classList.add('revisit');
         //                 }
         //             });
@@ -202,7 +194,7 @@
         //                         case 'Looks good':
         //                             row.classList.add('looks-good');
         //                             break;
-        //                         case 'Revisit':
+        //                         case 'Major Issues':
         //                             row.classList.add('revisit');
         //                             break;
         //                         default:

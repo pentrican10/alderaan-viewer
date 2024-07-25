@@ -28,6 +28,7 @@ import tempfile
 import base64
 import io
 from plotly.subplots import make_subplots
+from scipy.interpolate import interp1d
 
 
 
@@ -235,8 +236,6 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         ###################
         colors = ['orange','green','blue','pink','red','purple']
 
-        ttv_lines = []  # Store all TTV lines for manual legend item creation
-
         # Iterate through file paths
         for i, file_path in enumerate(file_paths):
             if os.path.isfile(file_path):
@@ -266,6 +265,24 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         lc.marker.update(symbol="circle", size=4, color="blue")
         lc.name = "Long Cadence"
         fig.add_trace(lc, row=1, col=1)
+
+        ###################
+        colors = ['orange','green','blue','pink','red','purple']
+
+        # Iterate through file paths
+        for i, file_path in enumerate(file_paths):
+            if os.path.isfile(file_path):
+                index, center_time, model, out_prob, out_flag = data_load.get_ttv_file(koi_id, file_path)
+
+                # Add a dot for each center time
+                minimum = data_lc.FLUX.min() -0.00001
+                offset = 0.0001*i
+                y_pts = minimum* np.ones(len(center_time)) + offset
+                c_time = px.scatter(x=center_time, y=y_pts).data[0]
+                color = colors[i]
+                c_time.marker.update(symbol="circle", size=4, color=color)
+                c_time.name = f"ttime 0{i}"
+                fig.add_trace(c_time, row=1, col=1)
         # Update x-axis label with units
         fig.update_layout(xaxis_title=f"TIME (DAYS)", yaxis_title="FLUX")
         graph1JSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
@@ -279,6 +296,24 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         sc.marker.update(symbol="circle", size=4, color="gray")
         sc.name = "Short Cadence"
         fig.add_trace(sc, row=1, col=1)
+
+        ###################
+        colors = ['orange','green','blue','pink','red','purple']
+
+        # Iterate through file paths
+        for i, file_path in enumerate(file_paths):
+            if os.path.isfile(file_path):
+                index, center_time, model, out_prob, out_flag = data_load.get_ttv_file(koi_id, file_path)
+
+                # Add a dot for each center time
+                minimum = data_sc.FLUX.min() -0.00001
+                offset = 0.0001*i
+                y_pts = minimum* np.ones(len(center_time)) + offset
+                c_time = px.scatter(x=center_time, y=y_pts).data[0]
+                color = colors[i]
+                c_time.marker.update(symbol="circle", size=4, color=color)
+                c_time.name = f"ttime 0{i}"
+                fig.add_trace(c_time, row=1, col=1)
         # Update x-axis label with units
         fig.update_layout(xaxis_title=f"TIME (DAYS)", yaxis_title="FLUX")
         graph1JSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
@@ -306,6 +341,12 @@ def generate_plot_single_transit(koi_id, line_number,planet):
     int_num = int(num)
     title = period[int_num]
 
+    file_name_lc = star_id + '_lc_filtered.fits'
+    file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
+    
+    file_name_sc = star_id + '_sc_filtered.fits'
+    file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
+
     ### posteriors for most likely model
     file_results =star_id + '-results.fits'
     file_path_results = os.path.join(data_directory, star_id, file_results)
@@ -331,33 +372,55 @@ def generate_plot_single_transit(koi_id, line_number,planet):
         photometry_data_lc,photometry_data_sc, transit_number, center_time = data_load.single_data(koi_id, line_number, num, ttv_file)
         center_time = np.asarray(center_time, dtype=np.float64)
         #transit_lc = px.scatter(photometry_data_lc, x="TIME", y="FLUX").data[0]
-        transit_lc = go.Scatter(x=photometry_data_lc.TIME, y=photometry_data_lc.FLUX, mode='markers')
-        transit_lc.marker.update(color="blue")
-        fig.add_trace(transit_lc, row=1, col=1)
+        # transit_lc = go.Scatter(x=photometry_data_lc.TIME, y=photometry_data_lc.FLUX, mode='markers')
+        # transit_lc.marker.update(color="blue")
+        # fig.add_trace(transit_lc, row=1, col=1)
 
-        #transit_sc = px.scatter(photometry_data_sc, x="TIME", y="FLUX").data[0]
-        transit_sc = go.Scatter(x=photometry_data_sc.TIME, y=photometry_data_sc.FLUX, mode='markers')
-        transit_sc.marker.update(color="blue")
-        fig.add_trace(transit_sc,row=1,col=1)
+        # #transit_sc = px.scatter(photometry_data_sc, x="TIME", y="FLUX").data[0]
+        # transit_sc = go.Scatter(x=photometry_data_sc.TIME, y=photometry_data_sc.FLUX, mode='markers')
+        # transit_sc.marker.update(color="blue")
+        # fig.add_trace(transit_sc,row=1,col=1)
+        if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
+            transit_lc = go.Scatter(x=photometry_data_lc.TIME, y=photometry_data_lc.FLUX, mode='markers')
+            transit_lc.marker.update(color="blue")
+            fig.add_trace(transit_lc, row=1, col=1)
 
-        lc_min,lc_max,sc_min,sc_max = data_load.get_min_max(koi_id)
+            transit_sc = go.Scatter(x=photometry_data_sc.TIME, y=photometry_data_sc.FLUX, mode='markers')
+            transit_sc.marker.update(color="blue")
+            fig.add_trace(transit_sc,row=1,col=1)
+            lc_min,lc_max,sc_min,sc_max = data_load.get_min_max(koi_id)
+            if len(photometry_data_sc)>0:
+                ### transit model
+                scit = 1.15e-5
+                t = np.arange(photometry_data_sc.TIME.min(), photometry_data_sc.TIME.max(),scit)
+                m = batman.TransitModel(theta, t-center_time)    #initializes model
+                flux = m.light_curve(theta)          #calculates light curve
+                mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
+                fig.add_trace(mod,row=1,col=1)
 
-       
-        if len(photometry_data_sc)>0:
-            ### transit model
-            scit = 1.15e-5
-            t = np.arange(photometry_data_sc.TIME.min(), photometry_data_sc.TIME.max(),scit)
-            m = batman.TransitModel(theta, t-center_time)    #initializes model
-            flux = m.light_curve(theta)          #calculates light curve
-            mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
-            fig.add_trace(mod,row=1,col=1)
 
+                fig.update_layout(xaxis_title=f"TIME (DAYS)", 
+                            yaxis_title="FLUX",
+                            yaxis=dict(range=[sc_min, sc_max])
+                )
+            else:
+                ### transit model
+                scit = 1.15e-5
+                t = np.arange(photometry_data_lc.TIME.min(), photometry_data_lc.TIME.max(),scit)
+                m = batman.TransitModel(theta, t-center_time)    #initializes model
+                flux = m.light_curve(theta)          #calculates light curve
+                mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
+                fig.add_trace(mod,row=1,col=1)
 
-            fig.update_layout(xaxis_title=f"TIME (DAYS)", 
-                          yaxis_title="FLUX",
-                          yaxis=dict(range=[sc_min, sc_max])
-            )
-        else:
+                fig.update_layout(xaxis_title=f"TIME (DAYS)", 
+                            yaxis_title="FLUX",
+                            yaxis=dict(range=[lc_min, lc_max])
+                )
+        elif os.path.isfile(file_path_lc) and not os.path.isfile(file_path_sc):
+            transit_lc = go.Scatter(x=photometry_data_lc.TIME, y=photometry_data_lc.FLUX, mode='markers')
+            transit_lc.marker.update(color="blue")
+            fig.add_trace(transit_lc, row=1, col=1)
+            lc_min,lc_max = data_load.get_min_max(koi_id)
             ### transit model
             scit = 1.15e-5
             t = np.arange(photometry_data_lc.TIME.min(), photometry_data_lc.TIME.max(),scit)
@@ -367,9 +430,29 @@ def generate_plot_single_transit(koi_id, line_number,planet):
             fig.add_trace(mod,row=1,col=1)
 
             fig.update_layout(xaxis_title=f"TIME (DAYS)", 
-                          yaxis_title="FLUX",
-                          yaxis=dict(range=[lc_min, lc_max])
+                        yaxis_title="FLUX",
+                        yaxis=dict(range=[lc_min, lc_max])
             )
+        elif os.path.isfile(file_path_sc) and not os.path.isfile(file_path_lc):
+            transit_sc = go.Scatter(x=photometry_data_sc.TIME, y=photometry_data_sc.FLUX, mode='markers')
+            transit_sc.marker.update(color="blue")
+            fig.add_trace(transit_sc,row=1,col=1)
+            sc_min,sc_max = data_load.get_min_max(koi_id)
+            ### transit model
+            scit = 1.15e-5
+            t = np.arange(photometry_data_sc.TIME.min(), photometry_data_sc.TIME.max(),scit)
+            m = batman.TransitModel(theta, t-center_time)    #initializes model
+            flux = m.light_curve(theta)          #calculates light curve
+            mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
+            fig.add_trace(mod,row=1,col=1)
+
+            fig.update_layout(xaxis_title=f"TIME (DAYS)", 
+                        yaxis_title="FLUX",
+                        yaxis=dict(range=[sc_min, sc_max])
+            )
+
+       
+        
        
         fig.update_layout(title=title, title_x=0.5)
         
@@ -439,9 +522,9 @@ def generate_plot_folded_light_curve(koi_id):
     subplot_height=350
     titles = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
     
-    fig = make_subplots(rows=npl, cols=1,
+    fig = make_subplots(rows=npl*2, cols=1,
                         subplot_titles = titles,
-                        row_heights=[subplot_height]*npl,
+                        row_heights=[subplot_height, subplot_height*0.4]*npl,
                         vertical_spacing=0.15)
     
     for i, file_path in enumerate(file_paths):
@@ -457,18 +540,32 @@ def generate_plot_folded_light_curve(koi_id):
         data_post = data_load.load_posteriors(file_path_results,planet_num,koi_id)
         ### get max likelihood
         max_index = data_post['LN_LIKE'].idxmax()
+        data_post = data_post.sort_values(by='LN_LIKE', ascending=False) 
+        row = data_post.iloc[0] # pick row with highest likelihood
         ### get most likely params {P, t0, Rp/Rs, b, T14, q1, q2}
         theta = batman.TransitParams()
-        theta.per = 1000 # data_post[f'P'][max_index]
+        # theta.per = data_post[f'P'][max_index]
+        # theta.t0 = 0.
+        # theta.rp = data_post[f'ROR_{planet_num}'][max_index]
+        # theta.b = data_post[f'IMPACT_{planet_num}'][max_index]
+        # theta.T14 = data_post[f'DUR14_{planet_num}'][max_index]*24
+        # LD_U1 = data_post[f'LD_U1'][max_index]
+        # LD_U2 = data_post[f'LD_U2'][max_index]
+        # theta.u = [LD_U1, LD_U2]
+        # theta.limb_dark = 'quadratic'
+
+        theta.per = row[f'P']
         theta.t0 = 0.
-        theta.rp = data_post[f'ROR_{planet_num}'][max_index]
-        theta.b = data_post[f'IMPACT_{planet_num}'][max_index]
-        theta.T14 = data_post[f'DUR14_{planet_num}'][max_index]*24
-        LD_U1 = data_post[f'LD_U1'][max_index]
-        LD_U2 = data_post[f'LD_U2'][max_index]
+        theta.rp = row[f'ROR_{planet_num}']
+        theta.b = row[f'IMPACT_{planet_num}']
+        theta.T14 = row[f'DUR14_{planet_num}']*24
+        LD_U1 = row[f'LD_U1']
+        LD_U2 = row[f'LD_U2']
         theta.u = [LD_U1, LD_U2]
         theta.limb_dark = 'quadratic'
 
+
+        all_residuals = []
         if os.path.exists(file_path_lc) and os.path.exists(file_path_sc):
             ### short cadence
             fold_sc = go.Scatter(x=fold_data_sc.TIME, y=fold_data_sc.FLUX, mode='markers')
@@ -499,9 +596,52 @@ def generate_plot_folded_light_curve(koi_id):
             mod.legendgroup=f'{i}'
             fig.add_trace(mod, row=i+1, col=1)
 
+            # Interpolate model flux to match observed times
+            interp_model_flux_lc = interp1d(t, flux, kind='linear', fill_value='extrapolate')
+            model_flux_lc = interp_model_flux_lc(fold_data_lc.TIME)
+            interp_model_flux_sc = interp1d(t, flux, kind='linear', fill_value='extrapolate')
+            model_flux_sc = interp_model_flux_sc(fold_data_sc.TIME)
+            interp_model_flux_bin = interp1d(t, flux, kind='linear', fill_value='extrapolate')
+            model_flux_bin = interp_model_flux_bin(binned_avg.TIME)
+
+            ### Compute residuals
+            residuals_lc = fold_data_lc.FLUX - model_flux_lc
+            residuals_sc = fold_data_sc.FLUX - model_flux_sc
+            residuals_bin = binned_avg.FLUX - model_flux_bin
+
+            # Collect all residuals
+            all_residuals.extend(residuals_lc)
+            all_residuals.extend(residuals_sc)
+            all_residuals.extend(residuals_bin)
+
+            residuals_plot_lc = go.Scatter(x=fold_data_lc.TIME, y=residuals_lc, mode='markers', showlegend=False)
+            residuals_plot_lc.marker.update(symbol="circle", size=5, color="blue")
+            fig.add_trace(residuals_plot_lc, row=i+2, col=1)
+
+            residuals_plot_sc = go.Scatter(x=fold_data_sc.TIME, y=residuals_sc, mode='markers', showlegend=False)
+            residuals_plot_sc.marker.update(symbol="circle", size=4, color="gray")
+            fig.add_trace(residuals_plot_sc, row=i+2, col=1)
+
+            residuals_plot_bin = go.Scatter(x=binned_avg.TIME, y=residuals_bin, mode='markers', showlegend=False)
+            residuals_plot_bin.marker.update(symbol="square", size=10, color="orange")
+            fig.add_trace(residuals_plot_bin, row=i+2, col=1)
+
+            # Add horizontal line at 0 in residual plot
+            fig.add_shape(type="line", x0=fold_data_lc.TIME.min(), x1=fold_data_lc.TIME.max(), y0=0, y1=0,
+                          line=dict(color="Red"), row= i + 2, col=1)
+
             ### Update x-axis and y-axis labels for each subplot
-            fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
+            # fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
+            
+            residuals_min = np.percentile(all_residuals, 20)
+            residuals_max = np.percentile(all_residuals, 80)
+            max_abs_residual = max(abs(residuals_min), abs(residuals_max))
+            fig.update_yaxes(range=[-max_abs_residual,max_abs_residual], row= i + 2, col=1)
+
             fig.update_yaxes(title_text="FLUX", row=i+1, col=1)
+            fig.update_xaxes(title_text="TIME (HOURS)", row=i+2, col=1)
+            fig.update_yaxes(title_text="Residuals", row=i+2, col=1)
+            fig.update_layout(height=700, width=1000)
         
         elif os.path.exists(file_path_lc) and not os.path.exists(file_path_sc):
             fold_lc = go.Scatter(x=fold_data_lc.TIME, y=fold_data_lc.FLUX, mode='markers')
@@ -526,6 +666,7 @@ def generate_plot_folded_light_curve(koi_id):
             ### Update x-axis and y-axis labels for each subplot
             fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
             fig.update_yaxes(title_text="FLUX", row=i+1, col=1)
+            
 
         elif not os.path.exists(file_path_lc) and os.path.exists(file_path_sc):
             fold_sc = go.Scatter(x=fold_data_sc.TIME, y=fold_data_sc.FLUX, mode='markers')
@@ -729,7 +870,7 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
         w = weight/ np.sum(weight)
         data['WEIGHTS'] = w
 
-        labels = data.columns.tolist()
+        labels = data[selected_columns].columns.tolist()
 
         fig = make_subplots(rows=len(selected_columns), cols=len(selected_columns))
         tick_values_y_c0 = None
@@ -744,49 +885,56 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
 
                 if i != j:
                     # Calculate the density of the points
-                    xy = np.vstack([x, y])
+                    # xy = np.vstack([x, y])
                     
-                    z = gaussian_kde(xy)(xy)
-                    ### plotting threshold
-                    threshold_p=np.percentile(z,1)
-                    # Select the top 90th percentile based on density
-                    threshold_s = np.percentile(z, 10) # scatter threshhold
-                    mask = (z >= threshold_s) 
-                    mask_s = (z >= threshold_p) & (z < threshold_s)
+                    # z = gaussian_kde(xy)(xy)
+                    # ### plotting threshold
+                    # threshold_p=np.percentile(z,1)
+                    # # Select the top 90th percentile based on density
+                    # threshold_s = np.percentile(z, 10) # scatter threshhold
+                    # mask = (z >= threshold_s) 
+                    # mask_s = (z >= threshold_p) & (z < threshold_s)
                     #Plot points below the threshold as scatter plot
                     fig.add_trace(go.Scatter(
-                        x=x[mask_s], 
-                        y=y[mask_s], 
+                        x=x,#[mask_s], 
+                        y=y,#[mask_s], 
                         mode='markers', 
                         marker=dict(color='gray', size=1), 
                         showlegend=False
                         ), row=j + 1, col=i + 1)
                     
                     # Determine threshold densities corresponding to the percentiles
-                    percentiles = [10, 25, 50, 75, 90]  # Reversed order
+                    # percentiles = [10, 25, 50, 75, 90]  # Reversed order
 
-                    # Define contour levels
-                    contour_levels = [10, 68, 98, 99]  # Adjust as needed
-                    fig.add_trace(go.Histogram2dContour(
-                        x=x[mask],
-                        y=y[mask],
-                        colorscale='Blues',
-                        reversescale=False,
-                        xaxis='x',
-                        yaxis='y',
-                        contours=dict(
-                            start=min(contour_levels),
-                            end=max(contour_levels),
-                            size=(max(contour_levels) - min(contour_levels)) / len(contour_levels),
-                        ),
-                        showscale=False,
-                    ), row=j + 1, col=i + 1)
+                    # # Define contour levels
+                    # contour_levels = [10, 68, 98, 99]  # Adjust as needed
+                    # fig.add_trace(go.Histogram2dContour(
+                    #     x=x[mask],
+                    #     y=y[mask],
+                    #     colorscale='Blues',
+                    #     reversescale=False,
+                    #     xaxis='x',
+                    #     yaxis='y',
+                    #     contours=dict(
+                    #         start=min(contour_levels),
+                    #         end=max(contour_levels),
+                    #         size=(max(contour_levels) - min(contour_levels)) / len(contour_levels),
+                    #     ),
+                    #     showscale=False,
+                    # ), row=j + 1, col=i + 1)
                     
                 else:
                     kde = gaussian_kde(x, weights=data['WEIGHTS']) 
-                    x_vals = np.linspace(min(x)*0.95, max(x)*1.05, 1000)
+                    max1 = max(x)
+                    min1=min(x)
+                    scale = max1 - min1
+                    buffer = 0.01 * scale
+                    x_vals = np.linspace(min(x)-buffer, max(x)+buffer, 1000)
                     y_vals = kde(x_vals)
                     fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', line=dict(color='blue'), name=labels[i], showlegend=False), row=j + 1, col=i + 1)
+                    if labels[j]==f'IMPACT_{planet_num}':
+                        # Add vertical line at x=1
+                        fig.add_trace(go.Scatter(x=[1, 1], y=[0, np.max(y_vals)], mode='lines', line=dict(color='black', dash='dash')), row=j + 1, col=i + 1)
 
                 ### add labels to x and y axes
                 if (i == 0) and (i != j):
@@ -800,9 +948,17 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                     plot_range = None
                     ### set y axes
                     if labels[j] == f'IMPACT_{planet_num}':
-                        tick_values_y = np.linspace(0, 1.2, 3)
-                        plot_range = [0, 1.2]
-                        tick_format = '.1f'
+                        if max(y)<1:
+                            tick_values_y = np.linspace(0, 1.2, 3)
+                            plot_range = [0, 1.2]
+                            tick_format = '.1f'
+                        else:
+                            buffer = 0.05
+                            maxy = max(y)
+                            rng = buffer + maxy
+                            tick_values_y = np.linspace(0, rng, 3)
+                            plot_range = [0, rng]
+                            tick_format = '.1f'
                     else:
                         tick_values_y = np.linspace(min(y), max(y), 3)
                         plot_range = [min(y), max(y)]
@@ -812,9 +968,17 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
 
                     ### set x axes
                     if labels[i] == f'IMPACT_{planet_num}':
-                        tick_values_x = np.linspace(0, 1.2, 3)
-                        plot_range = [0, 1.2]
-                        tick_format = '.1f'
+                        if max(x)<1:
+                            tick_values_x = np.linspace(0, 1.2, 3)
+                            plot_range = [0, 1.2]
+                            tick_format = '.1f'
+                        else:
+                            buffer = 0.05
+                            maxx = max(x)
+                            rng = buffer + maxx
+                            tick_values_x = np.linspace(0, rng, 3)
+                            plot_range = [0, rng]
+                            tick_format = '.1f'
                     else:
                         tick_values_x = np.linspace(min(x), max(x), 3)
                         plot_range = [min(x), max(x)]
@@ -832,9 +996,17 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                     tick_format = '.3f'
                     ### histograms only have x axes
                     if labels[i] == f'IMPACT_{planet_num}':
-                        tick_values_x = np.linspace(0, 1.2, 3)
-                        plot_range = [0, 1.2]
-                        tick_format = '.1f'
+                        if max(x)<1:
+                            tick_values_x = np.linspace(0, 1.2, 3)
+                            plot_range = [0, 1.2]
+                            tick_format = '.1f'
+                        else:
+                            buffer = 0.05
+                            maxx = max(x)
+                            rng = buffer + maxx
+                            tick_values_x = np.linspace(0, rng, 3)
+                            plot_range = [0, rng]
+                            tick_format = '.1f'
                     else:
                         tick_values_x = np.linspace(min(x), max(x), 3)
                         plot_range = [min(x), max(x)]

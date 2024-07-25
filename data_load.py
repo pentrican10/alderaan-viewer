@@ -84,16 +84,19 @@ def read_table_data(table):
     return unique_data
 
 def get_periods_for_koi_id(file_path, koi_id):
+    # koi_identifiers = []
     periods = []
     with open(file_path, 'r') as file:
         reader = csv.DictReader(file)
         
         for row in reader:
             if row['koi_id'] == koi_id:
+                koi_identifier = str(row['planet_name'])
                 period_value = float(row['period'])
                 rounded_period = round(period_value, 1)
-                append = f'Period: {rounded_period} Days'
+                append = f'{koi_identifier}, Period: {rounded_period} Days'
                 periods.append(str(append))
+
 
     return periods if periods else None
 
@@ -158,13 +161,20 @@ def load_posteriors(f,n,koi_id):
         LD_U2 = np.sqrt(LD_Q1)*(1-2*LD_Q2)
 
         index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id,ttv_file)
-        Leg0 = _legendre(koi_id,n,0)
-        Leg1 = _legendre(koi_id,n,1)
+        # Leg0 = _legendre(koi_id,n,0)
+        # Leg1 = _legendre(koi_id,n,1)
         model = np.array(model, dtype='float64')
         index = np.array(index, dtype='float64')
 
-        ephem = model + np.outer(C0,Leg0) + np.outer(C1, Leg1)
+        # ephem = model + np.outer(C0,Leg0) + np.outer(C1, Leg1)
+        # T0, P = poly.polyfit(index.flatten(),ephem.T,1)
+
+        centered_index = (index - index[-1]) // 2
+        LegX = centered_index / (index[-1]/2)
+        Leg0 = np.ones_like(LegX)
+        ephem = model + np.outer(C0, Leg0) + np.outer(C1,LegX)
         T0, P = poly.polyfit(index.flatten(),ephem.T,1)
+
 
         data_return = np.vstack([C0, C1, ROR, IMPACT, DUR14, T0, P, LD_Q1, LD_Q2, LD_U1, LD_U2, LN_WT, LN_LIKE]).T
         labels = f'C0_{n} C1_{n} ROR_{n} IMPACT_{n} DUR14_{n} T0 P LD_Q1 LD_Q2 LD_U1 LD_U2 LN_WT LN_LIKE'.split()
@@ -263,6 +273,16 @@ def get_min_max(koi_id):
         sc_max = photometry_data_sc['FLUX'].max()
         sc_min = photometry_data_sc['FLUX'].min()
         return lc_min,lc_max,sc_min,sc_max
+    elif os.path.isfile(file_path_lc) and not os.path.isfile(file_path_sc):
+        photometry_data_lc = read_data_from_fits(file_path_lc) 
+        lc_max = photometry_data_lc['FLUX'].max()
+        lc_min = photometry_data_lc['FLUX'].min()
+        return lc_min, lc_max
+    elif os.path.isfile(file_path_sc) and not os.path.isfile(file_path_lc):
+        photometry_data_sc = read_data_from_fits(file_path_sc)
+        sc_max = photometry_data_sc['FLUX'].max()
+        sc_min = photometry_data_sc['FLUX'].min()
+        return sc_min, sc_max
 
 
 def single_data(koi_id, line_number, num, ttv_file):
@@ -364,9 +384,15 @@ def folded_data(koi_id,planet_num, file_path):
     file_path_results = os.path.join(data_directory, star_id, file_results)
     data_post = load_posteriors(file_path_results,planet_num,koi_id)
     ### get max likelihood
+    # sortby ln like, pick row 
+    # get value after sampled
+    # plot
+    data_post = data_post.sort_values(by='LN_LIKE', ascending=False) 
+    row = data_post.iloc[0] # pick row with highest likelihood
     max_index = data_post['LN_LIKE'].idxmax()
     ### mult by 1.5 for correct offset
-    DUR14 = 1.5 * data_post[f'DUR14_{planet_num}'][max_index]
+    # DUR14 = 1.5 * data_post[f'DUR14_{planet_num}'][max_index]
+    DUR14 = 1.5 * row[f'DUR14_{planet_num}']
 
     fold_data_time = []
     fold_data_flux = []

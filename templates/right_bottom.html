@@ -19,6 +19,7 @@
         .koi-row.critical-issues {
             background-color: #ed3a49; /* Darker red */
         }
+        
     </style>
 </head>
 <body>
@@ -139,80 +140,53 @@
             }
         }
 
-        // function tableColor() {
-        //     fetch('/table_color/')
-        //         .then(response => response.json())
-        //         .then(data => {
-        //             // Create a mapping from koi_id to review status
-        //             const reviewStatusMap = {};
-        //             data.forEach(item => {
-        //                 reviewStatusMap[item.koi_id] = item.review;
-        //             });
+        function tableColor() {
+            fetch('/table_color/')
+                .then(response => response.json())
+                .then(data => {
+                    // Create a mapping from koi_id to review status
+                    const reviewStatusMap = {};
+                    data.forEach(item => {
+                        reviewStatusMap[item.koi_id] = item.review;
+                    });
 
-        //             // Apply classes based on review status
-        //             var rows = document.querySelectorAll(".koi-row");
-        //             rows.forEach(row => {
-        //                 var koiId = row.id.split('-')[1];
-        //                 var reviewStatus = reviewStatusMap[koiId];
+                    // Apply classes based on review status
+                    var rows = document.querySelectorAll(".koi-row");
+                    rows.forEach(row => {
+                        var koiId = row.id.split('-')[1];
+                        var reviewStatus = reviewStatusMap[koiId];
 
-        //                 // Remove existing classes first
-        //                 row.classList.remove('not-reviewed', 'looks-good', 'revisit');
+                        // Remove existing classes first
+                        row.classList.remove('not-reviewed', 'looks-good', 'minor-issues', 'major-issues', 'critical-issues');
+                        console.log(`Removing classes: not-reviewed, looks-good, minor-issues, major-issues, critical-issues`);
 
-        //                 // Add class based on review status
-        //                 if (reviewStatus === 'None') {
-        //                     row.classList.add('not-reviewed');
-        //                 } else if (reviewStatus === 'Looks good') {
-        //                     row.classList.add('looks-good');
-        //                 } else if (reviewStatus === 'Major Issues') {
-        //                     row.classList.add('revisit');
-        //                 }
-        //             });
-        //         })
-        //         .catch(error => {
-        //             console.error('Error fetching review status:', error);
-        //         });
-        // }
 
-        // function tableColor() {
-        //     fetch('/table_color/')
-        //         .then(response => response.json())
-        //         .then(data => {
-        //             // Iterate over the fetched data
-        //             data.forEach(item => {
-        //                 // Find the row that corresponds to the current item
-        //                 const row = document.querySelector(`#row-${item.koi_id}`);
+                        // Add class based on review status
+                        if (reviewStatus === 'None') {
+                            row.classList.add('not-reviewed');
+                            console.log('Adding class: not-reviewed');
+                        } else if (reviewStatus === 'Looks good') {
+                            row.classList.add('looks-good');
+                            console.log('Adding class: looks-good');
+                        } else if (reviewStatus === 'Minor Issues') {
+                            row.classList.add('minor-issues');
+                            console.log('Adding class: minor-issues');
+                        } else if (reviewStatus === 'Major Issues') {
+                            row.classList.add('major-issues');
+                            console.log('Adding class: major-issues');
+                        } else if (reviewStatus === 'Critical Issues') {
+                            row.classList.add('critical-issues');
+                            console.log('Adding class: critical-issues');
+                        }
+                        
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching review status:', error);
+                });
+        }
 
-        //                 if (row) {
-        //                     // Remove existing classes first
-        //                     row.classList.remove('not-reviewed', 'looks-good', 'revisit');
-
-        //                     // Add class based on review status
-        //                     switch (item.review) {
-        //                         case 'None':
-        //                             row.classList.add('not-reviewed');
-        //                             break;
-        //                         case 'Looks good':
-        //                             row.classList.add('looks-good');
-        //                             break;
-        //                         case 'Major Issues':
-        //                             row.classList.add('revisit');
-        //                             break;
-        //                         default:
-        //                             console.warn(`Unknown review status: ${item.review}`);
-        //                     }
-        //                 }
-        //             });
-        //         })
-        //         .catch(error => {
-        //             console.error('Error fetching review status:', error);
-        //         });
-        // }
-        // // Ensure tableColor() runs after the DOM is fully loaded
-        // document.addEventListener('DOMContentLoaded', (event) => {
-        //     tableColor();
-        // });
-
-        
+  
 
         //function to set action value
         function setAction(action) {

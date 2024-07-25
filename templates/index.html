@@ -20,6 +20,7 @@
         .koi-row.critical-issues {
             background-color: #ed3a49; /* Darker red */
         }
+        
     </style>
 </head>
 
@@ -73,7 +74,7 @@
                 koiIdContainer.innerHTML = `<h2>Selected koi_id: ${koiId}</h2>`;
                 selectedKoiId = koiId;
                 displayCommentFile(koiId);
-                //tableColor();
+                tableColor();
 
                 //show checkbox container
                 const checkboxContainer= document.getElementById("checkbox_container");

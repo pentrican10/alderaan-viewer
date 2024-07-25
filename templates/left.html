@@ -17,6 +17,7 @@
             .koi-row.critical-issues {
                 background-color: #ed3a49; /* Darker red */
             }
+            
         </style>
     </head>
     <body>
@@ -79,7 +80,6 @@
         function loadTable(){
             const selectedTable = document.getElementById('tableSelect').value;
             window.location.href = "/home?table=" + selectedTable;
-            tableColor();
 
             // Update the selected option in the dropdown
             const dropdown = document.getElementById('tableSelect');

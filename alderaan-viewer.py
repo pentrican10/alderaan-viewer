@@ -663,9 +663,47 @@ def generate_plot_folded_light_curve(koi_id):
             mod.name = "Model"
             mod.legendgroup=f'{i}'
             fig.add_trace(mod, row=i+1, col=1)
+
+            # Interpolate model flux to match observed times
+            interp_model_flux_lc = interp1d(t, flux, kind='linear', fill_value='extrapolate')
+            model_flux_lc = interp_model_flux_lc(fold_data_lc.TIME)
+            interp_model_flux_bin = interp1d(t, flux, kind='linear', fill_value='extrapolate')
+            model_flux_bin = interp_model_flux_bin(binned_avg.TIME)
+
+            ### Compute residuals
+            residuals_lc = fold_data_lc.FLUX - model_flux_lc
+            residuals_bin = binned_avg.FLUX - model_flux_bin
+
+            # Collect all residuals
+            all_residuals.extend(residuals_lc)
+            all_residuals.extend(residuals_bin)
+
+            residuals_plot_lc = go.Scatter(x=fold_data_lc.TIME, y=residuals_lc, mode='markers', showlegend=False)
+            residuals_plot_lc.marker.update(symbol="circle", size=5, color="blue")
+            fig.add_trace(residuals_plot_lc, row=i+2, col=1)
+
+            residuals_plot_bin = go.Scatter(x=binned_avg.TIME, y=residuals_bin, mode='markers', showlegend=False)
+            residuals_plot_bin.marker.update(symbol="square", size=10, color="orange")
+            fig.add_trace(residuals_plot_bin, row=i+2, col=1)
+
+            # Add horizontal line at 0 in residual plot
+            fig.add_shape(type="line", x0=fold_data_lc.TIME.min(), x1=fold_data_lc.TIME.max(), y0=0, y1=0,
+                          line=dict(color="Red"), row= i + 2, col=1)
+
             ### Update x-axis and y-axis labels for each subplot
-            fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
+            # fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
+            
+            residuals_min = np.percentile(all_residuals, 20)
+            residuals_max = np.percentile(all_residuals, 80)
+            max_abs_residual = max(abs(residuals_min), abs(residuals_max))
+            fig.update_yaxes(range=[-max_abs_residual,max_abs_residual], row= i + 2, col=1)
+
+
+            ### Update x-axis and y-axis labels for each subplot
             fig.update_yaxes(title_text="FLUX", row=i+1, col=1)
+            fig.update_xaxes(title_text="TIME (HOURS)", row=i+2, col=1)
+            fig.update_yaxes(title_text="Residuals", row=i+2, col=1)
+            fig.update_layout(height=700, width=1000)
             
 
         elif not os.path.exists(file_path_lc) and os.path.exists(file_path_sc):
@@ -688,9 +726,47 @@ def generate_plot_folded_light_curve(koi_id):
             mod.name = "Model"
             mod.legendgroup=f'{i}'
             fig.add_trace(mod, row=i+1, col=1)
+
+            # Interpolate model flux to match observed times
+            interp_model_flux_sc = interp1d(t, flux, kind='linear', fill_value='extrapolate')
+            model_flux_sc = interp_model_flux_sc(fold_data_sc.TIME)
+            interp_model_flux_bin = interp1d(t, flux, kind='linear', fill_value='extrapolate')
+            model_flux_bin = interp_model_flux_bin(binned_avg.TIME)
+
+            ### Compute residuals
+            residuals_sc = fold_data_sc.FLUX - model_flux_sc
+            residuals_bin = binned_avg.FLUX - model_flux_bin
+
+            # Collect all residuals
+            all_residuals.extend(residuals_sc)
+            all_residuals.extend(residuals_bin)
+
+            residuals_plot_sc = go.Scatter(x=fold_data_sc.TIME, y=residuals_sc, mode='markers', showlegend=False)
+            residuals_plot_sc.marker.update(symbol="circle", size=4, color="gray")
+            fig.add_trace(residuals_plot_sc, row=i+2, col=1)
+
+            residuals_plot_bin = go.Scatter(x=binned_avg.TIME, y=residuals_bin, mode='markers', showlegend=False)
+            residuals_plot_bin.marker.update(symbol="square", size=10, color="orange")
+            fig.add_trace(residuals_plot_bin, row=i+2, col=1)
+
+            # Add horizontal line at 0 in residual plot
+            fig.add_shape(type="line", x0=fold_data_lc.TIME.min(), x1=fold_data_lc.TIME.max(), y0=0, y1=0,
+                          line=dict(color="Red"), row= i + 2, col=1)
+
             ### Update x-axis and y-axis labels for each subplot
-            fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
+            # fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
+            
+            residuals_min = np.percentile(all_residuals, 20)
+            residuals_max = np.percentile(all_residuals, 80)
+            max_abs_residual = max(abs(residuals_min), abs(residuals_max))
+            fig.update_yaxes(range=[-max_abs_residual,max_abs_residual], row= i + 2, col=1)
+
+
+            ### Update x-axis and y-axis labels for each subplot
             fig.update_yaxes(title_text="FLUX", row=i+1, col=1)
+            fig.update_xaxes(title_text="TIME (HOURS)", row=i+2, col=1)
+            fig.update_yaxes(title_text="Residuals", row=i+2, col=1)
+            fig.update_layout(height=700, width=1000)
         
         else:
             error_message = f'No data found for {koi_id}'

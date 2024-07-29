@@ -101,7 +101,6 @@ def get_periods_for_koi_id(file_path, koi_id):
     return periods if periods else None
 
                
-
 def read_data_from_fits(file_path):
     with fits.open(file_path) as fits_file:
         time = np.array(fits_file[1].data, dtype=float)
@@ -135,122 +134,6 @@ def get_ttv_file(koi_id, file_path):
                 out_flag.append(columns[4])
         return index, ttime, model, out_prob, out_flag
     
-
-def load_posteriors(f,n,koi_id):
-    global K_id
-    if K_id == False:
-        star_id = koi_id.replace("K","S")
-    else:
-        star_id = koi_id
-    file_name = star_id + f'_0{n}_quick.ttvs'
-    ttv_file = os.path.join(data_directory, star_id, file_name)
-    with fits.open(f) as hduL:
-        data = hduL['SAMPLES'].data
-        C0 = data[f'C0_{n}']
-        C1 = data[f'C1_{n}']
-        ROR = data[f'ROR_{n}']
-        IMPACT = data[f'IMPACT_{n}']
-        DUR14 = data[f'DUR14_{n}']
-        LD_Q1 = data[f'LD_Q1']
-        LD_Q2 = data[f'LD_Q2']
-        LN_WT = data[f'LN_WT']
-        LN_LIKE = data[f'LN_LIKE']
-
-        ### calculate P, T0, U1, U2
-        LD_U1 = 2*np.sqrt(LD_Q1)*LD_Q2
-        LD_U2 = np.sqrt(LD_Q1)*(1-2*LD_Q2)
-
-        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id,ttv_file)
-        # Leg0 = _legendre(koi_id,n,0)
-        # Leg1 = _legendre(koi_id,n,1)
-        model = np.array(model, dtype='float64')
-        index = np.array(index, dtype='float64')
-
-        # ephem = model + np.outer(C0,Leg0) + np.outer(C1, Leg1)
-        # T0, P = poly.polyfit(index.flatten(),ephem.T,1)
-
-        centered_index = (index - index[-1]) // 2
-        LegX = centered_index / (index[-1]/2)
-        Leg0 = np.ones_like(LegX)
-        ephem = model + np.outer(C0, Leg0) + np.outer(C1,LegX)
-        T0, P = poly.polyfit(index.flatten(),ephem.T,1)
-
-
-        data_return = np.vstack([C0, C1, ROR, IMPACT, DUR14, T0, P, LD_Q1, LD_Q2, LD_U1, LD_U2, LN_WT, LN_LIKE]).T
-        labels = f'C0_{n} C1_{n} ROR_{n} IMPACT_{n} DUR14_{n} T0 P LD_Q1 LD_Q2 LD_U1 LD_U2 LN_WT LN_LIKE'.split()
-        df = pd.DataFrame(data_return, columns=labels)
-        return df
-
-def _legendre(koi_id, n, k):
-        global K_id
-        if K_id == False:
-            star_id = koi_id.replace("K","S")
-        else:
-            star_id = koi_id
-        
-        ttv_file_name = star_id + f'_0{n}_quick.ttvs'
-        ttv_file = os.path.join(data_directory, star_id, ttv_file_name)
-        lc_file = star_id + '_lc_filtered.fits'
-        sc_file = star_id + '_sc_filtered.fits'
-        lc_path = os.path.join(data_directory, star_id, lc_file)
-        sc_path = os.path.join(data_directory, star_id, sc_file)
-        index, ttime, model, out_prob, out_flag = get_ttv_file(star_id,ttv_file)
-        if os.path.isfile(lc_path):
-            data_lc = read_data_from_fits(lc_path)
-        if os.path.isfile(sc_path):
-            data_sc = read_data_from_fits(sc_path)
-        model= np.array(model, dtype='float64')
-        t = model
-        #t = t.astype(float)
-        #if data_lc.TIME.min()< data_sc.TIME.min() and data_lc.TIME.max()> data_sc.TIME.max():
-        x = 2 * (t-data_lc.TIME.min()) / (data_lc.TIME.max() - data_lc.TIME.min()) - 1 
-        
-        if k==0:
-            return np.ones_like(t)
-        if k==1:
-            return np.zeros_like(t)
-        else:
-            return ValueError("only configured for 0th and 1st order Legendre polynomials")
-
-
-
-# def single_transit_data(koi_id, line_number, ttv_file):
-#     star_id = koi_id.replace("K","S")
-#     file_name_lc = star_id + '_lc_filtered.fits'
-#     file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
-    
-#     file_name_sc = star_id + '_sc_filtered.fits'
-#     file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
-
-#     file_path = os.path.join(data_directory, star_id, ttv_file)
-
-#     combined_data = None
-#     #get data and create detrended light curve
-#     if os.path.isfile(file_path_lc):
-#         photometry_data_lc = read_data_from_fits(file_path_lc) #descriptive names
-#         index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
-
-#         if line_number < len(index):
-#             center_time = ttime[line_number]
-#             transit_number = index[line_number]
-        
-#             start_time = float(center_time) - 0.25
-#             end_time= float(center_time) + 0.25
-
-#             use_lc = (photometry_data_lc['TIME'] > start_time) & (photometry_data_lc['TIME'] < end_time)
-#             lc_data = photometry_data_lc[use_lc]
-#             combined_data = lc_data
-#     if os.path.isfile(file_path_sc):
-#             photometry_data_sc = read_data_from_fits(file_path_sc)
-#             if combined_data is not None:
-#                 use_sc = (photometry_data_sc['TIME'] > start_time) & (photometry_data_sc['TIME'] < end_time)
-#                 sc_data = photometry_data_sc[use_sc]
-#                 combined_data= pd.concat([combined_data, sc_data],ignore_index=True)
-#             else:
-#                 combined_data = photometry_data_sc
-
-#     return combined_data, transit_number, center_time ############
-
 
 def get_min_max(koi_id):
     global K_id
@@ -366,8 +249,6 @@ def single_data(koi_id, line_number, num, ttv_file):
         return lc_data,sc_data, transit_number, center_time
 
 
-    
-
 def folded_data(koi_id,planet_num, file_path):
     global K_id
     if K_id == False:
@@ -389,7 +270,6 @@ def folded_data(koi_id,planet_num, file_path):
     # plot
     data_post = data_post.sort_values(by='LN_LIKE', ascending=False) 
     row = data_post.iloc[0] # pick row with highest likelihood
-    max_index = data_post['LN_LIKE'].idxmax()
     ### mult by 1.5 for correct offset
     # DUR14 = 1.5 * data_post[f'DUR14_{planet_num}'][max_index]
     DUR14 = 1.5 * row[f'DUR14_{planet_num}']
@@ -446,16 +326,17 @@ def folded_data(koi_id,planet_num, file_path):
         'FLUX': fold_data_flux,
         'ERR' : fold_data_err
     })
-    fold_data_lc['TIME'] = fold_data_lc['TIME'] * 24 ### to hours
+    # do this conversion in plotting, not data structure 
+    # model all params in days, manipulate to hours in plotting 
+    #plot days first then hours 
 
     fold_data_sc = pd.DataFrame({
         'TIME' : fold_data_time_sc,
         'FLUX': fold_data_flux_sc,
         'ERR' : fold_data_err_sc
     })
-    fold_data_sc['TIME'] = fold_data_sc['TIME'] * 24 ### to hours
 
-    bin_size = 0.5
+    bin_size = 0.02
     combined_time = np.concatenate([fold_data_lc['TIME'], fold_data_sc['TIME']])
     combined_flux = np.concatenate([fold_data_lc['FLUX'], fold_data_sc['FLUX']])
     combined_flux_err = np.concatenate([fold_data_lc['ERR'], fold_data_sc['ERR']]) 
@@ -470,8 +351,6 @@ def folded_data(koi_id,planet_num, file_path):
 
     return fold_data_lc, fold_data_sc, binned_weighted_avg_combined, center_time
 
-
-########################################################################################
 # Binned weighted average function
 def calculate_binned_weighted_average(time, flux, flux_err, bin_size):
     bins = np.arange(time.min(), time.max(), bin_size)
@@ -487,7 +366,6 @@ def calculate_binned_weighted_average(time, flux, flux_err, bin_size):
         
     bin_centers = (bins[1:] + bins[:-1]) / 2
     return bin_centers, weighted_avg
-
 
     
 def OMC_data(koi_id,file_path):
@@ -518,4 +396,79 @@ def OMC_data(koi_id,file_path):
     return OMC_data, OMC_model, out_prob, out_flag
 
 
+def load_posteriors(f,n,koi_id):
+    global K_id
+    if K_id == False:
+        star_id = koi_id.replace("K","S")
+    else:
+        star_id = koi_id
+    file_name = star_id + f'_0{n}_quick.ttvs'
+    ttv_file = os.path.join(data_directory, star_id, file_name)
+    with fits.open(f) as hduL:
+        data = hduL['SAMPLES'].data
+        C0 = data[f'C0_{n}']
+        C1 = data[f'C1_{n}']
+        ROR = data[f'ROR_{n}']
+        IMPACT = data[f'IMPACT_{n}']
+        DUR14 = data[f'DUR14_{n}']
+        LD_Q1 = data[f'LD_Q1']
+        LD_Q2 = data[f'LD_Q2']
+        LN_WT = data[f'LN_WT']
+        LN_LIKE = data[f'LN_LIKE']
+
+        ### calculate P, T0, U1, U2
+        LD_U1 = 2*np.sqrt(LD_Q1)*LD_Q2
+        LD_U2 = np.sqrt(LD_Q1)*(1-2*LD_Q2)
+
+        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id,ttv_file)
+        # Leg0 = _legendre(koi_id,n,0)
+        # Leg1 = _legendre(koi_id,n,1)
+        model = np.array(model, dtype='float64')
+        index = np.array(index, dtype='float64')
+
+        # ephem = model + np.outer(C0,Leg0) + np.outer(C1, Leg1)
+        # T0, P = poly.polyfit(index.flatten(),ephem.T,1)
+
+        centered_index = (index - index[-1]) // 2
+        LegX = centered_index / (index[-1]/2)
+        Leg0 = np.ones_like(LegX)
+        ephem = model + np.outer(C0, Leg0) + np.outer(C1,LegX)
+        T0, P = poly.polyfit(index.flatten(),ephem.T,1)
+
+
+        data_return = np.vstack([C0, C1, ROR, IMPACT, DUR14, T0, P, LD_Q1, LD_Q2, LD_U1, LD_U2, LN_WT, LN_LIKE]).T
+        labels = f'C0_{n} C1_{n} ROR_{n} IMPACT_{n} DUR14_{n} T0 P LD_Q1 LD_Q2 LD_U1 LD_U2 LN_WT LN_LIKE'.split()
+        df = pd.DataFrame(data_return, columns=labels)
+        return df
+
+def _legendre(koi_id, n, k):
+        global K_id
+        if K_id == False:
+            star_id = koi_id.replace("K","S")
+        else:
+            star_id = koi_id
+        
+        ttv_file_name = star_id + f'_0{n}_quick.ttvs'
+        ttv_file = os.path.join(data_directory, star_id, ttv_file_name)
+        lc_file = star_id + '_lc_filtered.fits'
+        sc_file = star_id + '_sc_filtered.fits'
+        lc_path = os.path.join(data_directory, star_id, lc_file)
+        sc_path = os.path.join(data_directory, star_id, sc_file)
+        index, ttime, model, out_prob, out_flag = get_ttv_file(star_id,ttv_file)
+        if os.path.isfile(lc_path):
+            data_lc = read_data_from_fits(lc_path)
+        if os.path.isfile(sc_path):
+            data_sc = read_data_from_fits(sc_path)
+        model= np.array(model, dtype='float64')
+        t = model
+        #t = t.astype(float)
+        #if data_lc.TIME.min()< data_sc.TIME.min() and data_lc.TIME.max()> data_sc.TIME.max():
+        x = 2 * (t-data_lc.TIME.min()) / (data_lc.TIME.max() - data_lc.TIME.min()) - 1 
+        
+        if k==0:
+            return np.ones_like(t)
+        if k==1:
+            return np.zeros_like(t)
+        else:
+            return ValueError("only configured for 0th and 1st order Legendre polynomials")
 

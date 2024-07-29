@@ -109,7 +109,6 @@ def review_status(koi_id):
     
     return jsonify({'status': 'success'})
 
-
 @app.route('/table_color/')
 def table_color():
     global data_directory
@@ -558,43 +557,67 @@ def generate_plot_folded_light_curve(koi_id):
         theta.t0 = 0.
         theta.rp = row[f'ROR_{planet_num}']
         theta.b = row[f'IMPACT_{planet_num}']
-        theta.T14 = row[f'DUR14_{planet_num}']*24
+        theta.T14 = row[f'DUR14_{planet_num}']#*24
         LD_U1 = row[f'LD_U1']
         LD_U2 = row[f'LD_U2']
         theta.u = [LD_U1, LD_U2]
         theta.limb_dark = 'quadratic'
 
+        other_models = []
+        num_models = 20
+        
+
 
         all_residuals = []
         if os.path.exists(file_path_lc) and os.path.exists(file_path_sc):
             ### short cadence
-            fold_sc = go.Scatter(x=fold_data_sc.TIME, y=fold_data_sc.FLUX, mode='markers')
+            fold_sc = go.Scatter(x=fold_data_sc.TIME*24, y=fold_data_sc.FLUX, mode='markers')
             fold_sc.marker.update(symbol="circle", size=4, color="gray")
             fold_sc.name = "Short Cadence"
             fold_sc.legendgroup=f'{i}'
             fig.add_trace(fold_sc, row=i+1, col=1)
             ### long cadence
-            fold_lc = go.Scatter(x=fold_data_lc.TIME, y=fold_data_lc.FLUX, mode='markers')
+            fold_lc = go.Scatter(x=fold_data_lc.TIME*24, y=fold_data_lc.FLUX, mode='markers')
             fold_lc.marker.update(symbol="circle", size=5, color="blue")
             fold_lc.name = "Long Cadence"
             fold_lc.legendgroup=f'{i}'
             fig.add_trace(fold_lc, row=i+1, col=1)
             ### binned avg
-            bin_avg = go.Scatter(x=binned_avg.TIME, y=binned_avg.FLUX, mode='markers')
+            bin_avg = go.Scatter(x=binned_avg.TIME*24, y=binned_avg.FLUX, mode='markers')
             bin_avg.marker.update(symbol="square", size=10, color="orange")
             bin_avg.name = "Binned Average"
             bin_avg.legendgroup=f'{i}'
-            fig.add_trace(bin_avg, row=i+1, col=1)
+            fig.add_trace(bin_avg, row=i+1, col=1) 
 
             ### model
             scit = 1.15e-5
             t = np.arange(fold_data_lc.TIME.min(), fold_data_lc.TIME.max(),scit)
             m = batman.TransitModel(theta, t)    #initializes model
             flux = (m.light_curve(theta))        #calculates light curve
-            mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
+            mod = go.Scatter(x=t*24, y=flux, mode="lines", line=dict(color='red'))
             mod.name = "Model"
             mod.legendgroup=f'{i}'
             fig.add_trace(mod, row=i+1, col=1)
+
+            # for j in range(num_models):
+            #     row_ = data_post.iloc[j] # pick row with highest likelihood
+            #     ### get most likely params {P, t0, Rp/Rs, b, T14, q1, q2}
+            #     theta_ = batman.TransitParams()
+            #     theta_.per = row_[f'P']
+            #     theta_.t0 = 0.
+            #     theta_.rp = row_[f'ROR_{planet_num}']
+            #     theta_.b = row_[f'IMPACT_{planet_num}']
+            #     theta_.T14 = row_[f'DUR14_{planet_num}']*24
+            #     LD_U1 = row_[f'LD_U1']
+            #     LD_U2 = row_[f'LD_U2']
+            #     theta_.u = [LD_U1, LD_U2]
+            #     theta_.limb_dark = 'quadratic'
+            #     m_ = batman.TransitModel(theta_, t)    #initializes model
+            #     flux_ = (m_.light_curve(theta_))        #calculates light curve
+            #     mod_ = go.Scatter(x=t, y=flux_, mode="lines", line=dict(color='pink'))
+            #     mod_.name = f'Model {j}'
+            #     mod_.legendgroup=f'{i}'
+            #     fig.add_trace(mod_, row=i+1, col=1)
 
             # Interpolate model flux to match observed times
             interp_model_flux_lc = interp1d(t, flux, kind='linear', fill_value='extrapolate')
@@ -614,20 +637,21 @@ def generate_plot_folded_light_curve(koi_id):
             all_residuals.extend(residuals_sc)
             all_residuals.extend(residuals_bin)
 
-            residuals_plot_lc = go.Scatter(x=fold_data_lc.TIME, y=residuals_lc, mode='markers', showlegend=False)
+            residuals_plot_lc = go.Scatter(x=fold_data_lc.TIME*24, y=residuals_lc, mode='markers', showlegend=False)
             residuals_plot_lc.marker.update(symbol="circle", size=5, color="blue")
             fig.add_trace(residuals_plot_lc, row=i+2, col=1)
 
-            residuals_plot_sc = go.Scatter(x=fold_data_sc.TIME, y=residuals_sc, mode='markers', showlegend=False)
+            residuals_plot_sc = go.Scatter(x=fold_data_sc.TIME*24, y=residuals_sc, mode='markers', showlegend=False)
             residuals_plot_sc.marker.update(symbol="circle", size=4, color="gray")
             fig.add_trace(residuals_plot_sc, row=i+2, col=1)
 
-            residuals_plot_bin = go.Scatter(x=binned_avg.TIME, y=residuals_bin, mode='markers', showlegend=False)
+            residuals_plot_bin = go.Scatter(x=binned_avg.TIME*24, y=residuals_bin, mode='markers', showlegend=False)
             residuals_plot_bin.marker.update(symbol="square", size=10, color="orange")
             fig.add_trace(residuals_plot_bin, row=i+2, col=1)
 
             # Add horizontal line at 0 in residual plot
-            fig.add_shape(type="line", x0=fold_data_lc.TIME.min(), x1=fold_data_lc.TIME.max(), y0=0, y1=0,
+            t = t*24
+            fig.add_shape(type="line", x0=(t.min()), x1=(-1*t.min()), y0=0, y1=0,
                           line=dict(color="Red"), row= i + 2, col=1)
 
             ### Update x-axis and y-axis labels for each subplot
@@ -847,78 +871,7 @@ def generate_plot_OMC(koi_id):
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
     return jsonify(graphJSON)
 
-"""   
-@app.route('/generate_plot_corner/<koi_id>/<selected_columns>/<planet_num>')
-def generate_plot_corner(koi_id,selected_columns, planet_num):
-    try:
-        selected_columns = selected_columns.split(',')
-        global K_id
-        if K_id==False:
-            star_id = koi_id.replace("K","S")
-        else:
-            star_id = koi_id
-        file =star_id + '-results.fits'
-        file_path = os.path.join(data_directory, star_id, file)
 
-        if os.path.isfile(file_path):
-            data = data_load.load_posteriors(file_path,planet_num,koi_id)
-            # Drop the 'period' column if it exists
-            if f'P_{planet_num}' in data.columns:
-                data = data.drop(columns=[f'P_{planet_num}'])
-
-            LN_WT = data['LN_WT'][::5].values
-            weight = np.exp(LN_WT- LN_WT.max())
-            w = weight/ np.sum(weight)
-            index = np.arange(len(LN_WT))
-            rand_index = np.random.choice(index,p=w,size=len(LN_WT), replace=True)
-
-            data = data[selected_columns]
-
-            labels = data.columns.tolist()
-            
-            # Create a subplot grid for the corner plot
-            fig, axs = plt.subplots(len(selected_columns), len(selected_columns), figsize=(12, 12))
-            
-            for i in range(len(selected_columns)):
-                for j in range(len(selected_columns)):
-                    if i == j:
-                        # Diagonal plot - histogram or KDE plot
-                        x=[1,2,3,4]
-                        y=[1,2,3,4]
-                        ax = axs[i, j]
-                        ax.scatter(x,y)
-                        #ax.set_xlabel(labels[i])
-                        ax.set_ylabel('Density')
-                    elif i > j:
-                        # Lower triangle plot - scatter plot or line plot
-                        ax = axs[i, j]
-                        x = [5,6,7,8]
-                        y=[5,6,7,8]
-                        ax.scatter(x,y)
-                        #ax.set_xlabel(labels[j])
-                        #ax.set_ylabel(labels[i])
-                    else:
-                        # Upper triangle plot - remove axis
-                        axs[i, j].remove()
-            
-            # Adjust layout and convert plot to HTML
-            plt.tight_layout()
-            mpld3_plot = mpld3.fig_to_html(fig)
-            
-            # Convert mpld3 plot to JSON format and return as response
-            #graphJSON = json.dumps(mpld3_plot)
-            # Convert mpld3 plot to JSON format and return as response
-            return jsonify(graphJSON=mpld3_plot)
-            #return jsonify(graphJSON=graphJSON)
-        else:
-            error_message = f'No data found for {koi_id}'
-            return jsonify(error_message=error_message)
-    except Exception as e:
-        error_message = f'An error occurred: {str(e)}'
-        print(error_message)  # Log the error
-        return jsonify(error_message=error_message)
-    
-"""
 @app.route('/generate_plot_corner/<koi_id>/<selected_columns>/<planet_num>')
 def generate_plot_corner(koi_id,selected_columns, planet_num):
     selected_columns = selected_columns.split(',')
@@ -1106,7 +1059,6 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
     else:
         error_message = f'No data found for {koi_id}'
         return jsonify(error_message=error_message)
-
 
 
 if __name__ == '__main__':

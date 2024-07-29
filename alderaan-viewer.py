@@ -569,6 +569,7 @@ def generate_plot_folded_light_curve(koi_id):
 
 
         all_residuals = []
+        all_data = []
         if os.path.exists(file_path_lc) and os.path.exists(file_path_sc):
             ### short cadence
             fold_sc = go.Scatter(x=fold_data_sc.TIME*24, y=fold_data_sc.FLUX, mode='markers')
@@ -636,6 +637,10 @@ def generate_plot_folded_light_curve(koi_id):
             all_residuals.extend(residuals_lc)
             all_residuals.extend(residuals_sc)
             all_residuals.extend(residuals_bin)
+            ### collect all data
+            all_data.extend(fold_data_lc.FLUX)
+            all_data.extend(fold_data_sc.FLUX)
+            all_data.extend(binned_avg.FLUX)
 
             residuals_plot_lc = go.Scatter(x=fold_data_lc.TIME*24, y=residuals_lc, mode='markers', showlegend=False)
             residuals_plot_lc.marker.update(symbol="circle", size=5, color="blue")
@@ -656,11 +661,17 @@ def generate_plot_folded_light_curve(koi_id):
 
             ### Update x-axis and y-axis labels for each subplot
             # fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
+
+            data_min = np.percentile(all_data, 5)
+            data_max = np.percentile(all_data, 95)
+            max_abs_data = max(abs(data_min), abs(data_max))
+            fig.update_yaxes(range=[data_min,data_max], row= i + 1, col=1)
             
             residuals_min = np.percentile(all_residuals, 20)
             residuals_max = np.percentile(all_residuals, 80)
             max_abs_residual = max(abs(residuals_min), abs(residuals_max))
             fig.update_yaxes(range=[-max_abs_residual,max_abs_residual], row= i + 2, col=1)
+
 
             fig.update_yaxes(title_text="FLUX", row=i+1, col=1)
             fig.update_xaxes(title_text="TIME (HOURS)", row=i+2, col=1)

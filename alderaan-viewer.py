@@ -29,7 +29,7 @@ import base64
 import io
 from plotly.subplots import make_subplots
 from scipy.interpolate import interp1d
-
+import random
 
 
 #sys.path.append('c:\\Users\\Paige\\Projects\\alderaan\\')
@@ -218,6 +218,8 @@ def generate_plot_Detrended_Light_Curve(koi_id):
     if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
         data_lc = data_load.read_data_from_fits(file_path_lc)
         data_sc = data_load.read_data_from_fits(file_path_sc)
+        quarter_lc = data_lc.QUARTER
+        quarter_sc = data_sc.QUARTER
 
         lc = px.scatter(data_lc, x="TIME",y="FLUX").data[0]
         lc.marker.update(symbol="circle", size=4, color="blue")
@@ -232,6 +234,79 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         sc.name = "Short Cadence"
         fig.add_trace(sc, row=1, col=1)
 
+        ### mark quarters 
+        # Define a constant y-value for horizontal lines above the data
+        horizontal_line_y = max(data_sc['FLUX']) + 0.0001 * max(data_sc['FLUX'])  # Adjust offset as needed
+        # Use Plotly's predefined color scale
+        quarter_colors = px.colors.qualitative.Plotly
+        num_colors = len(quarter_colors)
+
+        def get_color(quarter_index):
+            return quarter_colors[quarter_index % num_colors]
+
+        # Mark quarters for Long Cadence data
+        unique_quarters_lc = data_lc['QUARTER'].unique()
+        for idx, quarter in enumerate(unique_quarters_lc):
+            times = data_lc.loc[data_lc['QUARTER'] == quarter, 'TIME']
+            start = times.min()
+            end = times.max()
+            line_color = get_color(idx)
+
+            # Add horizontal lines at the top of the plot
+            fig.add_shape(
+                type="line",
+                x0=start,
+                x1=end,
+                y0=horizontal_line_y,
+                y1=horizontal_line_y,
+                line=dict(color=line_color, width=4),
+                name=f"Quarter {quarter}"
+            )
+
+            # Add an invisible scatter trace for hover information
+            hover_trace = go.Scatter(
+                x=[(start + end) / 2],  # Position the hover text in the middle of the line
+                y=[horizontal_line_y],
+                mode='markers',
+                marker=dict(opacity=0),  # Make the marker invisible
+                showlegend=False,
+                hoverinfo='text',
+                text=f"Quarter {quarter}",
+                hoverlabel=dict(bgcolor=line_color, font=dict(color='white'))  # Set hover text background color and font color
+            )
+            fig.add_trace(hover_trace)
+
+        # Mark quarters for Short Cadence data
+        unique_quarters_sc = data_sc['QUARTER'].unique()
+        for idx, quarter in enumerate(unique_quarters_sc):
+            times = data_sc.loc[data_sc['QUARTER'] == quarter, 'TIME']
+            start = times.min()
+            end = times.max()
+            line_color = get_color(idx)
+
+            # Add horizontal lines at the top of the plot
+            fig.add_shape(
+                type="line",
+                x0=start,
+                x1=end,
+                y0=horizontal_line_y,
+                y1=horizontal_line_y,
+                line=dict(color=line_color, width=4),
+                name=f"Quarter {quarter}"
+            )
+
+            # Add an invisible scatter trace for hover information
+            hover_trace = go.Scatter(
+                x=[(start + end) / 2],  # Position the hover text in the middle of the line
+                y=[horizontal_line_y],
+                mode='markers',
+                marker=dict(opacity=0),  # Make the marker invisible
+                showlegend=False,
+                hoverinfo='text',
+                text=f"Quarter {quarter}",
+                hoverlabel=dict(bgcolor=line_color, font=dict(color='white'))  # Set hover text background color and font color
+            )
+            fig.add_trace(hover_trace)
         ###################
         colors = ['orange','green','blue','pink','red','purple']
 
@@ -265,6 +340,48 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         lc.name = "Long Cadence"
         fig.add_trace(lc, row=1, col=1)
 
+        ### mark quarters 
+        # Define a constant y-value for horizontal lines above the data
+        horizontal_line_y = max(data_lc['FLUX']) + 0.0001 * max(data_lc['FLUX'])  # Adjust offset as needed
+        # Use Plotly's predefined color scale 
+        quarter_colors = px.colors.qualitative.Plotly
+        num_colors = len(quarter_colors)
+
+        def get_color(quarter_index):
+            return quarter_colors[quarter_index % num_colors]
+
+        # Mark quarters for Long Cadence data
+        unique_quarters_lc = data_lc['QUARTER'].unique()
+        for idx, quarter in enumerate(unique_quarters_lc):
+            times = data_lc.loc[data_lc['QUARTER'] == quarter, 'TIME']
+            start = times.min()
+            end = times.max()
+            line_color = get_color(idx)
+
+            # Add horizontal lines at the top of the plot
+            fig.add_shape(
+                type="line",
+                x0=start,
+                x1=end,
+                y0=horizontal_line_y,
+                y1=horizontal_line_y,
+                line=dict(color=line_color, width=4),
+                name=f"Quarter {quarter}"
+            )
+
+            # Add an invisible scatter trace for hover information
+            hover_trace = go.Scatter(
+                x=[(start + end) / 2],  # Position the hover text in the middle of the line
+                y=[horizontal_line_y],
+                mode='markers',
+                marker=dict(opacity=0),  # Make the marker invisible
+                showlegend=False,
+                hoverinfo='text',
+                text=f"Quarter {quarter}",
+                hoverlabel=dict(bgcolor=line_color, font=dict(color='white'))  # Set hover text background color and font color
+            )
+            fig.add_trace(hover_trace)
+
         ###################
         colors = ['orange','green','blue','pink','red','purple']
 
@@ -295,6 +412,48 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         sc.marker.update(symbol="circle", size=4, color="gray")
         sc.name = "Short Cadence"
         fig.add_trace(sc, row=1, col=1)
+
+        ### mark quarters 
+        # Define a constant y-value for horizontal lines above the data
+        horizontal_line_y = max(data_sc['FLUX']) + 0.0001 * max(data_sc['FLUX'])  # Adjust offset as needed
+        # Use Plotly's predefined color scale
+        quarter_colors = px.colors.qualitative.Plotly
+        num_colors = len(quarter_colors)
+
+        def get_color(quarter_index):
+            return quarter_colors[quarter_index % num_colors]
+
+        # Mark quarters for Short Cadence data
+        unique_quarters_sc = data_sc['QUARTER'].unique()
+        for idx, quarter in enumerate(unique_quarters_sc):
+            times = data_sc.loc[data_sc['QUARTER'] == quarter, 'TIME']
+            start = times.min()
+            end = times.max()
+            line_color = get_color(idx)
+
+            # Add horizontal lines at the top of the plot
+            fig.add_shape(
+                type="line",
+                x0=start,
+                x1=end,
+                y0=horizontal_line_y,
+                y1=horizontal_line_y,
+                line=dict(color=line_color, width=4),
+                name=f"Quarter {quarter}"
+            )
+
+            # Add an invisible scatter trace for hover information
+            hover_trace = go.Scatter(
+                x=[(start + end) / 2],  # Position the hover text in the middle of the line
+                y=[horizontal_line_y],
+                mode='markers',
+                marker=dict(opacity=0),  # Make the marker invisible
+                showlegend=False,
+                hoverinfo='text',
+                text=f"Quarter {quarter}",
+                hoverlabel=dict(bgcolor=line_color, font=dict(color='white'))  # Set hover text background color and font color
+            )
+            fig.add_trace(hover_trace)
 
         ###################
         colors = ['orange','green','blue','pink','red','purple']
@@ -370,6 +529,7 @@ def generate_plot_single_transit(koi_id, line_number,planet):
     if (data_load.single_data(koi_id, line_number,num,ttv_file)):
         photometry_data_lc,photometry_data_sc, transit_number, center_time = data_load.single_data(koi_id, line_number, num, ttv_file)
         center_time = np.asarray(center_time, dtype=np.float64)
+        
         #transit_lc = px.scatter(photometry_data_lc, x="TIME", y="FLUX").data[0]
         # transit_lc = go.Scatter(x=photometry_data_lc.TIME, y=photometry_data_lc.FLUX, mode='markers')
         # transit_lc.marker.update(color="blue")
@@ -382,10 +542,12 @@ def generate_plot_single_transit(koi_id, line_number,planet):
         if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
             transit_lc = go.Scatter(x=photometry_data_lc.TIME, y=photometry_data_lc.FLUX, mode='markers')
             transit_lc.marker.update(color="blue")
+            transit_lc.name = "lc data"
             fig.add_trace(transit_lc, row=1, col=1)
 
             transit_sc = go.Scatter(x=photometry_data_sc.TIME, y=photometry_data_sc.FLUX, mode='markers')
             transit_sc.marker.update(color="blue")
+            transit_sc.name="sc data"
             fig.add_trace(transit_sc,row=1,col=1)
             lc_min,lc_max,sc_min,sc_max = data_load.get_min_max(koi_id)
             if len(photometry_data_sc)>0:
@@ -395,7 +557,20 @@ def generate_plot_single_transit(koi_id, line_number,planet):
                 m = batman.TransitModel(theta, t-center_time)    #initializes model
                 flux = m.light_curve(theta)          #calculates light curve
                 mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
+                mod.name='Model'
                 fig.add_trace(mod,row=1,col=1)
+
+                ### quarter 
+                quarter = photometry_data_sc.loc[photometry_data_sc['TIME'] == photometry_data_sc.TIME.min(), 'QUARTER']
+                hover_trace = go.Scatter(
+                    x=[photometry_data_sc.TIME.max()],  
+                    y=[photometry_data_sc.FLUX.max() + 0.001*photometry_data_sc.FLUX.max()],
+                    mode='markers',
+                    name = f'Quarter {quarter.values}',
+                    hoverinfo='text',
+                    text=f"Quarter {quarter}"
+                )
+                fig.add_trace(hover_trace)
 
 
                 fig.update_layout(xaxis_title=f"TIME (DAYS)", 
@@ -409,7 +584,21 @@ def generate_plot_single_transit(koi_id, line_number,planet):
                 m = batman.TransitModel(theta, t-center_time)    #initializes model
                 flux = m.light_curve(theta)          #calculates light curve
                 mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
+                mod.name='Model'
                 fig.add_trace(mod,row=1,col=1)
+
+                ### quarter 
+                quarter = photometry_data_lc.loc[photometry_data_lc['TIME'] == photometry_data_lc.TIME.min(), 'QUARTER']
+                hover_trace = go.Scatter(
+                    x=[photometry_data_lc.TIME.max()],  
+                    y=[photometry_data_lc.FLUX.max() + 0.001*photometry_data_lc.FLUX.max()],
+                    mode='markers',
+                    #showlegend=False,
+                    name = f'Quarter {quarter.values[0]}'
+                    #hoverinfo='text',
+                    #text=f"Quarter {quarter}"
+                )
+                fig.add_trace(hover_trace)
 
                 fig.update_layout(xaxis_title=f"TIME (DAYS)", 
                             yaxis_title="FLUX",
@@ -565,8 +754,12 @@ def generate_plot_folded_light_curve(koi_id):
 
         other_models = []
         num_models = 20
-        
 
+        # Select 20 random samples from the posterior distribution
+        random_indices = random.sample(range(len(data_post)), num_models)
+        random_samples = data_post.iloc[random_indices]
+        
+        pink_transparent = "rgba(255, 105, 180, 0.5)"  # Pink color with 50% transparency
 
         all_residuals = []
         all_data = []
@@ -600,22 +793,44 @@ def generate_plot_folded_light_curve(koi_id):
             mod.legendgroup=f'{i}'
             fig.add_trace(mod, row=i+1, col=1)
 
+            for j, row_ in random_samples.iterrows():
+                #row_ = data_post.iloc[j] # pick row with highest likelihood
+                ### get random params {P, t0, Rp/Rs, b, T14, q1, q2}
+                theta_ = batman.TransitParams()
+                theta_.per = row_[f'P']
+                theta_.t0 = 0.
+                theta_.rp = row_[f'ROR_{planet_num}']
+                theta_.b = row_[f'IMPACT_{planet_num}']
+                theta_.T14 = row_[f'DUR14_{planet_num}']
+                LD_U1 = row_[f'LD_U1']
+                LD_U2 = row_[f'LD_U2']
+                theta_.u = [LD_U1, LD_U2]
+                theta_.limb_dark = 'quadratic'
+                
+                m_ = batman.TransitModel(theta_, t)    #initializes model
+                flux_ = (m_.light_curve(theta_))        #calculates light curve
+                mod_ = go.Scatter(x=t*24, y=flux_, mode="lines", line=dict(color=pink_transparent))
+                mod_.name = f'Model {j}'
+                mod_.legendgroup=f'{i}'
+                fig.add_trace(mod_, row=i+1, col=1)
+
             # for j in range(num_models):
             #     row_ = data_post.iloc[j] # pick row with highest likelihood
-            #     ### get most likely params {P, t0, Rp/Rs, b, T14, q1, q2}
+            #     ### get 20 most likely params {P, t0, Rp/Rs, b, T14, q1, q2}
             #     theta_ = batman.TransitParams()
             #     theta_.per = row_[f'P']
             #     theta_.t0 = 0.
             #     theta_.rp = row_[f'ROR_{planet_num}']
             #     theta_.b = row_[f'IMPACT_{planet_num}']
-            #     theta_.T14 = row_[f'DUR14_{planet_num}']*24
+            #     theta_.T14 = row_[f'DUR14_{planet_num}']
             #     LD_U1 = row_[f'LD_U1']
             #     LD_U2 = row_[f'LD_U2']
             #     theta_.u = [LD_U1, LD_U2]
             #     theta_.limb_dark = 'quadratic'
+                
             #     m_ = batman.TransitModel(theta_, t)    #initializes model
             #     flux_ = (m_.light_curve(theta_))        #calculates light curve
-            #     mod_ = go.Scatter(x=t, y=flux_, mode="lines", line=dict(color='pink'))
+            #     mod_ = go.Scatter(x=t*24, y=flux_, mode="lines", line=dict(color=colors[j % len(colors)]))
             #     mod_.name = f'Model {j}'
             #     mod_.legendgroup=f'{i}'
             #     fig.add_trace(mod_, row=i+1, col=1)
@@ -662,9 +877,9 @@ def generate_plot_folded_light_curve(koi_id):
             ### Update x-axis and y-axis labels for each subplot
             # fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
 
+            ### set plotting range for folded lc
             data_min = np.percentile(all_data, 5)
             data_max = np.percentile(all_data, 95)
-            max_abs_data = max(abs(data_min), abs(data_max))
             fig.update_yaxes(range=[data_min,data_max], row= i + 1, col=1)
             
             residuals_min = np.percentile(all_residuals, 20)

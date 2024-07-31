@@ -106,10 +106,14 @@ def read_data_from_fits(file_path):
         time = np.array(fits_file[1].data, dtype=float)
         flux = np.array(fits_file[2].data, dtype=float)
         err = np.array(fits_file[3].data, dtype=float)
+        cadno = np.array(fits_file[4].data, dtype=int)
+        quarter = np.array(fits_file[5].data, dtype=int)
         df = pd.DataFrame(dict(
             TIME=time,
             FLUX=flux,
-            ERR = err
+            ERR = err,
+            CADNO = cadno,
+            QUARTER = quarter
         ))
     return df
 
@@ -354,18 +358,22 @@ def folded_data(koi_id,planet_num, file_path):
 # Binned weighted average function
 def calculate_binned_weighted_average(time, flux, flux_err, bin_size):
     bins = np.arange(time.min(), time.max(), bin_size)
-    indices = np.digitize(time, bins)
+    indices = np.digitize(time, bins, right=True)
+
+    bin_centers = (bins[1:] + bins[:-1]) / 2
         
     weighted_avg = []
     for i in range(1, len(bins)):
         bin_indices = indices == i
         if any(bin_indices):
-            weighted_avg.append(np.average(flux[bin_indices], weights=1.0 / flux_err[bin_indices]**2))
+            weights = 1.0 / flux_err[bin_indices]#**2
+            weighted_avg.append(np.average(flux[bin_indices], weights=weights))
         else:
-            weighted_avg.append(np.nan)  # or use a different indicator for missing data
+            weighted_avg.append(np.nan)  # or use a different indicator for missing data?
         
-    bin_centers = (bins[1:] + bins[:-1]) / 2
     return bin_centers, weighted_avg
+### mess around with binning in separate file, try just lc and just sc 
+### center on midtransit point 
 
     
 def OMC_data(koi_id,file_path):

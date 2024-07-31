@@ -530,15 +530,6 @@ def generate_plot_single_transit(koi_id, line_number,planet):
         photometry_data_lc,photometry_data_sc, transit_number, center_time = data_load.single_data(koi_id, line_number, num, ttv_file)
         center_time = np.asarray(center_time, dtype=np.float64)
         
-        #transit_lc = px.scatter(photometry_data_lc, x="TIME", y="FLUX").data[0]
-        # transit_lc = go.Scatter(x=photometry_data_lc.TIME, y=photometry_data_lc.FLUX, mode='markers')
-        # transit_lc.marker.update(color="blue")
-        # fig.add_trace(transit_lc, row=1, col=1)
-
-        # #transit_sc = px.scatter(photometry_data_sc, x="TIME", y="FLUX").data[0]
-        # transit_sc = go.Scatter(x=photometry_data_sc.TIME, y=photometry_data_sc.FLUX, mode='markers')
-        # transit_sc.marker.update(color="blue")
-        # fig.add_trace(transit_sc,row=1,col=1)
         if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
             transit_lc = go.Scatter(x=photometry_data_lc.TIME, y=photometry_data_lc.FLUX, mode='markers')
             transit_lc.marker.update(color="blue")
@@ -566,7 +557,7 @@ def generate_plot_single_transit(koi_id, line_number,planet):
                     x=[photometry_data_sc.TIME.max()],  
                     y=[photometry_data_sc.FLUX.max() + 0.001*photometry_data_sc.FLUX.max()],
                     mode='markers',
-                    name = f'Quarter {quarter.values}',
+                    name = f'Quarter {quarter.values[0]}',
                     hoverinfo='text',
                     text=f"Quarter {quarter}"
                 )
@@ -593,10 +584,7 @@ def generate_plot_single_transit(koi_id, line_number,planet):
                     x=[photometry_data_lc.TIME.max()],  
                     y=[photometry_data_lc.FLUX.max() + 0.001*photometry_data_lc.FLUX.max()],
                     mode='markers',
-                    #showlegend=False,
                     name = f'Quarter {quarter.values[0]}'
-                    #hoverinfo='text',
-                    #text=f"Quarter {quarter}"
                 )
                 fig.add_trace(hover_trace)
 
@@ -617,6 +605,16 @@ def generate_plot_single_transit(koi_id, line_number,planet):
             mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
             fig.add_trace(mod,row=1,col=1)
 
+            ### quarter 
+            quarter = photometry_data_lc.loc[photometry_data_lc['TIME'] == photometry_data_lc.TIME.min(), 'QUARTER']
+            hover_trace = go.Scatter(
+                x=[photometry_data_lc.TIME.max()],  
+                y=[photometry_data_lc.FLUX.max() + 0.001*photometry_data_lc.FLUX.max()],
+                mode='markers',
+                name = f'Quarter {quarter.values[0]}'
+            )
+            fig.add_trace(hover_trace)
+
             fig.update_layout(xaxis_title=f"TIME (DAYS)", 
                         yaxis_title="FLUX",
                         yaxis=dict(range=[lc_min, lc_max])
@@ -633,6 +631,16 @@ def generate_plot_single_transit(koi_id, line_number,planet):
             flux = m.light_curve(theta)          #calculates light curve
             mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
             fig.add_trace(mod,row=1,col=1)
+
+            ### quarter 
+            quarter = photometry_data_sc.loc[photometry_data_sc['TIME'] == photometry_data_sc.TIME.min(), 'QUARTER']
+            hover_trace = go.Scatter(
+                x=[photometry_data_sc.TIME.max()],  
+                y=[photometry_data_sc.FLUX.max() + 0.001*photometry_data_sc.FLUX.max()],
+                mode='markers',
+                name = f'Quarter {quarter.values[0]}'
+            )                
+            fig.add_trace(hover_trace)
 
             fig.update_layout(xaxis_title=f"TIME (DAYS)", 
                         yaxis_title="FLUX",

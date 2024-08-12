@@ -241,8 +241,15 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         quarter_colors = px.colors.qualitative.Plotly
         num_colors = len(quarter_colors)
 
-        def get_color(quarter_index):
-            return quarter_colors[quarter_index % num_colors]
+        # Use Plotly's predefined color scale
+        quarter_colors = px.colors.qualitative.Plotly
+
+        def get_color(quarter):
+            # Use modulo 4 to group quarters
+            return quarter_colors[quarter % 4]
+
+        # def get_color(quarter_index):
+        #     return quarter_colors[quarter_index % num_colors]
 
         # Mark quarters for Long Cadence data
         unique_quarters_lc = data_lc['QUARTER'].unique()
@@ -250,7 +257,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
             times = data_lc.loc[data_lc['QUARTER'] == quarter, 'TIME']
             start = times.min()
             end = times.max()
-            line_color = get_color(idx)
+            line_color = get_color(quarter)
 
             # Add horizontal lines at the top of the plot
             fig.add_shape(
@@ -282,7 +289,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
             times = data_sc.loc[data_sc['QUARTER'] == quarter, 'TIME']
             start = times.min()
             end = times.max()
-            line_color = get_color(idx)
+            line_color = get_color(quarter)
 
             # Add horizontal lines at the top of the plot
             fig.add_shape(
@@ -329,6 +336,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         # Update x-axis label with units
         fig.update_traces(showlegend=True, row=1, col=1)
         fig.update_layout(xaxis_title=f"TIME (DAYS)", yaxis_title="FLUX")
+        fig.update_layout(title=star_id, title_x=0.5)
         fig.update_layout(legend=dict(traceorder="normal"))
         graph1JSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
         return jsonify(graph1JSON)
@@ -347,9 +355,12 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         quarter_colors = px.colors.qualitative.Plotly
         num_colors = len(quarter_colors)
 
-        def get_color(quarter_index):
-            return quarter_colors[quarter_index % num_colors]
+        # Use Plotly's predefined color scale
+        quarter_colors = px.colors.qualitative.Plotly
 
+        def get_color(quarter):
+            # Use modulo 4 to group quarters
+            return quarter_colors[quarter % 4]
         # Mark quarters for Long Cadence data
         unique_quarters_lc = data_lc['QUARTER'].unique()
         for idx, quarter in enumerate(unique_quarters_lc):
@@ -401,6 +412,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
                 fig.add_trace(c_time, row=1, col=1)
         # Update x-axis label with units
         fig.update_layout(xaxis_title=f"TIME (DAYS)", yaxis_title="FLUX")
+        fig.update_layout(title=star_id, title_x=0.5)
         graph1JSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
         return jsonify(graph1JSON)
     
@@ -420,9 +432,12 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         quarter_colors = px.colors.qualitative.Plotly
         num_colors = len(quarter_colors)
 
-        def get_color(quarter_index):
-            return quarter_colors[quarter_index % num_colors]
+        # Use Plotly's predefined color scale
+        quarter_colors = px.colors.qualitative.Plotly
 
+        def get_color(quarter):
+            # Use modulo 4 to group quarters
+            return quarter_colors[quarter % 4]
         # Mark quarters for Short Cadence data
         unique_quarters_sc = data_sc['QUARTER'].unique()
         for idx, quarter in enumerate(unique_quarters_sc):
@@ -474,6 +489,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
                 fig.add_trace(c_time, row=1, col=1)
         # Update x-axis label with units
         fig.update_layout(xaxis_title=f"TIME (DAYS)", yaxis_title="FLUX")
+        fig.update_layout(title=star_id, title_x=0.5)
         graph1JSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
         return jsonify(graph1JSON)
     
@@ -492,12 +508,14 @@ def generate_plot_single_transit(koi_id, line_number,planet):
     ext = os.path.basename(data_directory) +'.csv'
     csv_file_path = os.path.join(data_directory, ext)
 
-    period = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
+    period,koi_identifier = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
 
     planet_num = re.findall(r'\d+', planet)
     num = planet_num[0][1]
     int_num = int(num)
-    title = period[int_num]
+    #title = period[int_num]
+    title = koi_identifier[int_num]
+    period= period[int_num]
 
     file_name_lc = star_id + '_lc_filtered.fits'
     file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
@@ -553,20 +571,49 @@ def generate_plot_single_transit(koi_id, line_number,planet):
 
                 ### quarter 
                 quarter = photometry_data_sc.loc[photometry_data_sc['TIME'] == photometry_data_sc.TIME.min(), 'QUARTER']
-                hover_trace = go.Scatter(
-                    x=[photometry_data_sc.TIME.max()],  
-                    y=[photometry_data_sc.FLUX.max() + 0.001*photometry_data_sc.FLUX.max()],
-                    mode='markers',
-                    name = f'Quarter {quarter.values[0]}',
-                    hoverinfo='text',
-                    text=f"Quarter {quarter}"
-                )
-                fig.add_trace(hover_trace)
-
 
                 fig.update_layout(xaxis_title=f"TIME (DAYS)", 
                             yaxis_title="FLUX",
-                            yaxis=dict(range=[sc_min, sc_max])
+                            yaxis=dict(range=[sc_min, sc_max]),
+                            annotations=[
+                                go.layout.Annotation(
+                                    x=1,  # Positioning on the far right
+                                    y=1,  # Positioning on the top
+                                    xref="paper",  # Use paper coordinates (0 to 1)
+                                    yref="paper",  # Use paper coordinates (0 to 1)
+                                    text=f'{period}', 
+                                    showarrow=False,  # No arrow needed
+                                    font=dict(size=14, color="black"),  # Customize font size and color
+                                    align='right',
+                                    xanchor='right',  # Anchor the text to the right
+                                    yanchor='top'  # Anchor the text to the top
+                                ),
+                                go.layout.Annotation(
+                                    x=1,  # Positioning on the far right
+                                    y=0.95,  # Slightly lower than the previous annotation
+                                    xref="paper",  # Use paper coordinates (0 to 1)
+                                    yref="paper",  # Use paper coordinates (0 to 1)
+                                    text=f'Quarter: {quarter.values[0]}',
+                                    showarrow=False,  # No arrow needed
+                                    font=dict(size=14, color="black"),  # Customize font size and color
+                                    align='right',
+                                    xanchor='right',  # Anchor the text to the right
+                                    yanchor='top'  # Anchor the text to the top
+                                )
+                            ],
+                            shapes=[
+                                go.layout.Shape(
+                                    type='rect',
+                                    x0=0.80,  # Adjust x0 to position the left side of the rectangle
+                                    y0=0.85,  # Adjust y0 to position the bottom of the rectangle
+                                    x1=1,  # Adjust x1 to position the right side of the rectangle
+                                    y1=1,  # Adjust y1 to position the top of the rectangle
+                                    xref='paper',
+                                    yref='paper',
+                                    line=dict(color='black', width=2),  # Border color and width
+                                    fillcolor='rgba(255, 255, 255, 0.7)'
+                                )
+                            ]
                 )
             else:
                 ### transit model
@@ -580,17 +627,49 @@ def generate_plot_single_transit(koi_id, line_number,planet):
 
                 ### quarter 
                 quarter = photometry_data_lc.loc[photometry_data_lc['TIME'] == photometry_data_lc.TIME.min(), 'QUARTER']
-                hover_trace = go.Scatter(
-                    x=[photometry_data_lc.TIME.max()],  
-                    y=[photometry_data_lc.FLUX.max() + 0.001*photometry_data_lc.FLUX.max()],
-                    mode='markers',
-                    name = f'Quarter {quarter.values[0]}'
-                )
-                fig.add_trace(hover_trace)
 
                 fig.update_layout(xaxis_title=f"TIME (DAYS)", 
                             yaxis_title="FLUX",
-                            yaxis=dict(range=[lc_min, lc_max])
+                            yaxis=dict(range=[lc_min, lc_max]),
+                            annotations=[
+                                go.layout.Annotation(
+                                    x=1,  # Positioning on the far right
+                                    y=1,  # Positioning on the top
+                                    xref="paper",  # Use paper coordinates (0 to 1)
+                                    yref="paper",  # Use paper coordinates (0 to 1)
+                                    text=f'{period}', 
+                                    showarrow=False,  # No arrow needed
+                                    font=dict(size=14, color="black"),  # Customize font size and color
+                                    align='right',
+                                    xanchor='right',  # Anchor the text to the right
+                                    yanchor='top'  # Anchor the text to the top
+                                ),
+                                go.layout.Annotation(
+                                    x=1,  # Positioning on the far right
+                                    y=0.95,  # Slightly lower than the previous annotation
+                                    xref="paper",  # Use paper coordinates (0 to 1)
+                                    yref="paper",  # Use paper coordinates (0 to 1)
+                                    text=f'Quarter: {quarter.values[0]}',
+                                    showarrow=False,  # No arrow needed
+                                    font=dict(size=14, color="black"),  # Customize font size and color
+                                    align='right',
+                                    xanchor='right',  # Anchor the text to the right
+                                    yanchor='top'  # Anchor the text to the top
+                                )
+                            ],
+                            shapes=[
+                                go.layout.Shape(
+                                    type='rect',
+                                    x0=0.80,  # Adjust x0 to position the left side of the rectangle
+                                    y0=0.85,  # Adjust y0 to position the bottom of the rectangle
+                                    x1=1,  # Adjust x1 to position the right side of the rectangle
+                                    y1=1,  # Adjust y1 to position the top of the rectangle
+                                    xref='paper',
+                                    yref='paper',
+                                    line=dict(color='black', width=2),  # Border color and width
+                                    fillcolor='rgba(255, 255, 255, 0.7)'
+                                )
+                            ]
                 )
         elif os.path.isfile(file_path_lc) and not os.path.isfile(file_path_sc):
             transit_lc = go.Scatter(x=photometry_data_lc.TIME, y=photometry_data_lc.FLUX, mode='markers')
@@ -607,17 +686,49 @@ def generate_plot_single_transit(koi_id, line_number,planet):
 
             ### quarter 
             quarter = photometry_data_lc.loc[photometry_data_lc['TIME'] == photometry_data_lc.TIME.min(), 'QUARTER']
-            hover_trace = go.Scatter(
-                x=[photometry_data_lc.TIME.max()],  
-                y=[photometry_data_lc.FLUX.max() + 0.001*photometry_data_lc.FLUX.max()],
-                mode='markers',
-                name = f'Quarter {quarter.values[0]}'
-            )
-            fig.add_trace(hover_trace)
-
+           
             fig.update_layout(xaxis_title=f"TIME (DAYS)", 
                         yaxis_title="FLUX",
-                        yaxis=dict(range=[lc_min, lc_max])
+                        yaxis=dict(range=[lc_min, lc_max]),
+                        annotations=[
+                                go.layout.Annotation(
+                                    x=1,  # Positioning on the far right
+                                    y=1,  # Positioning on the top
+                                    xref="paper",  # Use paper coordinates (0 to 1)
+                                    yref="paper",  # Use paper coordinates (0 to 1)
+                                    text=f'{period}', 
+                                    showarrow=False,  # No arrow needed
+                                    font=dict(size=14, color="black"),  # Customize font size and color
+                                    align='right',
+                                    xanchor='right',  # Anchor the text to the right
+                                    yanchor='top'  # Anchor the text to the top
+                                ),
+                                go.layout.Annotation(
+                                    x=1,  # Positioning on the far right
+                                    y=0.95,  # Slightly lower than the previous annotation
+                                    xref="paper",  # Use paper coordinates (0 to 1)
+                                    yref="paper",  # Use paper coordinates (0 to 1)
+                                    text=f'Quarter: {quarter.values[0]}',
+                                    showarrow=False,  # No arrow needed
+                                    font=dict(size=14, color="black"),  # Customize font size and color
+                                    align='right',
+                                    xanchor='right',  # Anchor the text to the right
+                                    yanchor='top'  # Anchor the text to the top
+                                )
+                            ],
+                            shapes=[
+                                go.layout.Shape(
+                                    type='rect',
+                                    x0=0.80,  # Adjust x0 to position the left side of the rectangle
+                                    y0=0.85,  # Adjust y0 to position the bottom of the rectangle
+                                    x1=1,  # Adjust x1 to position the right side of the rectangle
+                                    y1=1,  # Adjust y1 to position the top of the rectangle
+                                    xref='paper',
+                                    yref='paper',
+                                    line=dict(color='black', width=2),  # Border color and width
+                                    fillcolor='rgba(255, 255, 255, 0.7)'
+                                )
+                            ]
             )
         elif os.path.isfile(file_path_sc) and not os.path.isfile(file_path_lc):
             transit_sc = go.Scatter(x=photometry_data_sc.TIME, y=photometry_data_sc.FLUX, mode='markers')
@@ -634,21 +745,51 @@ def generate_plot_single_transit(koi_id, line_number,planet):
 
             ### quarter 
             quarter = photometry_data_sc.loc[photometry_data_sc['TIME'] == photometry_data_sc.TIME.min(), 'QUARTER']
-            hover_trace = go.Scatter(
-                x=[photometry_data_sc.TIME.max()],  
-                y=[photometry_data_sc.FLUX.max() + 0.001*photometry_data_sc.FLUX.max()],
-                mode='markers',
-                name = f'Quarter {quarter.values[0]}'
-            )                
-            fig.add_trace(hover_trace)
+            
 
             fig.update_layout(xaxis_title=f"TIME (DAYS)", 
                         yaxis_title="FLUX",
-                        yaxis=dict(range=[sc_min, sc_max])
+                        yaxis=dict(range=[sc_min, sc_max]),
+                        annotations=[
+                                go.layout.Annotation(
+                                    x=1,  # Positioning on the far right
+                                    y=1,  # Positioning on the top
+                                    xref="paper",  # Use paper coordinates (0 to 1)
+                                    yref="paper",  # Use paper coordinates (0 to 1)
+                                    text=f'{period}', 
+                                    showarrow=False,  # No arrow needed
+                                    font=dict(size=14, color="black"),  # Customize font size and color
+                                    align='right',
+                                    xanchor='right',  # Anchor the text to the right
+                                    yanchor='top'  # Anchor the text to the top
+                                ),
+                                go.layout.Annotation(
+                                    x=1,  # Positioning on the far right
+                                    y=0.95,  # Slightly lower than the previous annotation
+                                    xref="paper",  # Use paper coordinates (0 to 1)
+                                    yref="paper",  # Use paper coordinates (0 to 1)
+                                    text=f'Quarter: {quarter.values[0]}',
+                                    showarrow=False,  # No arrow needed
+                                    font=dict(size=14, color="black"),  # Customize font size and color
+                                    align='right',
+                                    xanchor='right',  # Anchor the text to the right
+                                    yanchor='top'  # Anchor the text to the top
+                                )
+                            ],
+                            shapes=[
+                                go.layout.Shape(
+                                    type='rect',
+                                    x0=0.80,  # Adjust x0 to position the left side of the rectangle
+                                    y0=0.85,  # Adjust y0 to position the bottom of the rectangle
+                                    x1=1,  # Adjust x1 to position the right side of the rectangle
+                                    y1=1,  # Adjust y1 to position the top of the rectangle
+                                    xref='paper',
+                                    yref='paper',
+                                    line=dict(color='black', width=2),  # Border color and width
+                                    fillcolor='rgba(255, 255, 255, 0.7)'
+                                )
+                            ]
             )
-
-       
-        
        
         fig.update_layout(title=title, title_x=0.5)
         
@@ -716,15 +857,20 @@ def generate_plot_folded_light_curve(koi_id):
     ### number of planets from number of ttv files
     npl = len(file_paths)
     subplot_height=350
-    titles = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
+    periods, koi_identifiers = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
+    subplot_titles = []
+    for k in range(len(koi_identifiers)):
+        subplot_titles.append(f'{koi_identifiers[k]}, {periods[k]}') 
+        subplot_titles.append('')
     
     fig = make_subplots(rows=npl*2, cols=1,
-                        subplot_titles = titles,
+                        subplot_titles = subplot_titles,
                         row_heights=[subplot_height, subplot_height*0.4]*npl,
                         vertical_spacing=0.15)
     
     for i, file_path in enumerate(file_paths):
         planet_num = 0+i
+        period=periods[i]
         fold_data_lc, fold_data_sc, binned_avg,center_time = data_load.folded_data(koi_id,planet_num,file_path)
         N_samp = 1000
         if len(fold_data_lc) > N_samp:
@@ -735,21 +881,10 @@ def generate_plot_folded_light_curve(koi_id):
         
         data_post = data_load.load_posteriors(file_path_results,planet_num,koi_id)
         ### get max likelihood
-        max_index = data_post['LN_LIKE'].idxmax()
         data_post = data_post.sort_values(by='LN_LIKE', ascending=False) 
         row = data_post.iloc[0] # pick row with highest likelihood
         ### get most likely params {P, t0, Rp/Rs, b, T14, q1, q2}
         theta = batman.TransitParams()
-        # theta.per = data_post[f'P'][max_index]
-        # theta.t0 = 0.
-        # theta.rp = data_post[f'ROR_{planet_num}'][max_index]
-        # theta.b = data_post[f'IMPACT_{planet_num}'][max_index]
-        # theta.T14 = data_post[f'DUR14_{planet_num}'][max_index]*24
-        # LD_U1 = data_post[f'LD_U1'][max_index]
-        # LD_U2 = data_post[f'LD_U2'][max_index]
-        # theta.u = [LD_U1, LD_U2]
-        # theta.limb_dark = 'quadratic'
-
         theta.per = row[f'P']
         theta.t0 = 0.
         theta.rp = row[f'ROR_{planet_num}']
@@ -817,31 +952,10 @@ def generate_plot_folded_light_curve(koi_id):
                 
                 m_ = batman.TransitModel(theta_, t)    #initializes model
                 flux_ = (m_.light_curve(theta_))        #calculates light curve
-                mod_ = go.Scatter(x=t*24, y=flux_, mode="lines", line=dict(color=pink_transparent))
+                mod_ = go.Scatter(x=t*24, y=flux_, mode="lines", showlegend=False, line=dict(color=pink_transparent))
                 mod_.name = f'Model {j}'
-                mod_.legendgroup=f'{i}'
-                fig.add_trace(mod_, row=i+1, col=1)
-
-            # for j in range(num_models):
-            #     row_ = data_post.iloc[j] # pick row with highest likelihood
-            #     ### get 20 most likely params {P, t0, Rp/Rs, b, T14, q1, q2}
-            #     theta_ = batman.TransitParams()
-            #     theta_.per = row_[f'P']
-            #     theta_.t0 = 0.
-            #     theta_.rp = row_[f'ROR_{planet_num}']
-            #     theta_.b = row_[f'IMPACT_{planet_num}']
-            #     theta_.T14 = row_[f'DUR14_{planet_num}']
-            #     LD_U1 = row_[f'LD_U1']
-            #     LD_U2 = row_[f'LD_U2']
-            #     theta_.u = [LD_U1, LD_U2]
-            #     theta_.limb_dark = 'quadratic'
                 
-            #     m_ = batman.TransitModel(theta_, t)    #initializes model
-            #     flux_ = (m_.light_curve(theta_))        #calculates light curve
-            #     mod_ = go.Scatter(x=t*24, y=flux_, mode="lines", line=dict(color=colors[j % len(colors)]))
-            #     mod_.name = f'Model {j}'
-            #     mod_.legendgroup=f'{i}'
-            #     fig.add_trace(mod_, row=i+1, col=1)
+                fig.add_trace(mod_, row=i+1, col=1)
 
             # Interpolate model flux to match observed times
             interp_model_flux_lc = interp1d(t, flux, kind='linear', fill_value='extrapolate')
@@ -894,12 +1008,12 @@ def generate_plot_folded_light_curve(koi_id):
             residuals_max = np.percentile(all_residuals, 80)
             max_abs_residual = max(abs(residuals_min), abs(residuals_max))
             fig.update_yaxes(range=[-max_abs_residual,max_abs_residual], row= i + 2, col=1)
-
-
+            
             fig.update_yaxes(title_text="FLUX", row=i+1, col=1)
             fig.update_xaxes(title_text="TIME (HOURS)", row=i+2, col=1)
             fig.update_yaxes(title_text="Residuals", row=i+2, col=1)
             fig.update_layout(height=700, width=1000)
+            
         
         elif os.path.exists(file_path_lc) and not os.path.exists(file_path_sc):
             fold_lc = go.Scatter(x=fold_data_lc.TIME, y=fold_data_lc.FLUX, mode='markers')
@@ -1051,9 +1165,13 @@ def generate_plot_OMC(koi_id):
     csv_file_path = os.path.join(data_directory, ext)
     ### number of planets from number of ttv files
     npl = len(file_paths)
-    titles = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
+    # titles = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
+    periods,koi_identifiers = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
+    subplot_titles = []
+    for k in range(len(koi_identifiers)):
+        subplot_titles.append(f'{koi_identifiers[k]}, {periods[k]}') 
     fig = make_subplots(rows=npl, cols=1,
-                        subplot_titles=titles)
+                        subplot_titles=subplot_titles)
 
     for i, file_path in enumerate(file_paths):
         omc_data, omc_model, out_prob, out_flag = data_load.OMC_data(koi_id, file_path)

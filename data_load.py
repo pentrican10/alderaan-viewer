@@ -84,7 +84,7 @@ def read_table_data(table):
     return unique_data
 
 def get_periods_for_koi_id(file_path, koi_id):
-    # koi_identifiers = []
+    koi_identifiers = []
     periods = []
     with open(file_path, 'r') as file:
         reader = csv.DictReader(file)
@@ -94,11 +94,14 @@ def get_periods_for_koi_id(file_path, koi_id):
                 koi_identifier = str(row['planet_name'])
                 period_value = float(row['period'])
                 rounded_period = round(period_value, 1)
-                append = f'{koi_identifier}, Period: {rounded_period} Days'
+                #append = f'{koi_identifier}, Period: {rounded_period} Days'
+                append = f'Period: {rounded_period} Days'
+                #periods.append(str(append))
                 periods.append(str(append))
+                koi_identifiers.append(str(f'{koi_identifier}'))
 
 
-    return periods if periods else None
+    return periods,koi_identifiers if periods else None
 
                
 def read_data_from_fits(file_path):

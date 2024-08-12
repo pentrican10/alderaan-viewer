@@ -1025,20 +1025,27 @@ def generate_plot_folded_light_curve(koi_id):
     subplot_height=400
     periods, koi_identifiers = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
     subplot_titles = []
+    spacing = []
     for k in range(len(koi_identifiers)):
         subplot_titles.append(f'{koi_identifiers[k]}, {periods[k]}') 
         subplot_titles.append('')
+        spacing.append(0.01)
+        spacing.append(0.05)
     rows=npl*2
+    
     
     fig = make_subplots(rows=npl*2, cols=1,
                         subplot_titles = subplot_titles,
                         row_heights=[subplot_height, subplot_height*0.4]*npl,
-                        #vertical_spacing=(1 / (rows - 1)) 
+                        vertical_spacing=0.05 
                         ) 
     
+    r_plot = 1
+    r_residuals = r_plot+1
+    
     for i, file_path in enumerate(file_paths):
-        r_plot = 1
-        r_residuals = r_plot+1
+        # r_plot = 1
+        # r_residuals = r_plot+1
         planet_num = 0+i
         period=periods[i]
         fold_data_lc, fold_data_sc, binned_avg,center_time = data_load.folded_data(koi_id,planet_num,file_path)
@@ -1077,34 +1084,60 @@ def generate_plot_folded_light_curve(koi_id):
         all_residuals = []
         all_data = []
         if os.path.exists(file_path_lc) and os.path.exists(file_path_sc):
-            ### short cadence
-            fold_sc = go.Scatter(x=fold_data_sc.TIME*24, y=fold_data_sc.FLUX, mode='markers')
-            fold_sc.marker.update(symbol="circle", size=4, color="gray")
-            fold_sc.name = "Short Cadence"
-            fold_sc.legendgroup=f'{i}'
-            fig.add_trace(fold_sc, row=i+1, col=1)
-            ### long cadence
-            fold_lc = go.Scatter(x=fold_data_lc.TIME*24, y=fold_data_lc.FLUX, mode='markers')
-            fold_lc.marker.update(symbol="circle", size=5, color="blue")
-            fold_lc.name = "Long Cadence"
-            fold_lc.legendgroup=f'{i}'
-            fig.add_trace(fold_lc, row=i+1, col=1)
-            ### binned avg
-            bin_avg = go.Scatter(x=binned_avg.TIME*24, y=binned_avg.FLUX, mode='markers')
-            bin_avg.marker.update(symbol="square", size=10, color="orange")
-            bin_avg.name = "Binned Average"
-            bin_avg.legendgroup=f'{i}'
-            fig.add_trace(bin_avg, row=i+1, col=1) 
+            if i==0:
+                ### short cadence
+                fold_sc = go.Scatter(x=fold_data_sc.TIME*24, y=fold_data_sc.FLUX, mode='markers')
+                fold_sc.marker.update(symbol="circle", size=4, color="gray")
+                fold_sc.name = "Short Cadence"
+                fold_sc.legendgroup=f'{i}'
+                fig.add_trace(fold_sc, row=r_plot, col=1)
+                ### long cadence
+                fold_lc = go.Scatter(x=fold_data_lc.TIME*24, y=fold_data_lc.FLUX, mode='markers')
+                fold_lc.marker.update(symbol="circle", size=5, color="blue")
+                fold_lc.name = "Long Cadence"
+                fold_lc.legendgroup=f'{i}'
+                fig.add_trace(fold_lc, row=r_plot, col=1)
+                ### binned avg
+                bin_avg = go.Scatter(x=binned_avg.TIME*24, y=binned_avg.FLUX, mode='markers')
+                bin_avg.marker.update(symbol="square", size=10, color="orange")
+                bin_avg.name = "Binned Average"
+                bin_avg.legendgroup=f'{i}'
+                fig.add_trace(bin_avg, row=r_plot, col=1) 
 
-            ### model
-            scit = 1.15e-5
-            t = np.arange(fold_data_lc.TIME.min(), fold_data_lc.TIME.max(),scit)
-            m = batman.TransitModel(theta, t)    #initializes model
-            flux = (m.light_curve(theta))        #calculates light curve
-            mod = go.Scatter(x=t*24, y=flux, mode="lines", line=dict(color='red'))
-            mod.name = "Model"
-            mod.legendgroup=f'{i}'
-            fig.add_trace(mod, row=i+1, col=1)
+                ### model
+                scit = 1.15e-5
+                t = np.arange(fold_data_lc.TIME.min(), fold_data_lc.TIME.max(),scit)
+                m = batman.TransitModel(theta, t)    #initializes model
+                flux = (m.light_curve(theta))        #calculates light curve
+                mod = go.Scatter(x=t*24, y=flux, mode="lines", line=dict(color='red'))
+                mod.name = "Model"
+                mod.legendgroup=f'{i}'
+                fig.add_trace(mod, row=r_plot, col=1)
+            else:
+                ### short cadence
+                fold_sc = go.Scatter(x=fold_data_sc.TIME*24, y=fold_data_sc.FLUX, mode='markers', shlowlegend=False)
+                fold_sc.marker.update(symbol="circle", size=4, color="gray")
+                fold_sc.name = "Short Cadence"
+                fig.add_trace(fold_sc, row=r_plot, col=1)
+                ### long cadence
+                fold_lc = go.Scatter(x=fold_data_lc.TIME*24, y=fold_data_lc.FLUX, mode='markers', shlowlegend=False)
+                fold_lc.marker.update(symbol="circle", size=5, color="blue")
+                fold_lc.name = "Long Cadence"
+                fig.add_trace(fold_lc, row=r_plot, col=1)
+                ### binned avg
+                bin_avg = go.Scatter(x=binned_avg.TIME*24, y=binned_avg.FLUX, mode='markers', shlowlegend=False)
+                bin_avg.marker.update(symbol="square", size=10, color="orange")
+                bin_avg.name = "Binned Average"
+                fig.add_trace(bin_avg, row=r_plot, col=1) 
+
+                ### model
+                scit = 1.15e-5
+                t = np.arange(fold_data_lc.TIME.min(), fold_data_lc.TIME.max(),scit)
+                m = batman.TransitModel(theta, t)    #initializes model
+                flux = (m.light_curve(theta))        #calculates light curve
+                mod = go.Scatter(x=t*24, y=flux, mode="lines", line=dict(color='red'), shlowlegend=False)
+                mod.name = "Model"
+                fig.add_trace(mod, row=r_plot, col=1)
 
             for j, row_ in random_samples.iterrows():
                 #row_ = data_post.iloc[j] # pick row with highest likelihood
@@ -1151,20 +1184,20 @@ def generate_plot_folded_light_curve(koi_id):
 
             residuals_plot_lc = go.Scatter(x=fold_data_lc.TIME*24, y=residuals_lc, mode='markers', showlegend=False)
             residuals_plot_lc.marker.update(symbol="circle", size=5, color="blue")
-            fig.add_trace(residuals_plot_lc, row=i+2, col=1)
+            fig.add_trace(residuals_plot_lc, row=r_residuals, col=1)
 
             residuals_plot_sc = go.Scatter(x=fold_data_sc.TIME*24, y=residuals_sc, mode='markers', showlegend=False)
             residuals_plot_sc.marker.update(symbol="circle", size=4, color="gray")
-            fig.add_trace(residuals_plot_sc, row=i+2, col=1)
+            fig.add_trace(residuals_plot_sc, row=r_residuals, col=1)
 
             residuals_plot_bin = go.Scatter(x=binned_avg.TIME*24, y=residuals_bin, mode='markers', showlegend=False)
             residuals_plot_bin.marker.update(symbol="square", size=10, color="orange")
-            fig.add_trace(residuals_plot_bin, row=i+2, col=1)
+            fig.add_trace(residuals_plot_bin, row=r_residuals, col=1)
 
             # Add horizontal line at 0 in residual plot
             t = t*24
             fig.add_shape(type="line", x0=(t.min()), x1=(-1*t.min()), y0=0, y1=0,
-                          line=dict(color="Red"), row= i + 2, col=1)
+                          line=dict(color="Red"), row=r_residuals, col=1)
 
             ### Update x-axis and y-axis labels for each subplot
             # fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
@@ -1172,40 +1205,63 @@ def generate_plot_folded_light_curve(koi_id):
             ### set plotting range for folded lc
             data_min = np.percentile(all_data, 5)
             data_max = np.percentile(all_data, 95)
-            fig.update_yaxes(range=[data_min,data_max], row= i + 1, col=1)
+            fig.update_yaxes(range=[data_min,data_max], row= r_plot, col=1)
             
             residuals_min = np.percentile(all_residuals, 20)
             residuals_max = np.percentile(all_residuals, 80)
             max_abs_residual = max(abs(residuals_min), abs(residuals_max))
-            fig.update_yaxes(range=[-max_abs_residual,max_abs_residual], row= i + 2, col=1)
+            fig.update_yaxes(range=[-max_abs_residual,max_abs_residual], row= r_residuals, col=1)
             
-            fig.update_yaxes(title_text="FLUX", row=i+1, col=1)
-            fig.update_xaxes(title_text="TIME (HOURS)", row=i+2, col=1)
-            fig.update_yaxes(title_text="Residuals", row=i+2, col=1)
+            fig.update_yaxes(title_text="FLUX", row=r_plot, col=1)
+            fig.update_xaxes(title_text="TIME (HOURS)", row=r_plot, col=1)
+            fig.update_yaxes(title_text="Residuals", row=r_residuals, col=1)
             fig.update_layout(height=700, width=1000)
             r_plot = r_residuals+1
+            r_residuals = r_plot+1
             
         
         elif os.path.exists(file_path_lc) and not os.path.exists(file_path_sc):
-            fold_lc = go.Scatter(x=fold_data_lc.TIME, y=fold_data_lc.FLUX, mode='markers')
-            fold_lc.marker.update(symbol="circle", size=5, color="blue")
-            fold_lc.name = "Long Cadence"
-            fig.add_trace(fold_lc, row=i+1, col=1)
-            ### binned avg
-            bin_avg = go.Scatter(x=binned_avg.TIME, y=binned_avg.FLUX, mode='markers')
-            bin_avg.marker.update(symbol="square", size=10, color="orange")
-            bin_avg.name = "Binned Average"
-            fig.add_trace(bin_avg, row=i+1, col=1)
-            ### model
-            scit = 1.15e-5
-            t = np.arange(fold_data_lc.TIME.min(), fold_data_lc.TIME.max(),scit)
-            m = batman.TransitModel(theta, t)    #initializes model
-            flux = m.light_curve(theta)          #calculates light curve
-            mod = go.Scatter(x=t, y=flux, mode="lines")
-            mod.line.update(color="red")
-            mod.name = "Model"
-            mod.legendgroup=f'{i}'
-            fig.add_trace(mod, row=i+1, col=1)
+            if i ==0:
+                fold_lc = go.Scatter(x=fold_data_lc.TIME, y=fold_data_lc.FLUX, mode='markers')
+                fold_lc.marker.update(symbol="circle", size=5, color="blue")
+                fold_lc.name = "Long Cadence"
+                fold_lc.legendgroup=f'{i}'
+                fig.add_trace(fold_lc, row=r_plot, col=1)
+                ### binned avg
+                bin_avg = go.Scatter(x=binned_avg.TIME, y=binned_avg.FLUX, mode='markers')
+                bin_avg.marker.update(symbol="square", size=10, color="orange")
+                bin_avg.name = "Binned Average"
+                bin_avg.legendgroup=f'{i}'
+                fig.add_trace(bin_avg, row=r_plot, col=1)
+                ### model
+                scit = 1.15e-5
+                t = np.arange(fold_data_lc.TIME.min(), fold_data_lc.TIME.max(),scit)
+                m = batman.TransitModel(theta, t)    #initializes model
+                flux = m.light_curve(theta)          #calculates light curve
+                mod = go.Scatter(x=t, y=flux, mode="lines")
+                mod.line.update(color="red")
+                mod.name = "Model"
+                mod.legendgroup=f'{i}'
+                fig.add_trace(mod, row=r_plot, col=1)
+            else:
+                fold_lc = go.Scatter(x=fold_data_lc.TIME, y=fold_data_lc.FLUX, mode='markers',showlegend=False)
+                fold_lc.marker.update(symbol="circle", size=5, color="blue")
+                fold_lc.name = "Long Cadence"
+                fig.add_trace(fold_lc, row=r_plot, col=1)
+                ### binned avg
+                bin_avg = go.Scatter(x=binned_avg.TIME, y=binned_avg.FLUX, mode='markers',showlegend=False)
+                bin_avg.marker.update(symbol="square", size=10, color="orange")
+                bin_avg.name = "Binned Average"
+                fig.add_trace(bin_avg, row=r_plot, col=1)
+                ### model
+                scit = 1.15e-5
+                t = np.arange(fold_data_lc.TIME.min(), fold_data_lc.TIME.max(),scit)
+                m = batman.TransitModel(theta, t)    #initializes model
+                flux = m.light_curve(theta)          #calculates light curve
+                mod = go.Scatter(x=t, y=flux, mode="lines", showlegend=False)
+                mod.line.update(color="red")
+                mod.name = "Model"
+                fig.add_trace(mod, row=r_plot, col=1) 
 
             # Interpolate model flux to match observed times
             interp_model_flux_lc = interp1d(t, flux, kind='linear', fill_value='extrapolate')
@@ -1223,15 +1279,15 @@ def generate_plot_folded_light_curve(koi_id):
 
             residuals_plot_lc = go.Scatter(x=fold_data_lc.TIME, y=residuals_lc, mode='markers', showlegend=False)
             residuals_plot_lc.marker.update(symbol="circle", size=5, color="blue")
-            fig.add_trace(residuals_plot_lc, row=i+2, col=1)
+            fig.add_trace(residuals_plot_lc, row=r_residuals, col=1)
 
             residuals_plot_bin = go.Scatter(x=binned_avg.TIME, y=residuals_bin, mode='markers', showlegend=False)
             residuals_plot_bin.marker.update(symbol="square", size=10, color="orange")
-            fig.add_trace(residuals_plot_bin, row=i+2, col=1)
+            fig.add_trace(residuals_plot_bin, row=r_residuals, col=1)
 
             # Add horizontal line at 0 in residual plot
             fig.add_shape(type="line", x0=fold_data_lc.TIME.min(), x1=fold_data_lc.TIME.max(), y0=0, y1=0,
-                          line=dict(color="Red"), row= i + 2, col=1)
+                          line=dict(color="Red"), row= r_residuals, col=1)
 
             ### Update x-axis and y-axis labels for each subplot
             # fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
@@ -1239,38 +1295,60 @@ def generate_plot_folded_light_curve(koi_id):
             residuals_min = np.percentile(all_residuals, 20)
             residuals_max = np.percentile(all_residuals, 80)
             max_abs_residual = max(abs(residuals_min), abs(residuals_max))
-            fig.update_yaxes(range=[-max_abs_residual,max_abs_residual], row= i + 2, col=1)
+            fig.update_yaxes(range=[-max_abs_residual,max_abs_residual], row=r_residuals, col=1)
 
 
             ### Update x-axis and y-axis labels for each subplot
-            fig.update_yaxes(title_text="FLUX", row=i+1, col=1)
-            fig.update_xaxes(title_text="TIME (HOURS)", row=i+2, col=1)
-            fig.update_yaxes(title_text="Residuals", row=i+2, col=1)
+            fig.update_yaxes(title_text="FLUX", row=r_plot, col=1)
+            fig.update_xaxes(title_text="TIME (HOURS)", row=r_residuals, col=1)
+            fig.update_yaxes(title_text="Residuals", row=r_residuals, col=1)
             fig.update_layout(height=700, width=1000)
 
             r_plot = r_residuals + 1
+            r_residuals = r_plot+1
             
 
         elif not os.path.exists(file_path_lc) and os.path.exists(file_path_sc):
-            fold_sc = go.Scatter(x=fold_data_sc.TIME, y=fold_data_sc.FLUX, mode='markers')
-            fold_sc.marker.update(symbol="circle", size=4, color="gray")
-            fold_sc.name = "Short Cadence"
-            fig.add_trace(fold_sc, row=i+1, col=1)
-            ### binned avg
-            bin_avg = go.Scatter(x=binned_avg.TIME, y=binned_avg.FLUX, mode='markers')
-            bin_avg.marker.update(symbol="square", size=10, color="orange")
-            bin_avg.name = "Binned Average"
-            fig.add_trace(bin_avg, row=i+1, col=1)
-            ### model
-            scit = 1.15e-5
-            t = np.arange(fold_data_sc.TIME.min(), fold_data_sc.TIME.max(),scit)
-            m = batman.TransitModel(theta, t)    #initializes model
-            flux = (m.light_curve(theta))        #calculates light curve
-            mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
-            mod.line.update(color="red")
-            mod.name = "Model"
-            mod.legendgroup=f'{i}'
-            fig.add_trace(mod, row=i+1, col=1)
+            if i ==0:
+                fold_sc = go.Scatter(x=fold_data_sc.TIME, y=fold_data_sc.FLUX, mode='markers')
+                fold_sc.marker.update(symbol="circle", size=4, color="gray")
+                fold_sc.name = "Short Cadence"
+                fig.add_trace(fold_sc, row=r_plot, col=1)
+                ### binned avg
+                bin_avg = go.Scatter(x=binned_avg.TIME, y=binned_avg.FLUX, mode='markers')
+                bin_avg.marker.update(symbol="square", size=10, color="orange")
+                bin_avg.name = "Binned Average"
+                fig.add_trace(bin_avg, row=r_plot, col=1)
+                ### model
+                scit = 1.15e-5
+                t = np.arange(fold_data_sc.TIME.min(), fold_data_sc.TIME.max(),scit)
+                m = batman.TransitModel(theta, t)    #initializes model
+                flux = (m.light_curve(theta))        #calculates light curve
+                mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
+                mod.line.update(color="red")
+                mod.name = "Model"
+                mod.legendgroup=f'{i}'
+                fig.add_trace(mod, row=r_plot, col=1)
+            else:
+                fold_sc = go.Scatter(x=fold_data_sc.TIME, y=fold_data_sc.FLUX, mode='markers',showlegend=False)
+                fold_sc.marker.update(symbol="circle", size=4, color="gray")
+                fold_sc.name = "Short Cadence"
+                fig.add_trace(fold_sc, row=r_plot, col=1)
+                ### binned avg
+                bin_avg = go.Scatter(x=binned_avg.TIME, y=binned_avg.FLUX, mode='markers',showlegend=False)
+                bin_avg.marker.update(symbol="square", size=10, color="orange")
+                bin_avg.name = "Binned Average"
+                fig.add_trace(bin_avg, row=r_plot, col=1)
+                ### model
+                scit = 1.15e-5
+                t = np.arange(fold_data_sc.TIME.min(), fold_data_sc.TIME.max(),scit)
+                m = batman.TransitModel(theta, t)    #initializes model
+                flux = (m.light_curve(theta))        #calculates light curve
+                mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'),showlegend=False)
+                mod.line.update(color="red")
+                mod.name = "Model"
+                mod.legendgroup=f'{i}'
+                fig.add_trace(mod, row=r_plot, col=1)
 
             # Interpolate model flux to match observed times
             interp_model_flux_sc = interp1d(t, flux, kind='linear', fill_value='extrapolate')
@@ -1288,15 +1366,15 @@ def generate_plot_folded_light_curve(koi_id):
 
             residuals_plot_sc = go.Scatter(x=fold_data_sc.TIME, y=residuals_sc, mode='markers', showlegend=False)
             residuals_plot_sc.marker.update(symbol="circle", size=4, color="gray")
-            fig.add_trace(residuals_plot_sc, row=i+2, col=1)
+            fig.add_trace(residuals_plot_sc, row=r_residuals, col=1)
 
             residuals_plot_bin = go.Scatter(x=binned_avg.TIME, y=residuals_bin, mode='markers', showlegend=False)
             residuals_plot_bin.marker.update(symbol="square", size=10, color="orange")
-            fig.add_trace(residuals_plot_bin, row=i+2, col=1)
+            fig.add_trace(residuals_plot_bin, row=r_residuals, col=1)
 
             # Add horizontal line at 0 in residual plot
             fig.add_shape(type="line", x0=fold_data_lc.TIME.min(), x1=fold_data_lc.TIME.max(), y0=0, y1=0,
-                          line=dict(color="Red"), row= i + 2, col=1)
+                          line=dict(color="Red"), row=r_residuals, col=1)
 
             ### Update x-axis and y-axis labels for each subplot
             # fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
@@ -1304,16 +1382,17 @@ def generate_plot_folded_light_curve(koi_id):
             residuals_min = np.percentile(all_residuals, 20)
             residuals_max = np.percentile(all_residuals, 80)
             max_abs_residual = max(abs(residuals_min), abs(residuals_max))
-            fig.update_yaxes(range=[-max_abs_residual,max_abs_residual], row= i + 2, col=1)
+            fig.update_yaxes(range=[-max_abs_residual,max_abs_residual], row=r_residuals, col=1)
 
 
             ### Update x-axis and y-axis labels for each subplot
-            fig.update_yaxes(title_text="FLUX", row=i+1, col=1)
-            fig.update_xaxes(title_text="TIME (HOURS)", row=i+2, col=1)
-            fig.update_yaxes(title_text="Residuals", row=i+2, col=1)
-            fig.update_layout(height=700, width=1000)
+            fig.update_yaxes(title_text="FLUX", row=r_plot, col=1)
+            fig.update_xaxes(title_text="TIME (HOURS)", row=r_residuals, col=1)
+            fig.update_yaxes(title_text="Residuals", row=r_residuals, col=1)
+            fig.update_layout(height=700, width=1000) 
 
             r_plot = r_residuals+1
+            r_residuals = r_plot+1
         
         else:
             error_message = f'No data found for {koi_id}'

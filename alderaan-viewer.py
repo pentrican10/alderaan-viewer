@@ -548,7 +548,7 @@ def generate_plot_single_transit(koi_id, line_number,planet):
     
     ### initialize figure
     #fig = make_subplots(rows=1, cols=1)
-    fig = make_subplots(rows=3, cols=3)
+    fig = make_subplots(rows=3, cols=3) 
 
     # Loop through the grid positions and corresponding line numbers
     for i, line_num in enumerate(line_number_plots):
@@ -560,15 +560,18 @@ def generate_plot_single_transit(koi_id, line_number,planet):
             center_time = np.asarray(center_time, dtype=np.float64)
             
             if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
-                transit_lc = go.Scatter(x=photometry_data_lc.TIME, y=photometry_data_lc.FLUX, mode='markers')
+                transit_lc = go.Scatter(x=photometry_data_lc.TIME, y=photometry_data_lc.FLUX, mode='markers',showlegend=False)
                 transit_lc.marker.update(color="blue")
                 transit_lc.name = "lc data"
                 fig.add_trace(transit_lc, row=r, col=c)
 
-                transit_sc = go.Scatter(x=photometry_data_sc.TIME, y=photometry_data_sc.FLUX, mode='markers')
+                transit_sc = go.Scatter(x=photometry_data_sc.TIME, y=photometry_data_sc.FLUX, mode='markers',showlegend=False)
                 transit_sc.marker.update(color="gray")
                 transit_sc.name="sc data"
                 fig.add_trace(transit_sc,row=r,col=c)
+
+                
+
                 lc_min,lc_max,sc_min,sc_max = data_load.get_min_max(koi_id)
                 if len(photometry_data_sc)>0:
                     ### transit model
@@ -576,7 +579,7 @@ def generate_plot_single_transit(koi_id, line_number,planet):
                     t = np.arange(photometry_data_sc.TIME.min(), photometry_data_sc.TIME.max(),scit)
                     m = batman.TransitModel(theta, t-center_time)    #initializes model
                     flux = m.light_curve(theta)          #calculates light curve
-                    mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
+                    mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'),showlegend=False)
                     mod.name='Model'
                     fig.add_trace(mod,row=r,col=c)
                     if r==3:
@@ -586,6 +589,7 @@ def generate_plot_single_transit(koi_id, line_number,planet):
 
                     ### quarter 
                     quarter = photometry_data_sc.loc[photometry_data_sc['TIME'] == photometry_data_sc.TIME.min(), 'QUARTER']
+                    
 
                     
                 else:
@@ -594,20 +598,22 @@ def generate_plot_single_transit(koi_id, line_number,planet):
                     t = np.arange(photometry_data_lc.TIME.min(), photometry_data_lc.TIME.max(),scit)
                     m = batman.TransitModel(theta, t-center_time)    #initializes model
                     flux = m.light_curve(theta)          #calculates light curve
-                    mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
+                    mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'),showlegend=False)
                     mod.name='Model'
                     fig.add_trace(mod,row=r,col=c)
+                    
+                    ### quarter 
+                    quarter = photometry_data_lc.loc[photometry_data_lc['TIME'] == photometry_data_lc.TIME.min(), 'QUARTER']
+                    
+
                     if r==3:
                         fig.update_xaxes(title_text="TIME (DAYS)", row=r, col=c)
                     if c==1:
                         fig.update_yaxes(title_text="FLUX", row=r, col=c, range=[lc_min, lc_max])
 
-                    ### quarter 
-                    quarter = photometry_data_lc.loc[photometry_data_lc['TIME'] == photometry_data_lc.TIME.min(), 'QUARTER']
 
-                    
             elif os.path.isfile(file_path_lc) and not os.path.isfile(file_path_sc):
-                transit_lc = go.Scatter(x=photometry_data_lc.TIME, y=photometry_data_lc.FLUX, mode='markers')
+                transit_lc = go.Scatter(x=photometry_data_lc.TIME, y=photometry_data_lc.FLUX, mode='markers',showlegend=False)
                 transit_lc.marker.update(color="blue")
                 fig.add_trace(transit_lc, row=r, col=c)
                 lc_min,lc_max = data_load.get_min_max(koi_id)
@@ -616,7 +622,7 @@ def generate_plot_single_transit(koi_id, line_number,planet):
                 t = np.arange(photometry_data_lc.TIME.min(), photometry_data_lc.TIME.max(),scit)
                 m = batman.TransitModel(theta, t-center_time)    #initializes model
                 flux = m.light_curve(theta)          #calculates light curve
-                mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
+                mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'),showlegend=False)
                 fig.add_trace(mod,row=r,col=c)
 
                 ### quarter 
@@ -624,7 +630,7 @@ def generate_plot_single_transit(koi_id, line_number,planet):
             
                 
             elif os.path.isfile(file_path_sc) and not os.path.isfile(file_path_lc):
-                transit_sc = go.Scatter(x=photometry_data_sc.TIME, y=photometry_data_sc.FLUX, mode='markers')
+                transit_sc = go.Scatter(x=photometry_data_sc.TIME, y=photometry_data_sc.FLUX, mode='markers',showlegend=False)
                 transit_sc.marker.update(color="blue")
                 fig.add_trace(transit_sc,row=r,col=c)
                 sc_min,sc_max = data_load.get_min_max(koi_id)
@@ -633,7 +639,7 @@ def generate_plot_single_transit(koi_id, line_number,planet):
                 t = np.arange(photometry_data_sc.TIME.min(), photometry_data_sc.TIME.max(),scit)
                 m = batman.TransitModel(theta, t-center_time)    #initializes model
                 flux = m.light_curve(theta)          #calculates light curve
-                mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
+                mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'),showlegend=False)
                 fig.add_trace(mod,row=r,col=c)
 
                 ### quarter 
@@ -1016,19 +1022,23 @@ def generate_plot_folded_light_curve(koi_id):
 
     ### number of planets from number of ttv files
     npl = len(file_paths)
-    subplot_height=350
+    subplot_height=400
     periods, koi_identifiers = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
     subplot_titles = []
     for k in range(len(koi_identifiers)):
         subplot_titles.append(f'{koi_identifiers[k]}, {periods[k]}') 
         subplot_titles.append('')
+    rows=npl*2
     
     fig = make_subplots(rows=npl*2, cols=1,
                         subplot_titles = subplot_titles,
                         row_heights=[subplot_height, subplot_height*0.4]*npl,
-                        vertical_spacing=0.15)
+                        #vertical_spacing=(1 / (rows - 1)) 
+                        ) 
     
     for i, file_path in enumerate(file_paths):
+        r_plot = 1
+        r_residuals = r_plot+1
         planet_num = 0+i
         period=periods[i]
         fold_data_lc, fold_data_sc, binned_avg,center_time = data_load.folded_data(koi_id,planet_num,file_path)
@@ -1173,6 +1183,7 @@ def generate_plot_folded_light_curve(koi_id):
             fig.update_xaxes(title_text="TIME (HOURS)", row=i+2, col=1)
             fig.update_yaxes(title_text="Residuals", row=i+2, col=1)
             fig.update_layout(height=700, width=1000)
+            r_plot = r_residuals+1
             
         
         elif os.path.exists(file_path_lc) and not os.path.exists(file_path_sc):
@@ -1236,6 +1247,8 @@ def generate_plot_folded_light_curve(koi_id):
             fig.update_xaxes(title_text="TIME (HOURS)", row=i+2, col=1)
             fig.update_yaxes(title_text="Residuals", row=i+2, col=1)
             fig.update_layout(height=700, width=1000)
+
+            r_plot = r_residuals + 1
             
 
         elif not os.path.exists(file_path_lc) and os.path.exists(file_path_sc):
@@ -1299,6 +1312,8 @@ def generate_plot_folded_light_curve(koi_id):
             fig.update_xaxes(title_text="TIME (HOURS)", row=i+2, col=1)
             fig.update_yaxes(title_text="Residuals", row=i+2, col=1)
             fig.update_layout(height=700, width=1000)
+
+            r_plot = r_residuals+1
         
         else:
             error_message = f'No data found for {koi_id}'
@@ -1331,7 +1346,9 @@ def generate_plot_OMC(koi_id):
     for k in range(len(koi_identifiers)):
         subplot_titles.append(f'{koi_identifiers[k]}, {periods[k]}') 
     fig = make_subplots(rows=npl, cols=1,
-                        subplot_titles=subplot_titles)
+                        subplot_titles=subplot_titles,
+                        row_heights=[350]*npl,
+                        vertical_spacing=0.05)  
 
     for i, file_path in enumerate(file_paths):
         omc_data, omc_model, out_prob, out_flag = data_load.OMC_data(koi_id, file_path)
@@ -1380,6 +1397,7 @@ def generate_plot_OMC(koi_id):
             return jsonify(error_message=error_message)
     ### return whole figure to page
     fig.update_coloraxes(colorbar_title_text='Out Probability')#, colorbar_len=0.2)
+    fig.update_layout(height=350*npl, width=1000)
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
     return jsonify(graphJSON)
 

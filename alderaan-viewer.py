@@ -218,8 +218,6 @@ def generate_plot_Detrended_Light_Curve(koi_id):
     if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
         data_lc = data_load.read_data_from_fits(file_path_lc)
         data_sc = data_load.read_data_from_fits(file_path_sc)
-        quarter_lc = data_lc.QUARTER
-        quarter_sc = data_sc.QUARTER
 
         lc = px.scatter(data_lc, x="TIME",y="FLUX").data[0]
         lc.marker.update(symbol="circle", size=4, color="blue")
@@ -237,12 +235,9 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         ### mark quarters 
         # Define a constant y-value for horizontal lines above the data
         horizontal_line_y = max(data_sc['FLUX']) + 0.0001 * max(data_sc['FLUX'])  # Adjust offset as needed
-        # Use Plotly's predefined color scale
-        quarter_colors = px.colors.qualitative.Plotly
+        quarter_colors = ['green','red','blue','orange'] 
         num_colors = len(quarter_colors)
 
-        # Use Plotly's predefined color scale
-        quarter_colors = px.colors.qualitative.Plotly
 
         def get_color(quarter):
             # Use modulo 4 to group quarters
@@ -315,7 +310,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
             )
             fig.add_trace(hover_trace)
         ###################
-        colors = ['orange','green','blue','pink','red','purple']
+        colors = ['orange','green','red','orange','green','red','orange','green','red']
 
         # Iterate through file paths
         for i, file_path in enumerate(file_paths):
@@ -352,11 +347,10 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         # Define a constant y-value for horizontal lines above the data
         horizontal_line_y = max(data_lc['FLUX']) + 0.0001 * max(data_lc['FLUX'])  # Adjust offset as needed
         # Use Plotly's predefined color scale 
-        quarter_colors = px.colors.qualitative.Plotly
+        #quarter_colors = px.colors.qualitative.Plotly
+        quarter_colors = ['green','red','blue','orange']
         num_colors = len(quarter_colors)
 
-        # Use Plotly's predefined color scale
-        quarter_colors = px.colors.qualitative.Plotly
 
         def get_color(quarter):
             # Use modulo 4 to group quarters
@@ -394,7 +388,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
             fig.add_trace(hover_trace)
 
         ###################
-        colors = ['orange','green','blue','pink','red','purple']
+        colors = ['orange','green','red','orange','green','red','orange','green','red']
 
         # Iterate through file paths
         for i, file_path in enumerate(file_paths):
@@ -411,6 +405,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
                 c_time.name = f"ttime 0{i}"
                 fig.add_trace(c_time, row=1, col=1)
         # Update x-axis label with units
+        fig.update_traces(showlegend=True, row=1, col=1)
         fig.update_layout(xaxis_title=f"TIME (DAYS)", yaxis_title="FLUX")
         fig.update_layout(title=star_id, title_x=0.5)
         graph1JSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
@@ -429,11 +424,9 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         # Define a constant y-value for horizontal lines above the data
         horizontal_line_y = max(data_sc['FLUX']) + 0.0001 * max(data_sc['FLUX'])  # Adjust offset as needed
         # Use Plotly's predefined color scale
-        quarter_colors = px.colors.qualitative.Plotly
+        quarter_colors = ['green','red','blue','orange']
         num_colors = len(quarter_colors)
 
-        # Use Plotly's predefined color scale
-        quarter_colors = px.colors.qualitative.Plotly
 
         def get_color(quarter):
             # Use modulo 4 to group quarters
@@ -471,7 +464,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
             fig.add_trace(hover_trace)
 
         ###################
-        colors = ['orange','green','blue','pink','red','purple']
+        colors = ['orange','green','red','orange','green','red','orange','green','red']
 
         # Iterate through file paths
         for i, file_path in enumerate(file_paths):
@@ -488,6 +481,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
                 c_time.name = f"ttime 0{i}"
                 fig.add_trace(c_time, row=1, col=1)
         # Update x-axis label with units
+        fig.update_traces(showlegend=True, row=1, col=1)
         fig.update_layout(xaxis_title=f"TIME (DAYS)", yaxis_title="FLUX")
         fig.update_layout(title=star_id, title_x=0.5)
         graph1JSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
@@ -1025,19 +1019,18 @@ def generate_plot_folded_light_curve(koi_id):
     subplot_height=400
     periods, koi_identifiers = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
     subplot_titles = []
-    spacing = []
+    spacing = [0.2,0.15,0.1,0.07,0.05]
     for k in range(len(koi_identifiers)):
         subplot_titles.append(f'{koi_identifiers[k]}, {periods[k]}') 
         subplot_titles.append('')
-        spacing.append(0.01)
-        spacing.append(0.05)
+        
     rows=npl*2
     
     
     fig = make_subplots(rows=npl*2, cols=1,
                         subplot_titles = subplot_titles,
                         row_heights=[subplot_height, subplot_height*0.4]*npl,
-                        vertical_spacing=0.05 
+                        vertical_spacing=spacing[npl-1]
                         ) 
     
     r_plot = 1
@@ -1422,12 +1415,13 @@ def generate_plot_OMC(koi_id):
     # titles = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
     periods,koi_identifiers = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
     subplot_titles = []
+    spacing = [0.2,0.15,0.1,0.07,0.05]
     for k in range(len(koi_identifiers)):
         subplot_titles.append(f'{koi_identifiers[k]}, {periods[k]}') 
     fig = make_subplots(rows=npl, cols=1,
                         subplot_titles=subplot_titles,
                         row_heights=[350]*npl,
-                        vertical_spacing=0.05)  
+                        vertical_spacing=spacing[npl-1]) 
 
     for i, file_path in enumerate(file_paths):
         omc_data, omc_model, out_prob, out_flag = data_load.OMC_data(koi_id, file_path)
@@ -1456,11 +1450,11 @@ def generate_plot_OMC(koi_id):
                 # Update x-axis and y-axis labels for each subplot
                 fig.update_xaxes(title_text="TIME (DAYS)", row=i+1, col=1)
                 fig.update_yaxes(title_text="O-C (MINUTES)", row=i+1, col=1)
-                fig.update_coloraxes(colorbar_title_text='Out Probability', colorbar_len=0.2, row=i+1, col=1)
+                fig.update_coloraxes(colorbar_title_text='Out Probability', colorbar_len=0.2)#, row=i+1, col=1)
 
             else:
                 mask_arr = np.array(mask)
-                omc = px.scatter(omc_data[~mask_arr], x="TIME",y="OMC")
+                omc = px.scatter(omc_data[~mask_arr], x="TIME",y="OMC") 
                 # Add a line plot for OMC_MODEL
                 line_trace = px.line(omc_model[~mask_arr], x="TIME", y="OMC_MODEL").data[0]
                 line_trace.line.color = 'red' 
@@ -1469,13 +1463,27 @@ def generate_plot_OMC(koi_id):
                 ### update axes and colorbar
                 fig.update_xaxes(title_text="TIME (DAYS)", row=i+1, col=1)
                 fig.update_yaxes(title_text="O-C (MINUTES)", row=i+1, col=1)
-                fig.update_coloraxes(colorbar_title_text='Out Probability', colorbar_len=0.2, row=i+1, col=1)
+                fig.update_coloraxes(colorbar_title_text='Out Probability', colorbar_len=0.2)#, row=i+1, col=1)
         
         else: 
             error_message = f'No data found for {koi_id}'
             return jsonify(error_message=error_message)
     ### return whole figure to page
-    fig.update_coloraxes(colorbar_title_text='Out Probability')#, colorbar_len=0.2)
+    
+    #fig.update_coloraxes(colorbar_title_text='Out Probability', colorbar_len=0.2)
+    colorbar_spacing = [1,0.5,0.33,0.25,0.2]
+    fig.update_layout(
+            coloraxis=dict(
+                colorbar=dict(
+                    title="Out Probability", 
+                    len=colorbar_spacing[npl-1],  # Adjust the length of the colorbar
+                    orientation='v',  # Vertical orientation
+                    x=1.05,  # Place it to the right of the plot
+                    y=1,  # Start at the top
+                    yanchor='top'
+                )
+            )
+    )
     fig.update_layout(height=350*npl, width=1000)
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
     return jsonify(graphJSON)

@@ -528,6 +528,163 @@ def generate_plot_single_transit(koi_id, line_number,planet):
     file_path_results = os.path.join(data_directory, star_id, file_results)
     data_post = data_load.load_posteriors(file_path_results,num,koi_id)
     ### get max likelihood
+    data_post = data_post.sort_values(by='LN_LIKE', ascending=False) 
+    row = data_post.iloc[0] # pick row with highest likelihood
+    ### get most likely params {P, t0, Rp/Rs, b, T14, q1, q2}
+    theta = batman.TransitParams()
+    theta.per = row[f'P']
+    theta.t0 = 0.
+    theta.rp = row[f'ROR_{num}']
+    theta.b = row[f'IMPACT_{num}']
+    theta.T14 = row[f'DUR14_{num}']#*24
+    LD_U1 = row[f'LD_U1']
+    LD_U2 = row[f'LD_U2']
+    theta.u = [LD_U1, LD_U2]
+    theta.limb_dark = 'quadratic'
+
+    line_number_plots = np.arange(line_number, line_number+9)
+    row = [1,1,1,2,2,2,3,3,3]
+    col = [1,2,3,1,2,3,1,2,3]
+    
+    ### initialize figure
+    #fig = make_subplots(rows=1, cols=1)
+    fig = make_subplots(rows=3, cols=3)
+
+    # Loop through the grid positions and corresponding line numbers
+    for i, line_num in enumerate(line_number_plots):
+        r = row[i]
+        c = col[i]
+
+        if (data_load.single_data(koi_id, line_num,num,ttv_file)):
+            photometry_data_lc,photometry_data_sc, transit_number, center_time = data_load.single_data(koi_id, line_num, num, ttv_file)
+            center_time = np.asarray(center_time, dtype=np.float64)
+            
+            if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
+                transit_lc = go.Scatter(x=photometry_data_lc.TIME, y=photometry_data_lc.FLUX, mode='markers')
+                transit_lc.marker.update(color="blue")
+                transit_lc.name = "lc data"
+                fig.add_trace(transit_lc, row=r, col=c)
+
+                transit_sc = go.Scatter(x=photometry_data_sc.TIME, y=photometry_data_sc.FLUX, mode='markers')
+                transit_sc.marker.update(color="gray")
+                transit_sc.name="sc data"
+                fig.add_trace(transit_sc,row=r,col=c)
+                lc_min,lc_max,sc_min,sc_max = data_load.get_min_max(koi_id)
+                if len(photometry_data_sc)>0:
+                    ### transit model
+                    scit = 1.15e-5
+                    t = np.arange(photometry_data_sc.TIME.min(), photometry_data_sc.TIME.max(),scit)
+                    m = batman.TransitModel(theta, t-center_time)    #initializes model
+                    flux = m.light_curve(theta)          #calculates light curve
+                    mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
+                    mod.name='Model'
+                    fig.add_trace(mod,row=r,col=c)
+                    if r==3:
+                        fig.update_xaxes(title_text="TIME (DAYS)", row=r, col=c)
+                    if c==1:
+                        fig.update_yaxes(title_text="FLUX", row=r, col=c, range=[sc_min, sc_max]) 
+
+                    ### quarter 
+                    quarter = photometry_data_sc.loc[photometry_data_sc['TIME'] == photometry_data_sc.TIME.min(), 'QUARTER']
+
+                    
+                else:
+                    ### transit model
+                    scit = 1.15e-5
+                    t = np.arange(photometry_data_lc.TIME.min(), photometry_data_lc.TIME.max(),scit)
+                    m = batman.TransitModel(theta, t-center_time)    #initializes model
+                    flux = m.light_curve(theta)          #calculates light curve
+                    mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
+                    mod.name='Model'
+                    fig.add_trace(mod,row=r,col=c)
+                    if r==3:
+                        fig.update_xaxes(title_text="TIME (DAYS)", row=r, col=c)
+                    if c==1:
+                        fig.update_yaxes(title_text="FLUX", row=r, col=c, range=[lc_min, lc_max])
+
+                    ### quarter 
+                    quarter = photometry_data_lc.loc[photometry_data_lc['TIME'] == photometry_data_lc.TIME.min(), 'QUARTER']
+
+                    
+            elif os.path.isfile(file_path_lc) and not os.path.isfile(file_path_sc):
+                transit_lc = go.Scatter(x=photometry_data_lc.TIME, y=photometry_data_lc.FLUX, mode='markers')
+                transit_lc.marker.update(color="blue")
+                fig.add_trace(transit_lc, row=r, col=c)
+                lc_min,lc_max = data_load.get_min_max(koi_id)
+                ### transit model
+                scit = 1.15e-5
+                t = np.arange(photometry_data_lc.TIME.min(), photometry_data_lc.TIME.max(),scit)
+                m = batman.TransitModel(theta, t-center_time)    #initializes model
+                flux = m.light_curve(theta)          #calculates light curve
+                mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
+                fig.add_trace(mod,row=r,col=c)
+
+                ### quarter 
+                quarter = photometry_data_lc.loc[photometry_data_lc['TIME'] == photometry_data_lc.TIME.min(), 'QUARTER']
+            
+                
+            elif os.path.isfile(file_path_sc) and not os.path.isfile(file_path_lc):
+                transit_sc = go.Scatter(x=photometry_data_sc.TIME, y=photometry_data_sc.FLUX, mode='markers')
+                transit_sc.marker.update(color="blue")
+                fig.add_trace(transit_sc,row=r,col=c)
+                sc_min,sc_max = data_load.get_min_max(koi_id)
+                ### transit model
+                scit = 1.15e-5
+                t = np.arange(photometry_data_sc.TIME.min(), photometry_data_sc.TIME.max(),scit)
+                m = batman.TransitModel(theta, t-center_time)    #initializes model
+                flux = m.light_curve(theta)          #calculates light curve
+                mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
+                fig.add_trace(mod,row=r,col=c)
+
+                ### quarter 
+                quarter = photometry_data_sc.loc[photometry_data_sc['TIME'] == photometry_data_sc.TIME.min(), 'QUARTER']
+        else:
+            error_message = f'No data found for {koi_id}'
+            return jsonify(error_message=error_message)
+        
+    fig.update_layout(height=700, width=1000, title=title, title_x=0.5)
+            
+    graphJSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
+    response_data = {
+        'graphJSON': graphJSON,
+        'transit_number': transit_number
+    }
+    return jsonify(response_data)
+    
+        
+
+'''
+@app.route('/generate_plot_single_transit/<koi_id>/<int:line_number>/<planet>')
+def generate_plot_single_transit(koi_id, line_number,planet):
+    global K_id
+    if K_id==False:
+        star_id = koi_id.replace("K","S")
+    else:
+        star_id = koi_id
+    ttv_file = star_id + planet
+    ext = os.path.basename(data_directory) +'.csv'
+    csv_file_path = os.path.join(data_directory, ext)
+
+    period,koi_identifier = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
+
+    planet_num = re.findall(r'\d+', planet)
+    num = planet_num[0][1]
+    int_num = int(num)
+    #title = period[int_num]
+    title = koi_identifier[int_num]
+    period= period[int_num]
+
+    file_name_lc = star_id + '_lc_filtered.fits'
+    file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
+    
+    file_name_sc = star_id + '_sc_filtered.fits'
+    file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
+
+    ### posteriors for most likely model
+    file_results =star_id + '-results.fits'
+    file_path_results = os.path.join(data_directory, star_id, file_results)
+    data_post = data_load.load_posteriors(file_path_results,num,koi_id)
+    ### get max likelihood
     max_index = data_post['LN_LIKE'].idxmax()
     ### get most likely params {P, t0, Rp/Rs, b, T14, q1, q2}
     theta = batman.TransitParams()
@@ -802,6 +959,9 @@ def generate_plot_single_transit(koi_id, line_number,planet):
     else:
         error_message = f'No data found for {koi_id}'
         return jsonify(error_message=error_message)
+
+'''
+
     
 @app.route('/get_transit_file_options/<koi_id>')
 def planet_options(koi_id):

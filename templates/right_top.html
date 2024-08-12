@@ -198,7 +198,7 @@
         let planet = '_00_quick.ttvs'
         // move forward and backward buttons
         function movePlotBackward() {
-            lineNumber -= 1;
+            lineNumber -= 9; // because of the 3x3 pannel
             if (lineNumber <0) {
                 lineNumber = 0;
             }
@@ -206,7 +206,7 @@
         }
 
         function movePlotForward() {
-           lineNumber += 1;
+           lineNumber += 9; // because of the 3x3 pannel
            generatePlotSingleTransit(selectedKoiId, lineNumber,planet);
         }
 

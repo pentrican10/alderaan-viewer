@@ -8,6 +8,9 @@ import pandas as pd
 import os
 import numpy.polynomial.polynomial as poly
 
+
+
+
 cadence_type = 's' # l is long cadence, s is short cadence
 koi_id = 'K01884'
 planet_num = 0

@@ -502,7 +502,10 @@ def generate_plot_single_transit(koi_id, line_number,planet):
     ext = os.path.basename(data_directory) +'.csv'
     csv_file_path = os.path.join(data_directory, ext)
 
-    period,koi_identifier = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
+    data_per = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
+    data_per = data_per.sort_values(by='periods') 
+    koi_identifier = data_per.koi_identifiers.values
+    period = data_per.period_title.values
 
     planet_num = re.findall(r'\d+', planet)
     num = planet_num[0][1]
@@ -1017,7 +1020,10 @@ def generate_plot_folded_light_curve(koi_id):
     ### number of planets from number of ttv files
     npl = len(file_paths)
     subplot_height=400
-    periods, koi_identifiers = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
+    data_per = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
+    data_per = data_per.sort_values(by='periods') 
+    koi_identifiers = data_per.koi_identifiers.values
+    periods = data_per.period_title.values
     subplot_titles = []
     spacing = [0.2,0.15,0.1,0.07,0.05]
     for k in range(len(koi_identifiers)):
@@ -1160,6 +1166,9 @@ def generate_plot_folded_light_curve(koi_id):
             model_flux_sc = interp_model_flux_sc(fold_data_sc.TIME)
             interp_model_flux_bin = interp1d(t, flux, kind='linear', fill_value='extrapolate')
             model_flux_bin = interp_model_flux_bin(binned_avg.TIME)
+           
+            # feed the t into batman directly to get the model values at that point, use that to calculate residuals,
+            # set oversample/supersample: sc=1, lc=7
 
             ### Compute residuals
             residuals_lc = fold_data_lc.FLUX - model_flux_lc
@@ -1413,7 +1422,10 @@ def generate_plot_OMC(koi_id):
     ### number of planets from number of ttv files
     npl = len(file_paths)
     # titles = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
-    periods,koi_identifiers = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
+    data_per = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
+    data_per = data_per.sort_values(by='periods') 
+    koi_identifiers = data_per.koi_identifiers.values
+    periods = data_per.period_title.values
     subplot_titles = []
     spacing = [0.2,0.15,0.1,0.07,0.05]
     for k in range(len(koi_identifiers)):
@@ -1468,9 +1480,7 @@ def generate_plot_OMC(koi_id):
         else: 
             error_message = f'No data found for {koi_id}'
             return jsonify(error_message=error_message)
-    ### return whole figure to page
     
-    #fig.update_coloraxes(colorbar_title_text='Out Probability', colorbar_len=0.2)
     colorbar_spacing = [1,0.5,0.33,0.25,0.2]
     fig.update_layout(
             coloraxis=dict(

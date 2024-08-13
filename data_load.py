@@ -86,6 +86,7 @@ def read_table_data(table):
 def get_periods_for_koi_id(file_path, koi_id):
     koi_identifiers = []
     periods = []
+    period_title = []
     with open(file_path, 'r') as file:
         reader = csv.DictReader(file)
         
@@ -95,11 +96,18 @@ def get_periods_for_koi_id(file_path, koi_id):
                 period_value = float(row['period'])
                 rounded_period = round(period_value, 1)
                 append = f'Period: {rounded_period} Days'
-                periods.append(str(append))
+                period_title.append(str(append))
+                periods.append(rounded_period)
                 koi_identifiers.append(str(f'{koi_identifier}'))
 
+        df = pd.DataFrame(dict(
+            koi_identifiers=koi_identifiers,
+            periods= periods,
+            period_title = period_title
+        ))
 
-    return periods,koi_identifiers if periods else None
+    return df if periods else None
+    #return periods,koi_identifiers if periods else None
 
                
 def read_data_from_fits(file_path):

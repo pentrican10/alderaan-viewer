@@ -7,16 +7,25 @@ import pandas as pd
 #from data_load import calculate_binned_weighted_average, folded_data
 import os
 import numpy.polynomial.polynomial as poly
-
+import data_load
 
 
 
 cadence_type = 'l' # l is long cadence, s is short cadence
-koi_id = 'K00070'
+koi_id = 'K00806'
 planet_num = 1
 table = 'ecc-multis-LC'
 file_path_results = f"c:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}\\{koi_id}\\{koi_id}-results.fits"
 file_path = f"C:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}\\{koi_id}\\{koi_id}_{cadence_type}c_filtered.fits"
+
+csv_file_path = f"c:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}\\{table}.csv"
+data_per = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
+data_per = data_per.sort_values(by='periods') 
+koi_identifier = data_per.koi_identifiers.values
+period = data_per.periods.values
+print(koi_identifier)
+print(period)
+assert 1==0
 
 for planet_num in range(0,4):
     # Open the FITS file

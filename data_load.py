@@ -83,7 +83,7 @@ def read_table_data(table):
 
     return unique_data
 
-def get_periods_for_koi_id(file_path, koi_id):
+def get_koi_identifiers(file_path, koi_id):
     koi_identifiers = []
     periods = []
     period_title = []
@@ -110,7 +110,7 @@ def get_periods_for_koi_id(file_path, koi_id):
     #return periods,koi_identifiers if periods else None
 
                
-def read_data_from_fits(file_path):
+def load_photometry_data(file_path):
     with fits.open(file_path) as fits_file:
         time = np.array(fits_file[1].data, dtype=float)
         flux = np.array(fits_file[2].data, dtype=float)
@@ -128,7 +128,7 @@ def read_data_from_fits(file_path):
     return df
 
 
-def get_ttv_file(koi_id, file_path):
+def load_ttv_data(koi_id, file_path):
     if os.path.isfile(file_path):
         index =[]
         ttime=[] 
@@ -146,6 +146,13 @@ def get_ttv_file(koi_id, file_path):
                 model.append(columns[2])
                 out_prob.append(columns[3])
                 out_flag.append(columns[4])
+        ### convert to arrays
+        index = np.asarray(index, dtype=np.int64)
+        model = np.asarray(model, dtype=np.float64)
+        ttime = np.asarray(ttime, dtype=np.float64)
+        model = np.asarray(model, dtype=np.float64)
+        out_prob = np.asarray(out_prob, dtype=np.float64)
+        out_flag = np.asarray(out_flag, dtype=np.float64)
         return index, ttime, model, out_prob, out_flag
     
 
@@ -162,8 +169,8 @@ def get_min_max(koi_id):
     file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
 
     if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
-        photometry_data_lc = read_data_from_fits(file_path_lc) 
-        photometry_data_sc = read_data_from_fits(file_path_sc)
+        photometry_data_lc = load_photometry_data(file_path_lc) 
+        photometry_data_sc = load_photometry_data(file_path_sc)
         lc_max = photometry_data_lc['FLUX'].max()
         lc_min = photometry_data_lc['FLUX'].min()
 
@@ -171,12 +178,12 @@ def get_min_max(koi_id):
         sc_min = photometry_data_sc['FLUX'].min()
         return lc_min,lc_max,sc_min,sc_max
     elif os.path.isfile(file_path_lc) and not os.path.isfile(file_path_sc):
-        photometry_data_lc = read_data_from_fits(file_path_lc) 
+        photometry_data_lc = load_photometry_data(file_path_lc) 
         lc_max = photometry_data_lc['FLUX'].max()
         lc_min = photometry_data_lc['FLUX'].min()
         return lc_min, lc_max
     elif os.path.isfile(file_path_sc) and not os.path.isfile(file_path_lc):
-        photometry_data_sc = read_data_from_fits(file_path_sc)
+        photometry_data_sc = load_photometry_data(file_path_sc)
         sc_max = photometry_data_sc['FLUX'].max()
         sc_min = photometry_data_sc['FLUX'].min()
         return sc_min, sc_max
@@ -206,9 +213,9 @@ def single_data(koi_id, line_number, num, ttv_file):
     combined_data = None
     #get data and create detrended light curve
     if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
-        photometry_data_lc = read_data_from_fits(file_path_lc) 
-        photometry_data_sc = read_data_from_fits(file_path_sc)
-        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
+        photometry_data_lc = load_photometry_data(file_path_lc) 
+        photometry_data_sc = load_photometry_data(file_path_sc)
+        index, ttime, model, out_prob, out_flag = load_ttv_data(koi_id, file_path)
 
         if line_number < len(index):
             center_time = ttime[line_number]
@@ -230,8 +237,8 @@ def single_data(koi_id, line_number, num, ttv_file):
         return lc_data, sc_data, transit_number, center_time
         
     elif os.path.isfile(file_path_lc):
-        photometry_data_lc = read_data_from_fits(file_path_lc) #descriptive names
-        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
+        photometry_data_lc = load_photometry_data(file_path_lc) #descriptive names
+        index, ttime, model, out_prob, out_flag = load_ttv_data(koi_id, file_path)
 
         if line_number < len(index):
             center_time = ttime[line_number]
@@ -246,8 +253,8 @@ def single_data(koi_id, line_number, num, ttv_file):
             sc_data = None
         return lc_data,sc_data, transit_number, center_time
     elif os.path.isfile(file_path_sc):
-        photometry_data_sc = read_data_from_fits(file_path_sc)
-        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
+        photometry_data_sc = load_photometry_data(file_path_sc)
+        index, ttime, model, out_prob, out_flag = load_ttv_data(koi_id, file_path)
 
         if line_number < len(index):
             center_time = ttime[line_number]
@@ -282,60 +289,54 @@ def folded_data(koi_id,planet_num, file_path):
     data_post = data_post.sort_values(by='LN_LIKE', ascending=False) 
     row = data_post.iloc[0] # pick row with highest likelihood
     ### mult by 1.5 for correct offset
-    DUR14 = 1.5 * row[f'DUR14_{planet_num}']
+    DUR14 = row[f'DUR14_{planet_num}']
 
-    fold_data_time = []
-    fold_data_flux = []
-    fold_data_err = []
+    fold_data_time_lc = [] 
+    fold_data_flux_lc = []
+    fold_data_err_lc = []
     fold_data_time_sc = []
     fold_data_flux_sc = []
     fold_data_err_sc = []
     #get data and create detrended light curve
     if os.path.isfile(file_path_lc):
-        photometry_data_lc = read_data_from_fits(file_path_lc)
-        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
+        photometry_data_lc = load_photometry_data(file_path_lc)
+        index, ttime, model, out_prob, out_flag = load_ttv_data(koi_id, file_path)
         
         for i in range(len(index)):
             # center_time = ttime[i]
-            center_time = model[i]
+            center_time = float(model[i])
         
-            start_time = float(center_time) - DUR14
-            end_time= float(center_time) + DUR14
+            start_time = (center_time) - (DUR14*1.5) 
+            end_time= (center_time) + (DUR14*1.5)
 
             use = (photometry_data_lc['TIME'] > start_time) & (photometry_data_lc['TIME'] < end_time)
             transit_data = photometry_data_lc[use]
 
-            ### Check and ensure that 'TIME' column is of numeric type
-            transit_data['TIME'] = pd.to_numeric(transit_data['TIME'], errors='coerce')
-            
-            ### Check and ensure that center_time is of numeric type
-            center_time = float(center_time)
-
-            norm_time = transit_data['TIME'] - center_time
-            fold_data_time.extend(norm_time)
-            fold_data_flux.extend(transit_data['FLUX'])
-            fold_data_err.extend(transit_data['ERR'])
+            folded_transit_time_lc = transit_data['TIME'] - center_time
+            fold_data_time_lc.extend(folded_transit_time_lc)
+            fold_data_flux_lc.extend(transit_data['FLUX'])
+            fold_data_err_lc.extend(transit_data['ERR'])
 
     if os.path.isfile(file_path_sc):
-        photometry_data_sc = read_data_from_fits(file_path_sc)
+        photometry_data_sc = load_photometry_data(file_path_sc)
         for i in range(len(index)):
-            center_time = model[i]
+            center_time = float(model[i])
         
-            start_time = float(center_time) - DUR14
-            end_time= float(center_time) + DUR14
+            start_time = center_time - DUR14
+            end_time= center_time + DUR14
+
             use_sc = (photometry_data_sc['TIME']>start_time) & (photometry_data_sc['TIME']<end_time)
             transit_data_sc = photometry_data_sc[use_sc]
-            transit_data_sc['TIME'] = pd.to_numeric(transit_data_sc['TIME'], errors='coerce')
-            center_time = float(center_time)
-            norm_time_sc = transit_data_sc['TIME'] - center_time
-            fold_data_time_sc.extend(norm_time_sc)
+
+            folded_transit_time_sc = transit_data_sc['TIME'] - center_time
+            fold_data_time_sc.extend(folded_transit_time_sc)
             fold_data_flux_sc.extend(transit_data_sc['FLUX'])
             fold_data_err_sc.extend(transit_data_sc['ERR'])
   
     fold_data_lc = pd.DataFrame({
-        'TIME' : fold_data_time,
-        'FLUX': fold_data_flux,
-        'ERR' : fold_data_err
+        'TIME' : fold_data_time_lc,
+        'FLUX': fold_data_flux_lc,
+        'ERR' : fold_data_err_lc
     })
 
     fold_data_sc = pd.DataFrame({
@@ -344,19 +345,19 @@ def folded_data(koi_id,planet_num, file_path):
         'ERR' : fold_data_err_sc
     })
 
-    bin_size = DUR14/14 #0.02
+    bin_size = DUR14/11 #0.02
     ### set so 11 bin points in transit, make sure it transfers to the exp time
     # DUR / 11
-    combined_df = pd.concat([fold_data_lc, fold_data_sc], ignore_index=True)
-    combined_df = combined_df.sort_values(by='TIME', ascending=True)
+    combined_df = pd.concat([fold_data_lc, fold_data_sc], ignore_index=True) #EXCEPTION IF SC DATA, CODE NOT WRITTEN
+    #combined_df = combined_df.sort_values(by='TIME', ascending=True)
     fold_time = np.array(combined_df.TIME)
     fold_flux = np.array(combined_df.FLUX)
-    bin_centers_combined, weighted_avg_combined = bin_data(fold_time, fold_flux, bin_size)
+    binned_centers, binned_data = bin_data(fold_time, fold_flux, bin_size)
 
     # Create DataFrame for combined binned weighted average data 
     binned_weighted_avg_combined = pd.DataFrame({
-        'TIME': bin_centers_combined,
-        'FLUX': weighted_avg_combined
+        'TIME': binned_centers,
+        'FLUX': binned_data
     })
 
     return fold_data_lc, fold_data_sc, binned_weighted_avg_combined, center_time
@@ -414,14 +415,8 @@ def bin_data(time, data, binsize):
 
 
     
-def OMC_data(koi_id,file_path):
-    index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
-    index = np.asarray(index, dtype=np.int64)
-    model = np.asarray(model, dtype=np.float64)
-    ttime = np.asarray(ttime, dtype=np.float64)
-    model = np.asarray(model, dtype=np.float64)
-    out_prob = np.asarray(out_prob, dtype=np.float64)
-    out_flag = np.asarray(out_flag, dtype=np.float64)
+def load_OMC_data(koi_id,file_path):
+    index, ttime, model, out_prob, out_flag = load_ttv_data(koi_id, file_path)
     t0, period = poly.polyfit(index, model, 1)
     omc_model = model - poly.polyval(index, [t0, period])
     omc_ttime =ttime - poly.polyval(index, [t0, period])
@@ -466,7 +461,7 @@ def load_posteriors(f,n,koi_id):
         LD_U1 = 2*np.sqrt(LD_Q1)*LD_Q2
         LD_U2 = np.sqrt(LD_Q1)*(1-2*LD_Q2)
 
-        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id,ttv_file)
+        index, ttime, model, out_prob, out_flag = load_ttv_data(koi_id,ttv_file)
         # Leg0 = _legendre(koi_id,n,0)
         # Leg1 = _legendre(koi_id,n,1)
         model = np.array(model, dtype='float64')
@@ -485,7 +480,34 @@ def load_posteriors(f,n,koi_id):
         data_return = np.vstack([C0, C1, ROR, IMPACT, DUR14, T0, P, LD_Q1, LD_Q2, LD_U1, LD_U2, LN_WT, LN_LIKE]).T
         labels = f'C0_{n} C1_{n} ROR_{n} IMPACT_{n} DUR14_{n} T0 P LD_Q1 LD_Q2 LD_U1 LD_U2 LN_WT LN_LIKE'.split()
         df = pd.DataFrame(data_return, columns=labels)
+
+        ### change to unweighted
+        N_samp = 1000
+        LN_WT = df['LN_WT'].values
+        weight = np.exp(LN_WT- LN_WT.max())
+        w = weight/ np.sum(weight)
+        df = df.sample(N_samp, replace=True, ignore_index=True, weights=w)
+
         return df
+    
+def load_results_model(file_path_results):
+    with fits.open(file_path_results) as hdul:
+        hdu2 = hdul[2]
+        data = hdu2.data
+        index = data['INDEX']
+        ttime = data['TTIME']
+        model = data['MODEL']
+        out_prob = data['OUT_PROB']
+        out_flag = data['OUT_FLAG']
+
+    df = pd.DataFrame(dict(
+            index=index,
+            ttime=ttime,
+            model = model,
+            out_prob = out_prob,
+            out_flag = out_flag
+        ))
+    return df
 
 def _legendre(koi_id, n, k):
         global K_id
@@ -500,11 +522,11 @@ def _legendre(koi_id, n, k):
         sc_file = star_id + '_sc_filtered.fits'
         lc_path = os.path.join(data_directory, star_id, lc_file)
         sc_path = os.path.join(data_directory, star_id, sc_file)
-        index, ttime, model, out_prob, out_flag = get_ttv_file(star_id,ttv_file)
+        index, ttime, model, out_prob, out_flag = load_ttv_data(star_id,ttv_file)
         if os.path.isfile(lc_path):
-            data_lc = read_data_from_fits(lc_path)
+            data_lc = load_photometry_data(lc_path)
         if os.path.isfile(sc_path):
-            data_sc = read_data_from_fits(sc_path)
+            data_sc = load_photometry_data(sc_path)
         model= np.array(model, dtype='float64')
         t = model
         #t = t.astype(float)

@@ -216,8 +216,8 @@ def generate_plot_Detrended_Light_Curve(koi_id):
 
     ### get data and create detrended light curve
     if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
-        data_lc = data_load.read_data_from_fits(file_path_lc)
-        data_sc = data_load.read_data_from_fits(file_path_sc)
+        data_lc = data_load.load_photometry_data(file_path_lc)
+        data_sc = data_load.load_photometry_data(file_path_sc)
 
         lc = px.scatter(data_lc, x="TIME",y="FLUX").data[0]
         lc.marker.update(symbol="circle", size=4, color="blue")
@@ -315,7 +315,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         # Iterate through file paths
         for i, file_path in enumerate(file_paths):
             if os.path.isfile(file_path):
-                index, center_time, model, out_prob, out_flag = data_load.get_ttv_file(koi_id, file_path)
+                index, center_time, model, out_prob, out_flag = data_load.load_ttv_data(koi_id, file_path)
 
                 # Add a dot for each center time
                 minimum = data_sc.FLUX.min() -0.00001
@@ -337,7 +337,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         return jsonify(graph1JSON)
     
     elif os.path.isfile(file_path_lc):
-        data_lc = data_load.read_data_from_fits(file_path_lc)
+        data_lc = data_load.load_photometry_data(file_path_lc)
         lc = px.scatter(data_lc, x="TIME",y="FLUX").data[0]
         lc.marker.update(symbol="circle", size=4, color="blue")
         lc.name = "Long Cadence"
@@ -393,7 +393,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         # Iterate through file paths
         for i, file_path in enumerate(file_paths):
             if os.path.isfile(file_path):
-                index, center_time, model, out_prob, out_flag = data_load.get_ttv_file(koi_id, file_path)
+                index, center_time, model, out_prob, out_flag = data_load.load_ttv_data(koi_id, file_path)
 
                 # Add a dot for each center time
                 minimum = data_lc.FLUX.min() -0.00001
@@ -412,7 +412,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         return jsonify(graph1JSON)
     
     elif os.path.isfile(file_path_sc):
-        data_sc = data_load.read_data_from_fits(file_path_sc)
+        data_sc = data_load.load_photometry_data(file_path_sc)
         sc_time_trim = data_sc['TIME'][::30]
         sc_flux_trim = data_sc['FLUX'][::30]
         sc = px.scatter(x=sc_time_trim, y=sc_flux_trim).data[0]
@@ -469,7 +469,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         # Iterate through file paths
         for i, file_path in enumerate(file_paths):
             if os.path.isfile(file_path):
-                index, center_time, model, out_prob, out_flag = data_load.get_ttv_file(koi_id, file_path)
+                index, center_time, model, out_prob, out_flag = data_load.load_ttv_data(koi_id, file_path)
 
                 # Add a dot for each center time
                 minimum = data_sc.FLUX.min() -0.00001
@@ -502,7 +502,7 @@ def generate_plot_single_transit(koi_id, line_number,planet):
     ext = os.path.basename(data_directory) +'.csv'
     csv_file_path = os.path.join(data_directory, ext)
 
-    data_per = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
+    data_per = data_load.get_koi_identifiers(csv_file_path, koi_id)
     data_per = data_per.sort_values(by='periods') 
     koi_identifier = data_per.koi_identifiers.values
     period = data_per.period_title.values
@@ -668,7 +668,7 @@ def generate_plot_single_transit(koi_id, line_number,planet):
     ext = os.path.basename(data_directory) +'.csv'
     csv_file_path = os.path.join(data_directory, ext)
 
-    period,koi_identifier = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
+    period,koi_identifier = data_load.get_koi_identifiers(csv_file_path, koi_id)
 
     planet_num = re.findall(r'\d+', planet)
     num = planet_num[0][1]
@@ -1020,10 +1020,10 @@ def generate_plot_folded_light_curve(koi_id):
     ### number of planets from number of ttv files
     npl = len(file_paths)
     subplot_height=400
-    data_per = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
-    data_per = data_per.sort_values(by='periods') 
-    koi_identifiers = data_per.koi_identifiers.values
-    periods = data_per.period_title.values
+    data_id = data_load.get_koi_identifiers(csv_file_path, koi_id)
+    data_id = data_id.sort_values(by='periods') 
+    koi_identifiers = data_id.koi_identifiers.values
+    periods = data_id.period_title.values
     subplot_titles = []
     spacing = [0.2,0.15,0.1,0.07,0.05]
     for k in range(len(koi_identifiers)):
@@ -1043,14 +1043,13 @@ def generate_plot_folded_light_curve(koi_id):
     r_residuals = r_plot+1
     
     for i, file_path in enumerate(file_paths):
-        # r_plot = 1
-        # r_residuals = r_plot+1
         planet_num = 0+i
         period=periods[i]
         fold_data_lc, fold_data_sc, binned_avg,center_time = data_load.folded_data(koi_id,planet_num,file_path)
 
         ### posteriors for most likely model
         data_post = data_load.load_posteriors(file_path_results,planet_num,koi_id)
+        
         ### get max likelihood
         data_post = data_post.sort_values(by='LN_LIKE', ascending=False) 
         row = data_post.iloc[0] # pick row with highest likelihood
@@ -1067,12 +1066,12 @@ def generate_plot_folded_light_curve(koi_id):
         theta.limb_dark = 'quadratic'
         DUR14 = row[f'DUR14_{planet_num}']
 
-        # other_models = []
-        # num_models = 20
+        other_models = []
+        num_models = 20
 
-        # # Select 20 random samples from the posterior distribution
-        # random_indices = random.sample(range(len(data_post)), num_models)
-        # random_samples = data_post.iloc[random_indices]
+        # Select 20 random samples from the posterior distribution
+        random_indices = random.sample(range(len(data_post)), num_models)
+        random_samples = data_post.iloc[random_indices]
         
         pink_transparent = "rgba(255, 105, 180, 0.5)"  # Pink color with 50% transparency
 
@@ -1257,12 +1256,13 @@ def generate_plot_folded_light_curve(koi_id):
             residuals_lc = fold_data_lc.FLUX - flux_m_lc
             residuals_lc = np.array(residuals_lc)
             fold_time = np.array(fold_data_lc.TIME)
-            fold_residuals = np.array(residuals_lc)
-            bin_centers, residuals_bin = data_load.bin_data(fold_time,fold_residuals, DUR14/7)
+            bin_centers, residuals_bin = data_load.bin_data(fold_time,residuals_lc, DUR14/11)
 
             # Collect all residuals
             all_residuals.extend(residuals_lc) 
             all_residuals.extend(residuals_bin)
+
+            
 
             N_samp = 1000
             inds = np.arange(len(t_lc_sorted), dtype='int')
@@ -1301,6 +1301,27 @@ def generate_plot_folded_light_curve(koi_id):
                 mod_lc = go.Scatter(x=t_lc_sorted*24, y=flux_m_lc_sorted, mode="lines", line=dict(color='red'), showlegend=False)
                 mod_lc.name = "LC Model" 
                 fig.add_trace(mod_lc, row=r_plot, col=1)
+
+            for j, row_ in random_samples.iterrows():
+                #row_ = data_post.iloc[j] # pick row with highest likelihood
+                ### get random params {P, t0, Rp/Rs, b, T14, q1, q2}
+                theta_ = batman.TransitParams()
+                theta_.per = row_[f'P']
+                theta_.t0 = 0.
+                theta_.rp = row_[f'ROR_{planet_num}']
+                theta_.b = row_[f'IMPACT_{planet_num}']
+                theta_.T14 = row_[f'DUR14_{planet_num}']
+                LD_U1 = row_[f'LD_U1']
+                LD_U2 = row_[f'LD_U2']
+                theta_.u = [LD_U1, LD_U2]
+                theta_.limb_dark = 'quadratic'
+                
+                m_ = batman.TransitModel(theta_, t_lc_sorted, supersample_factor = 7, exp_time = 0.02)    #initializes model
+                flux_ = (m_.light_curve(theta_))        #calculates light curve
+                mod_ = go.Scatter(x=t_lc_sorted*24, y=flux_, mode="lines", showlegend=False, line=dict(color=pink_transparent))
+                #mod_.name = f'Model {j}'
+                
+                fig.add_trace(mod_, row=r_plot, col=1)
 
             ### plot residuals
             residuals_plot_lc = go.Scatter(x=t_lc[inds]*24, y=residuals_lc[inds], mode='markers', showlegend=False)
@@ -1446,11 +1467,11 @@ def generate_plot_OMC(koi_id):
     csv_file_path = os.path.join(data_directory, ext)
     ### number of planets from number of ttv files
     npl = len(file_paths)
-    # titles = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
-    data_per = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
-    data_per = data_per.sort_values(by='periods') 
-    koi_identifiers = data_per.koi_identifiers.values
-    periods = data_per.period_title.values
+    # titles = data_load.get_koi_identifiers(csv_file_path, koi_id)
+    data_id = data_load.get_koi_identifiers(csv_file_path, koi_id)
+    data_id = data_id.sort_values(by='periods') 
+    koi_identifiers = data_id.koi_identifiers.values
+    periods = data_id.period_title.values
     subplot_titles = []
     spacing = [0.2,0.15,0.1,0.07,0.05]
     for k in range(len(koi_identifiers)):
@@ -1461,7 +1482,7 @@ def generate_plot_OMC(koi_id):
                         vertical_spacing=spacing[npl-1]) 
 
     for i, file_path in enumerate(file_paths):
-        omc_data, omc_model, out_prob, out_flag = data_load.OMC_data(koi_id, file_path)
+        omc_data, omc_model, out_prob, out_flag = data_load.load_OMC_data(koi_id, file_path)
         show_outliers = True
 
         if omc_data is not None:
@@ -1538,21 +1559,22 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
     ext = os.path.basename(data_directory) +'.csv'
     csv_file_path = os.path.join(data_directory, ext)
 
-    data_per = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
-    data_per = data_per.sort_values(by='periods') 
-    koi_identifiers = data_per.koi_identifiers.values
-    periods = data_per.period_title.values
+    data_id = data_load.get_koi_identifiers(csv_file_path, koi_id)
+    data_id = data_id.sort_values(by='periods') 
+    koi_identifiers = data_id.koi_identifiers.values
+    periods = data_id.period_title.values
 
     if os.path.isfile(file_path):
         data = data_load.load_posteriors(file_path,planet_num,koi_id)
         
         #set target # samples
-        N_samp = 1000
-        LN_WT = data['LN_WT'].values
-        weight = np.exp(LN_WT- LN_WT.max())
-        w = weight/ np.sum(weight)
+        ### commented out because i added this to the load posteriors function
+        # N_samp = 1000
+        # LN_WT = data['LN_WT'].values
+        # weight = np.exp(LN_WT- LN_WT.max())
+        # w = weight/ np.sum(weight)
 
-        data = data.sample(N_samp, replace=True, ignore_index=True, weights=w)
+        # data = data.sample(N_samp, replace=True, ignore_index=True, weights=w)
         #data = data[selected_columns]
         LN_WT = data['LN_WT'].values
         weight = np.exp(LN_WT- LN_WT.max())

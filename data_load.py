@@ -117,6 +117,7 @@ def read_data_from_fits(file_path):
         err = np.array(fits_file[3].data, dtype=float)
         cadno = np.array(fits_file[4].data, dtype=int)
         quarter = np.array(fits_file[5].data, dtype=int)
+
         df = pd.DataFrame(dict(
             TIME=time,
             FLUX=flux,
@@ -278,13 +279,9 @@ def folded_data(koi_id,planet_num, file_path):
     file_path_results = os.path.join(data_directory, star_id, file_results)
     data_post = load_posteriors(file_path_results,planet_num,koi_id)
     ### get max likelihood
-    # sortby ln like, pick row 
-    # get value after sampled
-    # plot
     data_post = data_post.sort_values(by='LN_LIKE', ascending=False) 
     row = data_post.iloc[0] # pick row with highest likelihood
     ### mult by 1.5 for correct offset
-    # DUR14 = 1.5 * data_post[f'DUR14_{planet_num}'][max_index]
     DUR14 = 1.5 * row[f'DUR14_{planet_num}']
 
     fold_data_time = []
@@ -299,7 +296,8 @@ def folded_data(koi_id,planet_num, file_path):
         index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
         
         for i in range(len(index)):
-            center_time = ttime[i]
+            # center_time = ttime[i]
+            center_time = model[i]
         
             start_time = float(center_time) - DUR14
             end_time= float(center_time) + DUR14
@@ -321,7 +319,7 @@ def folded_data(koi_id,planet_num, file_path):
     if os.path.isfile(file_path_sc):
         photometry_data_sc = read_data_from_fits(file_path_sc)
         for i in range(len(index)):
-            center_time = ttime[i]
+            center_time = model[i]
         
             start_time = float(center_time) - DUR14
             end_time= float(center_time) + DUR14
@@ -339,9 +337,6 @@ def folded_data(koi_id,planet_num, file_path):
         'FLUX': fold_data_flux,
         'ERR' : fold_data_err
     })
-    # do this conversion in plotting, not data structure 
-    # model all params in days, manipulate to hours in plotting 
-    #plot days first then hours 
 
     fold_data_sc = pd.DataFrame({
         'TIME' : fold_data_time_sc,
@@ -349,14 +344,16 @@ def folded_data(koi_id,planet_num, file_path):
         'ERR' : fold_data_err_sc
     })
 
-    bin_size = 0.02
-    combined_time = np.concatenate([fold_data_lc['TIME'], fold_data_sc['TIME']])
-    combined_flux = np.concatenate([fold_data_lc['FLUX'], fold_data_sc['FLUX']])
-    combined_flux_err = np.concatenate([fold_data_lc['ERR'], fold_data_sc['ERR']]) 
+    bin_size = DUR14/14 #0.02
+    ### set so 11 bin points in transit, make sure it transfers to the exp time
+    # DUR / 11
+    combined_df = pd.concat([fold_data_lc, fold_data_sc], ignore_index=True)
+    combined_df = combined_df.sort_values(by='TIME', ascending=True)
+    fold_time = np.array(combined_df.TIME)
+    fold_flux = np.array(combined_df.FLUX)
+    bin_centers_combined, weighted_avg_combined = bin_data(fold_time, fold_flux, bin_size)
 
-    bin_centers_combined, weighted_avg_combined = calculate_binned_weighted_average(combined_time, combined_flux, combined_flux_err, bin_size)
-
-    # Create DataFrame for combined binned weighted average data
+    # Create DataFrame for combined binned weighted average data 
     binned_weighted_avg_combined = pd.DataFrame({
         'TIME': bin_centers_combined,
         'FLUX': weighted_avg_combined
@@ -365,6 +362,7 @@ def folded_data(koi_id,planet_num, file_path):
     return fold_data_lc, fold_data_sc, binned_weighted_avg_combined, center_time
 
 # Binned weighted average function
+'''
 def calculate_binned_weighted_average(time, flux, flux_err, bin_size):
     bins = np.arange(time.min(), time.max(), bin_size)
     indices = np.digitize(time, bins, right=True)
@@ -381,8 +379,39 @@ def calculate_binned_weighted_average(time, flux, flux_err, bin_size):
             weighted_avg.append(np.nan)  # or use a different indicator for missing data?
         
     return bin_centers, weighted_avg
-### mess around with binning in separate file, try just lc and just sc 
-### center on midtransit point 
+'''
+
+
+### FIX FOR SC DATA, ACCOUNT FOR ERRORS
+def bin_data(time, data, binsize):
+    """
+    Parameters
+    ----------
+    time : ndarray
+        vector of time values
+    data : ndarray
+        corresponding vector of data values to be binned
+    binsize : float
+        bin size for output data, in same units as time
+        
+    Returns
+    -------
+    bin_centers : ndarray
+        center of each data (i.e. binned time)
+    binned_data : ndarray
+        data binned to selcted binsize
+    """
+    bin_centers = np.hstack([np.arange(time.mean(),time.min()-binsize/2,-binsize),
+                            np.arange(time.mean(),time.max()+binsize/2,binsize)])
+    
+    bin_centers = np.sort(np.unique(bin_centers))
+    binned_data = []
+    
+    for i, t0 in enumerate(bin_centers):
+        binned_data.append(np.mean(data[np.abs(time-t0) < binsize/2]))
+        
+    return bin_centers, np.array(binned_data)
+
 
     
 def OMC_data(koi_id,file_path):

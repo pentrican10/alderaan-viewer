@@ -12,20 +12,20 @@ import data_load
 
 
 cadence_type = 'l' # l is long cadence, s is short cadence
-koi_id = 'K00806'
+koi_id = 'K00001'
 planet_num = 1
-table = 'ecc-multis-LC'
+table = 'ecc-singles-LC'
 file_path_results = f"c:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}\\{koi_id}\\{koi_id}-results.fits"
 file_path = f"C:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}\\{koi_id}\\{koi_id}_{cadence_type}c_filtered.fits"
 
-csv_file_path = f"c:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}\\{table}.csv"
-data_per = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
-data_per = data_per.sort_values(by='periods') 
-koi_identifier = data_per.koi_identifiers.values
-period = data_per.periods.values
-print(koi_identifier)
-print(period)
-assert 1==0
+# csv_file_path = f"c:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}\\{table}.csv"
+# data_per = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
+# data_per = data_per.sort_values(by='periods') 
+# koi_identifier = data_per.koi_identifiers.values
+# period = data_per.periods.values
+# print(koi_identifier)
+# print(period)
+# assert 1==0
 
 for planet_num in range(0,4):
     # Open the FITS file
@@ -65,7 +65,7 @@ for planet_num in range(0,4):
 
     time_loc = df.loc[df['TIME'] == df.TIME.min(), 'QUARTER']
     #print(time_loc.values)
-    data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results\\ecc-multis-LC'
+    data_directory = f'c:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}'
 
 
     def load_posteriors(f,n,koi_id):
@@ -170,14 +170,14 @@ for planet_num in range(0,4):
             'ERR' : fold_data_err
         })
     
-        bin_size = 0.01
-        combined_time = np.concatenate([fold_data_lc['TIME']])
-        combined_flux = np.concatenate([fold_data_lc['FLUX']])
-        combined_flux_err = np.concatenate([fold_data_lc['ERR']]) 
+        bin_size = DUR14/14
+        combined_df = pd.concat([fold_data_lc], ignore_index=True)
+        combined_df = combined_df.sort_values(by='TIME', ascending=True)
+        fold_time = np.array(combined_df.TIME)
+        fold_flux = np.array(combined_df.FLUX)
+        bin_centers_combined, weighted_avg_combined = bin_data(fold_time, fold_flux, bin_size)
 
-        bin_centers_combined, weighted_avg_combined = calculate_binned_weighted_average(combined_time, combined_flux, combined_flux_err, bin_size)
-
-        # Create DataFrame for combined binned weighted average data
+        # Create DataFrame for combined binned weighted average data 
         binned_weighted_avg_combined = pd.DataFrame({
             'TIME': bin_centers_combined,
             'FLUX': weighted_avg_combined
@@ -186,22 +186,35 @@ for planet_num in range(0,4):
         return fold_data_lc, binned_weighted_avg_combined, center_time
 
 
-    def calculate_binned_weighted_average(time, flux, flux_err, bin_size):
-        bins = np.arange(time.min(), time.max(), bin_size)
-        indices = np.digitize(time, bins, right=True)
+    def bin_data(time, data, binsize):
+        """
+        Parameters
+        ----------
+        time : ndarray
+            vector of time values
+        data : ndarray
+            corresponding vector of data values to be binned
+        binsize : float
+            bin size for output data, in same units as time
+            
+        Returns
+        -------
+        bin_centers : ndarray
+            center of each data (i.e. binned time)
+        binned_data : ndarray
+            data binned to selcted binsize
+        """
+        bin_centers = np.hstack([np.arange(time.mean(),time.min()-binsize/2,-binsize),
+                                np.arange(time.mean(),time.max()+binsize/2,binsize)])
+        
+        bin_centers = np.sort(np.unique(bin_centers))
+        binned_data = []
+        
+        for i, t0 in enumerate(bin_centers):
+            binned_data.append(np.mean(data[np.abs(time-t0) < binsize/2]))
+            
+        return bin_centers, np.array(binned_data)
 
-        bin_centers = (bins[1:] + bins[:-1]) / 2
-            
-        weighted_avg = []
-        for i in range(1, len(bins)):
-            bin_indices = indices == i
-            if any(bin_indices):
-                weights = 1.0 / flux_err[bin_indices]#**2
-                weighted_avg.append(np.average(flux[bin_indices], weights=weights))
-            else:
-                weighted_avg.append(np.nan)  # or use a different indicator for missing data?
-            
-        return bin_centers, weighted_avg
 
 
     fold_data, binned_weighted_avg, center_time = folded_data(koi_id, planet_num)

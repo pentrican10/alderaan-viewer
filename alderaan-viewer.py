@@ -1048,13 +1048,8 @@ def generate_plot_folded_light_curve(koi_id):
         planet_num = 0+i
         period=periods[i]
         fold_data_lc, fold_data_sc, binned_avg,center_time = data_load.folded_data(koi_id,planet_num,file_path)
-        N_samp = 1000
-        if len(fold_data_lc) > N_samp:
-            fold_data_lc = fold_data_lc.sample(N_samp)
-        if len(fold_data_sc) > N_samp:
-            fold_data_sc = fold_data_sc.sample(N_samp)
+
         ### posteriors for most likely model
-        
         data_post = data_load.load_posteriors(file_path_results,planet_num,koi_id)
         ### get max likelihood
         data_post = data_post.sort_values(by='LN_LIKE', ascending=False) 
@@ -1070,28 +1065,80 @@ def generate_plot_folded_light_curve(koi_id):
         LD_U2 = row[f'LD_U2']
         theta.u = [LD_U1, LD_U2]
         theta.limb_dark = 'quadratic'
+        DUR14 = row[f'DUR14_{planet_num}']
 
-        other_models = []
-        num_models = 20
+        # other_models = []
+        # num_models = 20
 
-        # Select 20 random samples from the posterior distribution
-        random_indices = random.sample(range(len(data_post)), num_models)
-        random_samples = data_post.iloc[random_indices]
+        # # Select 20 random samples from the posterior distribution
+        # random_indices = random.sample(range(len(data_post)), num_models)
+        # random_samples = data_post.iloc[random_indices]
         
         pink_transparent = "rgba(255, 105, 180, 0.5)"  # Pink color with 50% transparency
 
         all_residuals = []
         all_data = []
         if os.path.exists(file_path_lc) and os.path.exists(file_path_sc):
+            scit = 1.15e-5
+            t = np.arange(fold_data_lc.TIME.min(), fold_data_lc.TIME.max(),scit)
+            m = batman.TransitModel(theta, t)    #initializes model
+            flux = (m.light_curve(theta))        #calculates light curve
+
+            t_lc = np.array(fold_data_lc.TIME)
+            f_lc = np.array(fold_data_lc.FLUX)
+            m_lc = batman.TransitModel(theta, t_lc, supersample_factor = 7, exp_time = 0.02)    #initializes model for lc times
+            flux_m_lc = (m_lc.light_curve(theta))
+            t_sc = np.array(fold_data_sc.TIME)
+            f_sc = np.array(fold_data_sc.FLUX)
+            m_sc = batman.TransitModel(theta, t_sc, supersample_factor = 1, exp_time = 0.0007)    #initializes model for sc times
+            flux_m_sc = (m_sc.light_curve(theta))
+
+            # Sort t_lc and flux_m_lc based on t_lc
+            # combined_fold_data = pd.concat([fold_data_lc, fold_data_sc], ignore_index=True)
+            # combined_fold_data = combined_fold_data.sort_values(by='TIME', ascending=True)
+            sorted_indices = np.argsort(t_lc)
+            t_lc_sorted = t_lc[sorted_indices]
+            f_lc_sorted = f_lc[sorted_indices]
+            flux_m_lc_sorted = flux_m_lc[sorted_indices]
+            sorted_indices_sc = np.argsort(t_sc)
+            t_sc_sorted = t_sc[sorted_indices_sc]
+            f_sc_sorted = f_sc[sorted_indices_sc]
+            flux_m_sc_sorted = flux_m_sc[sorted_indices_sc]
+
+            ### Compute residuals
+            residuals_lc = fold_data_lc.FLUX - flux_m_lc
+            residuals_sc = fold_data_sc.FLUX - flux_m_sc
+            combined_residuals = pd.concat([residuals_lc, residuals_sc], ignore_index=True)
+            combined_residuals = combined_residuals.sort_values(by='TIME', ascending=True)
+            fold_time = np.array(combined_residuals.TIME)
+            fold_flux = np.array(combined_residuals.FLUX)
+            residuals_bin = data_load.bin_data(fold_time,fold_flux, DUR14/14)
+            #residuals_bin = binned_avg.FLUX - flux_m_bin
+
+            # Collect all residuals
+            all_residuals.extend(residuals_lc)
+            all_residuals.extend(residuals_sc)
+            all_residuals.extend(residuals_bin)
+            ### collect all data
+            all_data.extend(fold_data_lc.FLUX)
+            all_data.extend(fold_data_sc.FLUX)
+            all_data.extend(binned_avg.FLUX)
+
+            N_samp = 1000
+            inds = np.arange(len(t_lc_sorted), dtype='int')
+            inds = np.random.choice(inds, size=np.min([N_samp,len(inds)]), replace=False)
+            inds_sc = np.arange(len(t_sc_sorted), dtype='int')
+            inds_sc = np.random.choice(inds_sc, size=np.min([N_samp,len(inds_sc)]), replace=False)
+
             if i==0:
                 ### short cadence
-                fold_sc = go.Scatter(x=fold_data_sc.TIME*24, y=fold_data_sc.FLUX, mode='markers')
+                fold_sc = go.Scatter(x=t_sc_sorted[inds_sc]*24, y=f_sc_sorted[inds_sc], mode='markers')
                 fold_sc.marker.update(symbol="circle", size=4, color="gray")
                 fold_sc.name = "Short Cadence"
                 fold_sc.legendgroup=f'{i}'
                 fig.add_trace(fold_sc, row=r_plot, col=1)
                 ### long cadence
-                fold_lc = go.Scatter(x=fold_data_lc.TIME*24, y=fold_data_lc.FLUX, mode='markers')
+                fold_lc = go.Scatter(x=t_lc_sorted[inds]*24, y=f_lc_sorted[inds], mode='markers')
                 fold_lc.marker.update(symbol="circle", size=5, color="blue")
                 fold_lc.name = "Long Cadence"
                 fold_lc.legendgroup=f'{i}'
@@ -1104,22 +1151,22 @@ def generate_plot_folded_light_curve(koi_id):
                 fig.add_trace(bin_avg, row=r_plot, col=1) 
 
                 ### model
-                scit = 1.15e-5
-                t = np.arange(fold_data_lc.TIME.min(), fold_data_lc.TIME.max(),scit)
-                m = batman.TransitModel(theta, t)    #initializes model
-                flux = (m.light_curve(theta))        #calculates light curve
                 mod = go.Scatter(x=t*24, y=flux, mode="lines", line=dict(color='red'))
                 mod.name = "Model"
                 mod.legendgroup=f'{i}'
                 fig.add_trace(mod, row=r_plot, col=1)
+                ### LC model
+                mod_lc = go.Scatter(x=t_lc_sorted*24, y=flux_m_lc_sorted, mode="lines", line=dict(color='green'))
+                mod_lc.name = "LC Model"
+                fig.add_trace(mod_lc, row=r_plot, col=1)
             else:
                 ### short cadence
-                fold_sc = go.Scatter(x=fold_data_sc.TIME*24, y=fold_data_sc.FLUX, mode='markers', shlowlegend=False)
+                fold_sc = go.Scatter(x=t_sc_sorted[inds_sc]*24, y=f_sc_sorted[inds_sc], mode='markers', shlowlegend=False)
                 fold_sc.marker.update(symbol="circle", size=4, color="gray")
                 fold_sc.name = "Short Cadence"
                 fig.add_trace(fold_sc, row=r_plot, col=1)
                 ### long cadence
-                fold_lc = go.Scatter(x=fold_data_lc.TIME*24, y=fold_data_lc.FLUX, mode='markers', shlowlegend=False)
+                fold_lc = go.Scatter(x=t_lc_sorted[inds]*24, y=f_lc_sorted[inds], mode='markers', shlowlegend=False)
                 fold_lc.marker.update(symbol="circle", size=5, color="blue")
                 fold_lc.name = "Long Cadence"
                 fig.add_trace(fold_lc, row=r_plot, col=1)
@@ -1130,65 +1177,40 @@ def generate_plot_folded_light_curve(koi_id):
                 fig.add_trace(bin_avg, row=r_plot, col=1) 
 
                 ### model
-                scit = 1.15e-5
-                t = np.arange(fold_data_lc.TIME.min(), fold_data_lc.TIME.max(),scit)
-                m = batman.TransitModel(theta, t)    #initializes model
-                flux = (m.light_curve(theta))        #calculates light curve
                 mod = go.Scatter(x=t*24, y=flux, mode="lines", line=dict(color='red'), shlowlegend=False)
-                mod.name = "Model"
+                mod.name = "Inst Model"
                 fig.add_trace(mod, row=r_plot, col=1)
+                ### LC model
+                mod_lc = go.Scatter(x=t_lc_sorted*24, y=flux_m_lc_sorted, mode="lines", line=dict(color='green'), shlowlegend=False)
+                mod_lc.name = "LC Model"
+                fig.add_trace(mod_lc, row=r_plot, col=1)
 
-            for j, row_ in random_samples.iterrows():
-                #row_ = data_post.iloc[j] # pick row with highest likelihood
-                ### get random params {P, t0, Rp/Rs, b, T14, q1, q2}
-                theta_ = batman.TransitParams()
-                theta_.per = row_[f'P']
-                theta_.t0 = 0.
-                theta_.rp = row_[f'ROR_{planet_num}']
-                theta_.b = row_[f'IMPACT_{planet_num}']
-                theta_.T14 = row_[f'DUR14_{planet_num}']
-                LD_U1 = row_[f'LD_U1']
-                LD_U2 = row_[f'LD_U2']
-                theta_.u = [LD_U1, LD_U2]
-                theta_.limb_dark = 'quadratic'
+            # for j, row_ in random_samples.iterrows():
+            #     #row_ = data_post.iloc[j] # pick row with highest likelihood
+            #     ### get random params {P, t0, Rp/Rs, b, T14, q1, q2}
+            #     theta_ = batman.TransitParams()
+            #     theta_.per = row_[f'P']
+            #     theta_.t0 = 0.
+            #     theta_.rp = row_[f'ROR_{planet_num}']
+            #     theta_.b = row_[f'IMPACT_{planet_num}']
+            #     theta_.T14 = row_[f'DUR14_{planet_num}']
+            #     LD_U1 = row_[f'LD_U1']
+            #     LD_U2 = row_[f'LD_U2']
+            #     theta_.u = [LD_U1, LD_U2]
+            #     theta_.limb_dark = 'quadratic'
                 
-                m_ = batman.TransitModel(theta_, t)    #initializes model
-                flux_ = (m_.light_curve(theta_))        #calculates light curve
-                mod_ = go.Scatter(x=t*24, y=flux_, mode="lines", showlegend=False, line=dict(color=pink_transparent))
-                mod_.name = f'Model {j}'
+            #     m_ = batman.TransitModel(theta_, t)    #initializes model
+            #     flux_ = (m_.light_curve(theta_))        #calculates light curve
+            #     mod_ = go.Scatter(x=t*24, y=flux_, mode="lines", showlegend=False, line=dict(color=pink_transparent))
+            #     mod_.name = f'Model {j}'
                 
-                fig.add_trace(mod_, row=i+1, col=1)
+            #     fig.add_trace(mod_, row=i+1, col=1)
 
-            # Interpolate model flux to match observed times
-            interp_model_flux_lc = interp1d(t, flux, kind='linear', fill_value='extrapolate')
-            model_flux_lc = interp_model_flux_lc(fold_data_lc.TIME)
-            interp_model_flux_sc = interp1d(t, flux, kind='linear', fill_value='extrapolate')
-            model_flux_sc = interp_model_flux_sc(fold_data_sc.TIME)
-            interp_model_flux_bin = interp1d(t, flux, kind='linear', fill_value='extrapolate')
-            model_flux_bin = interp_model_flux_bin(binned_avg.TIME)
-           
-            # feed the t into batman directly to get the model values at that point, use that to calculate residuals,
-            # set oversample/supersample: sc=1, lc=7
-
-            ### Compute residuals
-            residuals_lc = fold_data_lc.FLUX - model_flux_lc
-            residuals_sc = fold_data_sc.FLUX - model_flux_sc
-            residuals_bin = binned_avg.FLUX - model_flux_bin
-
-            # Collect all residuals
-            all_residuals.extend(residuals_lc)
-            all_residuals.extend(residuals_sc)
-            all_residuals.extend(residuals_bin)
-            ### collect all data
-            all_data.extend(fold_data_lc.FLUX)
-            all_data.extend(fold_data_sc.FLUX)
-            all_data.extend(binned_avg.FLUX)
-
-            residuals_plot_lc = go.Scatter(x=fold_data_lc.TIME*24, y=residuals_lc, mode='markers', showlegend=False)
+            residuals_plot_lc = go.Scatter(x=t_lc_sorted[inds]*24, y=residuals_lc[inds], mode='markers', showlegend=False)
             residuals_plot_lc.marker.update(symbol="circle", size=5, color="blue")
             fig.add_trace(residuals_plot_lc, row=r_residuals, col=1)
 
-            residuals_plot_sc = go.Scatter(x=fold_data_sc.TIME*24, y=residuals_sc, mode='markers', showlegend=False)
+            residuals_plot_sc = go.Scatter(x=t_sc_sorted[inds_sc]*24, y=residuals_sc[inds_sc], mode='markers', showlegend=False)
             residuals_plot_sc.marker.update(symbol="circle", size=4, color="gray")
             fig.add_trace(residuals_plot_sc, row=r_residuals, col=1)
 
@@ -1200,9 +1222,6 @@ def generate_plot_folded_light_curve(koi_id):
             t = t*24
             fig.add_shape(type="line", x0=(t.min()), x1=(-1*t.min()), y0=0, y1=0,
                           line=dict(color="Red"), row=r_residuals, col=1)
-
-            ### Update x-axis and y-axis labels for each subplot
-            # fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
 
             ### set plotting range for folded lc
             data_min = np.percentile(all_data, 5)
@@ -1223,82 +1242,84 @@ def generate_plot_folded_light_curve(koi_id):
             
         
         elif os.path.exists(file_path_lc) and not os.path.exists(file_path_sc):
+
+            t_lc = np.array(fold_data_lc.TIME)
+            f_lc = np.array(fold_data_lc.FLUX)
+            m_lc = batman.TransitModel(theta, t_lc, supersample_factor = 7, exp_time = 0.02)    #initializes model for lc times
+            flux_m_lc = (m_lc.light_curve(theta))
+
+            # Sort t_lc and flux_m_lc based on t_lc
+            sorted_indices = np.argsort(t_lc)
+            t_lc_sorted = t_lc[sorted_indices]
+            flux_m_lc_sorted = flux_m_lc[sorted_indices]
+            
+            ### Compute residuals
+            residuals_lc = fold_data_lc.FLUX - flux_m_lc
+            residuals_lc = np.array(residuals_lc)
+            fold_time = np.array(fold_data_lc.TIME)
+            fold_residuals = np.array(residuals_lc)
+            bin_centers, residuals_bin = data_load.bin_data(fold_time,fold_residuals, DUR14/7)
+
+            # Collect all residuals
+            all_residuals.extend(residuals_lc) 
+            all_residuals.extend(residuals_bin)
+
+            N_samp = 1000
+            inds = np.arange(len(t_lc_sorted), dtype='int')
+            inds = np.random.choice(inds, size=np.min([N_samp,len(inds)]), replace=False)
+
+            
             if i ==0:
-                fold_lc = go.Scatter(x=fold_data_lc.TIME, y=fold_data_lc.FLUX, mode='markers')
+                ### long cadence
+                fold_lc = go.Scatter(x=t_lc[inds]*24, y=f_lc[inds], mode='markers')
                 fold_lc.marker.update(symbol="circle", size=5, color="blue")
                 fold_lc.name = "Long Cadence"
                 fold_lc.legendgroup=f'{i}'
                 fig.add_trace(fold_lc, row=r_plot, col=1)
                 ### binned avg
-                bin_avg = go.Scatter(x=binned_avg.TIME, y=binned_avg.FLUX, mode='markers')
+                bin_avg = go.Scatter(x=binned_avg.TIME*24, y=binned_avg.FLUX, mode='markers')
                 bin_avg.marker.update(symbol="square", size=10, color="orange")
                 bin_avg.name = "Binned Average"
                 bin_avg.legendgroup=f'{i}'
                 fig.add_trace(bin_avg, row=r_plot, col=1)
                 ### model
-                scit = 1.15e-5
-                t = np.arange(fold_data_lc.TIME.min(), fold_data_lc.TIME.max(),scit)
-                m = batman.TransitModel(theta, t)    #initializes model
-                flux = m.light_curve(theta)          #calculates light curve
-                mod = go.Scatter(x=t, y=flux, mode="lines")
-                mod.line.update(color="red")
-                mod.name = "Model"
-                mod.legendgroup=f'{i}'
-                fig.add_trace(mod, row=r_plot, col=1)
+                mod_lc = go.Scatter(x=t_lc_sorted*24, y=flux_m_lc_sorted, mode="lines", line=dict(color='red')) 
+                mod_lc.name = "LC Model"
+                fig.add_trace(mod_lc, row=r_plot, col=1)
             else:
-                fold_lc = go.Scatter(x=fold_data_lc.TIME, y=fold_data_lc.FLUX, mode='markers',showlegend=False)
+                ### long cadence
+                fold_lc = go.Scatter(x=t_lc[inds]*24, y=f_lc[inds], mode='markers',showlegend=False)
                 fold_lc.marker.update(symbol="circle", size=5, color="blue")
                 fold_lc.name = "Long Cadence"
                 fig.add_trace(fold_lc, row=r_plot, col=1)
                 ### binned avg
-                bin_avg = go.Scatter(x=binned_avg.TIME, y=binned_avg.FLUX, mode='markers',showlegend=False)
+                bin_avg = go.Scatter(x=binned_avg.TIME*24, y=binned_avg.FLUX, mode='markers',showlegend=False)
                 bin_avg.marker.update(symbol="square", size=10, color="orange")
                 bin_avg.name = "Binned Average"
                 fig.add_trace(bin_avg, row=r_plot, col=1)
                 ### model
-                scit = 1.15e-5
-                t = np.arange(fold_data_lc.TIME.min(), fold_data_lc.TIME.max(),scit)
-                m = batman.TransitModel(theta, t)    #initializes model
-                flux = m.light_curve(theta)          #calculates light curve
-                mod = go.Scatter(x=t, y=flux, mode="lines", showlegend=False)
-                mod.line.update(color="red")
-                mod.name = "Model"
-                fig.add_trace(mod, row=r_plot, col=1) 
+                mod_lc = go.Scatter(x=t_lc_sorted*24, y=flux_m_lc_sorted, mode="lines", line=dict(color='red'), showlegend=False)
+                mod_lc.name = "LC Model" 
+                fig.add_trace(mod_lc, row=r_plot, col=1)
 
-            # Interpolate model flux to match observed times
-            interp_model_flux_lc = interp1d(t, flux, kind='linear', fill_value='extrapolate')
-            model_flux_lc = interp_model_flux_lc(fold_data_lc.TIME)
-            interp_model_flux_bin = interp1d(t, flux, kind='linear', fill_value='extrapolate')
-            model_flux_bin = interp_model_flux_bin(binned_avg.TIME)
-
-            ### Compute residuals
-            residuals_lc = fold_data_lc.FLUX - model_flux_lc
-            residuals_bin = binned_avg.FLUX - model_flux_bin
-
-            # Collect all residuals
-            all_residuals.extend(residuals_lc)
-            all_residuals.extend(residuals_bin)
-
-            residuals_plot_lc = go.Scatter(x=fold_data_lc.TIME, y=residuals_lc, mode='markers', showlegend=False)
+            ### plot residuals
+            residuals_plot_lc = go.Scatter(x=t_lc[inds]*24, y=residuals_lc[inds], mode='markers', showlegend=False)
             residuals_plot_lc.marker.update(symbol="circle", size=5, color="blue")
             fig.add_trace(residuals_plot_lc, row=r_residuals, col=1)
 
-            residuals_plot_bin = go.Scatter(x=binned_avg.TIME, y=residuals_bin, mode='markers', showlegend=False)
+            residuals_plot_bin = go.Scatter(x=bin_centers*24, y=residuals_bin, mode='markers', showlegend=False)
             residuals_plot_bin.marker.update(symbol="square", size=10, color="orange")
             fig.add_trace(residuals_plot_bin, row=r_residuals, col=1)
 
             # Add horizontal line at 0 in residual plot
-            fig.add_shape(type="line", x0=fold_data_lc.TIME.min(), x1=fold_data_lc.TIME.max(), y0=0, y1=0,
+            fig.add_shape(type="line", x0=fold_data_lc.TIME.min()*24, x1=fold_data_lc.TIME.max()*24, y0=0, y1=0,
                           line=dict(color="Red"), row= r_residuals, col=1)
 
-            ### Update x-axis and y-axis labels for each subplot
-            # fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
-            
-            residuals_min = np.percentile(all_residuals, 20)
-            residuals_max = np.percentile(all_residuals, 80)
-            max_abs_residual = max(abs(residuals_min), abs(residuals_max))
+            ### plot range
+            residuals_min = np.percentile(all_residuals, 99) 
+            #residuals_max = np.percentile(all_residuals, 99)
+            max_abs_residual =(abs(residuals_min))  
             fig.update_yaxes(range=[-max_abs_residual,max_abs_residual], row=r_residuals, col=1)
-
 
             ### Update x-axis and y-axis labels for each subplot
             fig.update_yaxes(title_text="FLUX", row=r_plot, col=1)
@@ -1352,15 +1373,19 @@ def generate_plot_folded_light_curve(koi_id):
                 mod.legendgroup=f'{i}'
                 fig.add_trace(mod, row=r_plot, col=1)
 
-            # Interpolate model flux to match observed times
-            interp_model_flux_sc = interp1d(t, flux, kind='linear', fill_value='extrapolate')
-            model_flux_sc = interp_model_flux_sc(fold_data_sc.TIME)
-            interp_model_flux_bin = interp1d(t, flux, kind='linear', fill_value='extrapolate')
-            model_flux_bin = interp_model_flux_bin(binned_avg.TIME)
+            t_sc = np.array(fold_data_sc.TIME)
+            m_sc = batman.TransitModel(theta, t_sc, supersample_factor = 1, exp_time = 0.0007)    #initializes model for sc times
+            flux_m_sc = (m_sc.light_curve(theta))
+            t_bin = np.array(binned_avg.TIME)
+            m_bin = batman.TransitModel(theta, t_bin, supersample_factor = 7, exp_time = DUR14/14)    #initializes model for bin times
+            flux_m_bin = (m_bin.light_curve(theta))
 
             ### Compute residuals
-            residuals_sc = fold_data_sc.FLUX - model_flux_sc
-            residuals_bin = binned_avg.FLUX - model_flux_bin
+            residuals_sc = fold_data_sc.FLUX - flux_m_sc
+            fold_time = np.array(fold_data_sc.TIME)
+            fold_flux = np.array(residuals_sc)
+            residuals_bin = data_load.bin_data(fold_time,fold_flux, DUR14/14)
+            #residuals_bin = binned_avg.FLUX - flux_m_bin
 
             # Collect all residuals
             all_residuals.extend(residuals_sc)
@@ -1510,6 +1535,14 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
     file =star_id + '-results.fits'
     file_path = os.path.join(data_directory, star_id, file)
 
+    ext = os.path.basename(data_directory) +'.csv'
+    csv_file_path = os.path.join(data_directory, ext)
+
+    data_per = data_load.get_periods_for_koi_id(csv_file_path, koi_id)
+    data_per = data_per.sort_values(by='periods') 
+    koi_identifiers = data_per.koi_identifiers.values
+    periods = data_per.period_title.values
+
     if os.path.isfile(file_path):
         data = data_load.load_posteriors(file_path,planet_num,koi_id)
         
@@ -1559,25 +1592,7 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                         showlegend=False
                         ), row=j + 1, col=i + 1)
                     
-                    # Determine threshold densities corresponding to the percentiles
-                    # percentiles = [10, 25, 50, 75, 90]  # Reversed order
-
-                    # # Define contour levels
-                    # contour_levels = [10, 68, 98, 99]  # Adjust as needed
-                    # fig.add_trace(go.Histogram2dContour(
-                    #     x=x[mask],
-                    #     y=y[mask],
-                    #     colorscale='Blues',
-                    #     reversescale=False,
-                    #     xaxis='x',
-                    #     yaxis='y',
-                    #     contours=dict(
-                    #         start=min(contour_levels),
-                    #         end=max(contour_levels),
-                    #         size=(max(contour_levels) - min(contour_levels)) / len(contour_levels),
-                    #     ),
-                    #     showscale=False,
-                    # ), row=j + 1, col=i + 1)
+                    
                     
                 else:
                     kde = gaussian_kde(x, weights=data['WEIGHTS']) 
@@ -1681,6 +1696,7 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
         
         
         fig.update_layout(height=800, width=900)
+        #fig.update_layout(title = periods[planet_num])
         graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
         return jsonify(graphJSON)
     else:

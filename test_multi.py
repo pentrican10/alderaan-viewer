@@ -12,9 +12,9 @@ import data_load
 
 
 cadence_type = 'l' # l is long cadence, s is short cadence
-koi_id = 'K00001'
+koi_id = 'K00481'
 planet_num = 1
-table = 'ecc-singles-LC'
+table = 'ecc-multis-LC'
 file_path_results = f"c:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}\\{koi_id}\\{koi_id}-results.fits"
 file_path = f"C:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}\\{koi_id}\\{koi_id}_{cadence_type}c_filtered.fits"
 
@@ -30,14 +30,25 @@ file_path = f"C:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}\\{koi_
 for planet_num in range(0,4):
     # Open the FITS file
     with fits.open(file_path_results) as hdul:
-        hdu2 = hdul[2]
+        hdu2 = hdul[2 + planet_num]
         data = hdu2.data
         index = data['INDEX']
         ttime = data['TTIME']
         model = data['MODEL']
         out_prob = data['OUT_PROB']
         out_flag = data['OUT_FLAG']
-        
+    df = pd.DataFrame(dict(
+            index=index,
+            ttime=ttime,
+            model = model,
+            out_prob = out_prob,
+            out_flag = out_flag
+        ))
+    
+
+    
+    print(df.ttime)
+    assert 1==0 
 
     with fits.open(file_path) as fits_file:
             time = np.array(fits_file[1].data, dtype=float)

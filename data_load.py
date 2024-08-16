@@ -270,7 +270,7 @@ def single_data(koi_id, line_number, num, ttv_file):
         return lc_data,sc_data, transit_number, center_time
 
 
-def folded_data(koi_id,planet_num, file_path):
+def folded_data(koi_id,planet_num, file_path,overlap):
     global K_id
     if K_id == False:
         star_id = koi_id.replace("K","S")
@@ -300,7 +300,24 @@ def folded_data(koi_id,planet_num, file_path):
     #get data and create detrended light curve
     if os.path.isfile(file_path_lc):
         photometry_data_lc = load_photometry_data(file_path_lc)
-        index, ttime, model, out_prob, out_flag = load_ttv_data(koi_id, file_path)
+        # index, ttime, model, out_prob, out_flag = load_ttv_data(koi_id, file_path)
+        # index = index[~overlap]
+        # model = model[~overlap]                        # revisit and ensure using same ttime and model
+        results_data = load_results_model(file_path_results,planet_num)
+        
+        ### revieved error about endian: ValueError: Big-endian buffer not supported on little-endian compiler
+        ### Convert overlap to the correct endianness before applying the mask
+        overlap = overlap.astype(np.bool_).astype(overlap.dtype.newbyteorder('='))
+        ### Convert results_data to native byte order 
+        for col in results_data.columns:
+            if results_data[col].dtype.byteorder == '>':
+                results_data[col] = results_data[col].values.astype(results_data[col].dtype.newbyteorder('='))
+
+        
+        ### mask out overlapping transits
+        results_data = results_data[~overlap]
+        model = np.array(results_data.model)
+        index = np.array(results_data.index) 
         
         for i in range(len(index)):
             # center_time = ttime[i]
@@ -490,9 +507,9 @@ def load_posteriors(f,n,koi_id):
 
         return df
     
-def load_results_model(file_path_results):
+def load_results_model(file_path_results,planet_num):
     with fits.open(file_path_results) as hdul:
-        hdu2 = hdul[2]
+        hdu2 = hdul[2 + planet_num]
         data = hdu2.data
         index = data['INDEX']
         ttime = data['TTIME']

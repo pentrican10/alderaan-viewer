@@ -1019,19 +1019,37 @@ def generate_plot_folded_light_curve(koi_id):
 
     ### number of planets from number of ttv files
     npl = len(file_paths)
+    overlap = []
+    for i in range(npl):
+        df_i = data_load.load_results_model(file_path_results,i)
+        df_post_i = data_load.load_posteriors(file_path_results, i, star_id)
+        df_post_i = df_post_i.sort_values(by="LN_LIKE", ascending = False)
+        row_i = df_post_i.iloc[0]
+        dur_i = row_i[f'DUR14_{i}']
+        overlap_mask = np.zeros(len(df_i.ttime), dtype='bool')
+        #overlap.append(np.zeros(len(df_i.ttime), dtype='bool'))
+        for j in range(npl):
+            if i != j:
+                df_j = data_load.load_results_model(file_path_results,j)
+                df_post_j = data_load.load_posteriors(file_path_results, j, star_id)
+                df_post_j = df_post_j.sort_values(by="LN_LIKE", ascending = False)
+                row_j = df_post_j.iloc[0]
+                dur_j = row_j[f'DUR14_{j}']
+                for ttj in df_j.ttime:
+                    overlap_mask += np.abs(df_i.ttime - ttj)/ (dur_i + dur_j) < 1.5
+        overlap.append(overlap_mask)
+
     subplot_height=400
     data_id = data_load.get_koi_identifiers(csv_file_path, koi_id)
     data_id = data_id.sort_values(by='periods') 
     koi_identifiers = data_id.koi_identifiers.values
     periods = data_id.period_title.values
     subplot_titles = []
-    spacing = [0.2,0.15,0.1,0.07,0.05]
+    spacing = [0.2,0.15,0.1,0.07,0.05,0.04,0.03]
     for k in range(len(koi_identifiers)):
         subplot_titles.append(f'{koi_identifiers[k]}, {periods[k]}') 
         subplot_titles.append('')
         
-    rows=npl*2
-    
     
     fig = make_subplots(rows=npl*2, cols=1,
                         subplot_titles = subplot_titles,
@@ -1043,10 +1061,12 @@ def generate_plot_folded_light_curve(koi_id):
     r_residuals = r_plot+1
     
     for i, file_path in enumerate(file_paths):
-        planet_num = 0+i
+        planet_num = i
         period=periods[i]
-        fold_data_lc, fold_data_sc, binned_avg,center_time = data_load.folded_data(koi_id,planet_num,file_path)
-
+        current_overlap = overlap[i]
+        current_overlap = current_overlap.astype(np.bool_).astype(current_overlap.dtype.newbyteorder('='))
+        fold_data_lc, fold_data_sc, binned_avg,center_time = data_load.folded_data(koi_id,planet_num,file_path,current_overlap)
+        #fold_data_lc = fold_data_lc[~current_overlap]
         ### posteriors for most likely model
         data_post = data_load.load_posteriors(file_path_results,planet_num,koi_id)
         
@@ -1473,7 +1493,7 @@ def generate_plot_OMC(koi_id):
     koi_identifiers = data_id.koi_identifiers.values
     periods = data_id.period_title.values
     subplot_titles = []
-    spacing = [0.2,0.15,0.1,0.07,0.05]
+    spacing = [0.2,0.15,0.1,0.07,0.05,0.04,0.03]
     for k in range(len(koi_identifiers)):
         subplot_titles.append(f'{koi_identifiers[k]}, {periods[k]}') 
     fig = make_subplots(rows=npl, cols=1,
@@ -1527,7 +1547,7 @@ def generate_plot_OMC(koi_id):
             error_message = f'No data found for {koi_id}'
             return jsonify(error_message=error_message)
     
-    colorbar_spacing = [1,0.5,0.33,0.25,0.2]
+    colorbar_spacing = [1,0.5,0.33,0.25,0.2,0.15,0.1]
     fig.update_layout(
             coloraxis=dict(
                 colorbar=dict(

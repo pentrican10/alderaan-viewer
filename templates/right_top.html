@@ -140,6 +140,7 @@
                 <option value="physical7">Physical 7: P,T0,ROR,IMPACT,DUR14,U1,U2</option>
                 <option value="physical5">Physical 5: P,T0,ROR,IMPACT,DUR14</option>
                 <option value="physical3">Physical 3: ROR,IMPACT,DUR14</option>
+                <option value="ld">Limb Darkening</option>
             </select>
         </div>
 
@@ -488,6 +489,11 @@
                 document.getElementById(`ROR_${planetNumCorner}`).checked = true;
                 document.getElementById(`IMPACT_${planetNumCorner}`).checked = true;
                 document.getElementById(`DUR14_${planetNumCorner}`).checked = true;
+            } else if (selectedOption === "ld") {
+                document.getElementById("LD_U1").checked = true;
+                document.getElementById("LD_U2").checked = true;
+                document.getElementById("LD_Q1").checked = true;
+                document.getElementById("LD_Q2").checked = true;
             }
 
             // Call columns() function if needed

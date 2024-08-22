@@ -15,7 +15,11 @@ import numpy.polynomial.polynomial as poly
 import glob
 import batman
 
+LCIT = 29.4243885           # Kepler long cadence integration time + readout time [min] 
+SCIT = 58.848777            # Kepler short cadence integration time + readout time [sec]
 
+lcit = LCIT/60/24           # Kepler long cadence integration time + readout time [days]
+scit = SCIT/3600/24         # Kepler short cadence integration time + readout time [days]
 #data_directory = 'c:\\Users\\Paige\\Projects\\data\\'
 data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
 k_id = True
@@ -85,18 +89,39 @@ def read_table_data(table):
     return unique_data
 
 def get_planet_properties_table(koi_id,table):
-    file_path = os.path.join(data_directory, table)
+    global K_id
+    if K_id==False:
+        star_id = koi_id.replace("K","S")
+    else:
+        star_id = koi_id
+    file_path_csv = os.path.join(data_directory, table)
+    file_results =star_id + '-results.fits'
+    file_path_results = os.path.join(data_directory, star_id, file_results)
+    data_id = get_koi_identifiers(file_path_csv,koi_id)
+    data_id = data_id.sort_values(by='periods') 
+    koi_identifier = data_id.koi_identifiers.values
     planet_data = []
-    with open(file_path, 'r') as csvfile:
+    with open(file_path_csv, 'r') as csvfile:
         reader = csv.DictReader(csvfile)
-        
+        n=0
         for row in reader:
+            
             if row['koi_id'] == koi_id:
-                row['planet_name'] = row['planet_name']
-                row['period'] = float(row['period'])
-                row['impact'] = row['impact']
-                row['ror'] = row['ror']
-                row['duration'] = (float(row['duration']) / 24) #in days
+                # row['planet_name'] = row['planet_name']
+                row['planet_name'] = koi_identifier[n]
+
+                npl = row['npl']
+                data_post = load_posteriors(file_path_results,n,koi_id)
+                row['period'] = (data_post['P'].median())
+                row['lcit_ratio'] = row['period'] / lcit 
+                row['impact'] = round(data_post[f'IMPACT_{n}'].median(),5)
+                row['ror'] = round(data_post[f'ROR_{n}'].median(),5)
+                row['duration'] = round(data_post[f'DUR14_{n}'].median(),5) 
+                n+=1
+                # row['period'] = float(row['period'])
+                # row['impact'] = row['impact'] 
+                # row['ror'] = row['ror']
+                # row['duration'] = round((float(row['duration']) / 24),5) # in days
                 planet_data.append(row) 
     planet_data.sort(key=lambda x: x['period']) 
     return planet_data

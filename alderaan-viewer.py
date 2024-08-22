@@ -67,6 +67,7 @@ def display_table_data():
     Renders Index Template
     """
     global K_id
+    global table
     table = request.args.get('table', '2023-05-19_singles.csv')
     update_data_directory(table)
     ### set switch to use K versus S(simulation data) based on table selected
@@ -85,6 +86,12 @@ def update_data_directory(selected_table):
     global table
     data_directory = os.path.join('c:\\Users\\Paige\\Projects\\data\\alderaan_results', selected_table[:-4])
     table = selected_table
+
+@app.route('/planet_properties/<koi_id>', methods=['GET'])
+def get_planet_properties(koi_id):
+    global table
+    planet_data = data_load.get_planet_properties_table(koi_id,table)
+    return jsonify(planet_data)
 
 @app.route('/review_status/<koi_id>', methods=['POST'])
 def review_status(koi_id):
@@ -1065,11 +1072,10 @@ def generate_plot_folded_light_curve(koi_id):
         period=periods[i]
         current_overlap = overlap[i]
         current_overlap = current_overlap.astype(np.bool_).astype(current_overlap.dtype.newbyteorder('='))
-        fold_data_lc, fold_data_sc, binned_avg,center_time = data_load.folded_data(koi_id,planet_num,file_path,current_overlap)
-        #fold_data_lc = fold_data_lc[~current_overlap]
+        fold_data_lc, fold_data_sc, binned_avg = data_load.folded_data(koi_id,planet_num,file_path,current_overlap)
+        
         ### posteriors for most likely model
         data_post = data_load.load_posteriors(file_path_results,planet_num,koi_id)
-        
         ### get max likelihood
         data_post = data_post.sort_values(by='LN_LIKE', ascending=False) 
         row = data_post.iloc[0] # pick row with highest likelihood
@@ -1261,115 +1267,137 @@ def generate_plot_folded_light_curve(koi_id):
             
         
         elif os.path.exists(file_path_lc) and not os.path.exists(file_path_sc):
-
-            t_lc = np.array(fold_data_lc.TIME)
-            f_lc = np.array(fold_data_lc.FLUX)
-            m_lc = batman.TransitModel(theta, t_lc, supersample_factor = 7, exp_time = 0.02)    #initializes model for lc times
-            flux_m_lc = (m_lc.light_curve(theta))
-
-            # Sort t_lc and flux_m_lc based on t_lc
-            sorted_indices = np.argsort(t_lc)
-            t_lc_sorted = t_lc[sorted_indices]
-            flux_m_lc_sorted = flux_m_lc[sorted_indices]
-            
-            ### Compute residuals
-            residuals_lc = fold_data_lc.FLUX - flux_m_lc
-            residuals_lc = np.array(residuals_lc)
-            fold_time = np.array(fold_data_lc.TIME)
-            bin_centers, residuals_bin = data_load.bin_data(fold_time,residuals_lc, DUR14/11)
-
-            # Collect all residuals
-            all_residuals.extend(residuals_lc) 
-            all_residuals.extend(residuals_bin)
-
-            
-
-            N_samp = 1000
-            inds = np.arange(len(t_lc_sorted), dtype='int')
-            inds = np.random.choice(inds, size=np.min([N_samp,len(inds)]), replace=False)
-
-            
-            if i ==0:
-                ### long cadence
-                fold_lc = go.Scatter(x=t_lc[inds]*24, y=f_lc[inds], mode='markers')
-                fold_lc.marker.update(symbol="circle", size=5, color="blue")
-                fold_lc.name = "Long Cadence"
-                fold_lc.legendgroup=f'{i}'
-                fig.add_trace(fold_lc, row=r_plot, col=1)
-                ### binned avg
-                bin_avg = go.Scatter(x=binned_avg.TIME*24, y=binned_avg.FLUX, mode='markers')
-                bin_avg.marker.update(symbol="square", size=10, color="orange")
-                bin_avg.name = "Binned Average"
-                bin_avg.legendgroup=f'{i}'
-                fig.add_trace(bin_avg, row=r_plot, col=1)
-                ### model
-                mod_lc = go.Scatter(x=t_lc_sorted*24, y=flux_m_lc_sorted, mode="lines", line=dict(color='red')) 
-                mod_lc.name = "LC Model"
-                fig.add_trace(mod_lc, row=r_plot, col=1)
+            if len(fold_data_lc.TIME) < 1:
+                non_overlapping_transit = False
+                # error_message = f'No non-overlapping transits for {koi_identifiers[i]}'
+                # return jsonify(error_message=error_message)
             else:
-                ### long cadence
-                fold_lc = go.Scatter(x=t_lc[inds]*24, y=f_lc[inds], mode='markers',showlegend=False)
-                fold_lc.marker.update(symbol="circle", size=5, color="blue")
-                fold_lc.name = "Long Cadence"
-                fig.add_trace(fold_lc, row=r_plot, col=1)
-                ### binned avg
-                bin_avg = go.Scatter(x=binned_avg.TIME*24, y=binned_avg.FLUX, mode='markers',showlegend=False)
-                bin_avg.marker.update(symbol="square", size=10, color="orange")
-                bin_avg.name = "Binned Average"
-                fig.add_trace(bin_avg, row=r_plot, col=1)
-                ### model
-                mod_lc = go.Scatter(x=t_lc_sorted*24, y=flux_m_lc_sorted, mode="lines", line=dict(color='red'), showlegend=False)
-                mod_lc.name = "LC Model" 
-                fig.add_trace(mod_lc, row=r_plot, col=1)
+                non_overlapping_transit=True
 
-            for j, row_ in random_samples.iterrows():
-                #row_ = data_post.iloc[j] # pick row with highest likelihood
-                ### get random params {P, t0, Rp/Rs, b, T14, q1, q2}
-                theta_ = batman.TransitParams()
-                theta_.per = row_[f'P']
-                theta_.t0 = 0.
-                theta_.rp = row_[f'ROR_{planet_num}']
-                theta_.b = row_[f'IMPACT_{planet_num}']
-                theta_.T14 = row_[f'DUR14_{planet_num}']
-                LD_U1 = row_[f'LD_U1']
-                LD_U2 = row_[f'LD_U2']
-                theta_.u = [LD_U1, LD_U2]
-                theta_.limb_dark = 'quadratic'
+            if non_overlapping_transit==True:
+                t_lc = np.array(fold_data_lc.TIME)
+                f_lc = np.array(fold_data_lc.FLUX)
+                m_lc = batman.TransitModel(theta, t_lc, supersample_factor = 29, exp_time = 0.02)    #initializes model for lc times
+                flux_m_lc = (m_lc.light_curve(theta))
+
+                # Sort t_lc and flux_m_lc based on t_lc
+                sorted_indices = np.argsort(t_lc)
+                t_lc_sorted = t_lc[sorted_indices]
+                flux_m_lc_sorted = flux_m_lc[sorted_indices]
                 
-                m_ = batman.TransitModel(theta_, t_lc_sorted, supersample_factor = 7, exp_time = 0.02)    #initializes model
-                flux_ = (m_.light_curve(theta_))        #calculates light curve
-                mod_ = go.Scatter(x=t_lc_sorted*24, y=flux_, mode="lines", showlegend=False, line=dict(color=pink_transparent))
-                #mod_.name = f'Model {j}'
+                ### Compute residuals
+                residuals_lc = fold_data_lc.FLUX - flux_m_lc
+                residuals_lc = np.array(residuals_lc)
+                fold_time = np.array(fold_data_lc.TIME)
+                bin_centers, residuals_bin = data_load.bin_data(fold_time,residuals_lc, DUR14/11)
+            
+                # Collect all residuals
+                all_residuals.extend(residuals_lc) 
+                all_residuals.extend(residuals_bin)
+
                 
-                fig.add_trace(mod_, row=r_plot, col=1)
 
-            ### plot residuals
-            residuals_plot_lc = go.Scatter(x=t_lc[inds]*24, y=residuals_lc[inds], mode='markers', showlegend=False)
-            residuals_plot_lc.marker.update(symbol="circle", size=5, color="blue")
-            fig.add_trace(residuals_plot_lc, row=r_residuals, col=1)
+                N_samp = 1000
+                inds = np.arange(len(t_lc_sorted), dtype='int')
+                inds = np.random.choice(inds, size=np.min([N_samp,len(inds)]), replace=False)
 
-            residuals_plot_bin = go.Scatter(x=bin_centers*24, y=residuals_bin, mode='markers', showlegend=False)
-            residuals_plot_bin.marker.update(symbol="square", size=10, color="orange")
-            fig.add_trace(residuals_plot_bin, row=r_residuals, col=1)
+                
+                if i ==0:
+                    ### long cadence
+                    fold_lc = go.Scatter(x=t_lc[inds]*24, y=f_lc[inds], mode='markers')
+                    fold_lc.marker.update(symbol="circle", size=5, color="blue")
+                    fold_lc.name = "Long Cadence"
+                    fold_lc.legendgroup=f'{i}'
+                    fig.add_trace(fold_lc, row=r_plot, col=1)
+                    ### binned avg
+                    bin_avg = go.Scatter(x=binned_avg.TIME*24, y=binned_avg.FLUX, mode='markers')
+                    bin_avg.marker.update(symbol="square", size=10, color="orange")
+                    bin_avg.name = "Binned Average"
+                    bin_avg.legendgroup=f'{i}'
+                    fig.add_trace(bin_avg, row=r_plot, col=1)
+                    ### model
+                    mod_lc = go.Scatter(x=t_lc_sorted*24, y=flux_m_lc_sorted, mode="lines", line=dict(color='red')) 
+                    mod_lc.name = "LC Model"
+                    fig.add_trace(mod_lc, row=r_plot, col=1)
+                else:
+                    ### long cadence
+                    fold_lc = go.Scatter(x=t_lc[inds]*24, y=f_lc[inds], mode='markers',showlegend=False)
+                    fold_lc.marker.update(symbol="circle", size=5, color="blue")
+                    fold_lc.name = "Long Cadence"
+                    fig.add_trace(fold_lc, row=r_plot, col=1)
+                    ### binned avg
+                    bin_avg = go.Scatter(x=binned_avg.TIME*24, y=binned_avg.FLUX, mode='markers',showlegend=False)
+                    bin_avg.marker.update(symbol="square", size=10, color="orange")
+                    bin_avg.name = "Binned Average"
+                    fig.add_trace(bin_avg, row=r_plot, col=1)
+                    ### model
+                    mod_lc = go.Scatter(x=t_lc_sorted*24, y=flux_m_lc_sorted, mode="lines", line=dict(color='red'), showlegend=False)
+                    mod_lc.name = "LC Model" 
+                    fig.add_trace(mod_lc, row=r_plot, col=1)
 
-            # Add horizontal line at 0 in residual plot
-            fig.add_shape(type="line", x0=fold_data_lc.TIME.min()*24, x1=fold_data_lc.TIME.max()*24, y0=0, y1=0,
-                          line=dict(color="Red"), row= r_residuals, col=1)
+                for j, row_ in random_samples.iterrows():
+                    #row_ = data_post.iloc[j] # pick row with highest likelihood
+                    ### get random params {P, t0, Rp/Rs, b, T14, q1, q2}
+                    theta_ = batman.TransitParams()
+                    theta_.per = row_[f'P']
+                    theta_.t0 = 0.
+                    theta_.rp = row_[f'ROR_{planet_num}']
+                    theta_.b = row_[f'IMPACT_{planet_num}']
+                    theta_.T14 = row_[f'DUR14_{planet_num}']
+                    LD_U1 = row_[f'LD_U1']
+                    LD_U2 = row_[f'LD_U2']
+                    theta_.u = [LD_U1, LD_U2]
+                    theta_.limb_dark = 'quadratic'
+                    
+                    m_ = batman.TransitModel(theta_, t_lc_sorted, supersample_factor = 29, exp_time = 0.02)    #initializes model
+                    flux_ = (m_.light_curve(theta_))        #calculates light curve
+                    mod_ = go.Scatter(x=t_lc_sorted*24, y=flux_, mode="lines", showlegend=False, line=dict(color=pink_transparent))
+                    #mod_.name = f'Model {j}' 
+                    
+                    fig.add_trace(mod_, row=r_plot, col=1)
 
-            ### plot range
-            residuals_min = np.percentile(all_residuals, 99) 
-            #residuals_max = np.percentile(all_residuals, 99)
-            max_abs_residual =(abs(residuals_min))  
-            fig.update_yaxes(range=[-max_abs_residual,max_abs_residual], row=r_residuals, col=1)
+                ### plot residuals
+                residuals_plot_lc = go.Scatter(x=t_lc[inds]*24, y=residuals_lc[inds], mode='markers', showlegend=False)
+                residuals_plot_lc.marker.update(symbol="circle", size=5, color="blue")
+                fig.add_trace(residuals_plot_lc, row=r_residuals, col=1)
 
-            ### Update x-axis and y-axis labels for each subplot
-            fig.update_yaxes(title_text="FLUX", row=r_plot, col=1)
-            fig.update_xaxes(title_text="TIME (HOURS)", row=r_residuals, col=1)
-            fig.update_yaxes(title_text="Residuals", row=r_residuals, col=1)
-            fig.update_layout(height=700, width=1000)
+                residuals_plot_bin = go.Scatter(x=bin_centers*24, y=residuals_bin, mode='markers', showlegend=False)
+                residuals_plot_bin.marker.update(symbol="square", size=10, color="orange")
+                fig.add_trace(residuals_plot_bin, row=r_residuals, col=1)
 
-            r_plot = r_residuals + 1
-            r_residuals = r_plot+1
+                # Add horizontal line at 0 in residual plot
+                fig.add_shape(type="line", x0=fold_data_lc.TIME.min()*24, x1=fold_data_lc.TIME.max()*24, y0=0, y1=0,
+                            line=dict(color="Red"), row= r_residuals, col=1)
+
+                ### plot range
+                residuals_min = np.percentile(all_residuals, 99) 
+                #residuals_max = np.percentile(all_residuals, 99)
+                max_abs_residual =(abs(residuals_min))  
+                fig.update_yaxes(range=[-max_abs_residual,max_abs_residual], row=r_residuals, col=1)
+
+                ### Update x-axis and y-axis labels for each subplot
+                fig.update_yaxes(title_text="FLUX", row=r_plot, col=1)
+                fig.update_xaxes(title_text="TIME (HOURS)", row=r_residuals, col=1)
+                fig.update_yaxes(title_text="Residuals", row=r_residuals, col=1)
+                fig.update_layout(height=700, width=1000)
+
+                r_plot = r_residuals + 1
+                r_residuals = r_plot+1
+            else:
+                annotation = go.layout.Annotation(
+                                    x=1,  # Positioning on the far right
+                                    y=1,  # Positioning on the top
+                                    text=f'No non-overlapping transit for {koi_identifiers[i]}', 
+                                    showarrow=False,  # No arrow needed
+                                    font=dict(size=14, color="black"),  # Customize font size and color
+                                    align='center',
+                                    xanchor='center',  # Anchor the text to the right
+                                    yanchor='middle'  # Anchor the text to the top
+                                )
+                fig.add_annotation(annotation, row=r_plot, col=1)
+                fig.add_annotation(annotation, row=r_residuals, col=1) 
+                r_plot = r_residuals + 1
+                r_residuals = r_plot+1
             
 
         elif not os.path.exists(file_path_lc) and os.path.exists(file_path_sc):

@@ -12,9 +12,9 @@ import data_load
 
 
 cadence_type = 'l' # l is long cadence, s is short cadence
-koi_id = 'K00481'
+koi_id = 'K00633'
 planet_num = 1
-table = 'ecc-multis-LC'
+table = 'ecc-singles-LC'
 file_path_results = f"c:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}\\{koi_id}\\{koi_id}-results.fits"
 file_path = f"C:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}\\{koi_id}\\{koi_id}_{cadence_type}c_filtered.fits"
 
@@ -37,18 +37,15 @@ for planet_num in range(0,4):
         model = data['MODEL']
         out_prob = data['OUT_PROB']
         out_flag = data['OUT_FLAG']
-    df = pd.DataFrame(dict(
-            index=index,
-            ttime=ttime,
-            model = model,
-            out_prob = out_prob,
-            out_flag = out_flag
-        ))
+    # df = pd.DataFrame(dict(
+    #         index=index,
+    #         ttime=ttime,
+    #         model = model,
+    #         out_prob = out_prob,
+    #         out_flag = out_flag
+    #     ))
     
 
-    
-    print(df.ttime)
-    assert 1==0 
 
     with fits.open(file_path) as fits_file:
             time = np.array(fits_file[1].data, dtype=float)
@@ -63,8 +60,9 @@ for planet_num in range(0,4):
                 CADNO = cadno,
                 QUARTER = quarter
             ))
-    # print(df.QUARTER)
+    print(df.QUARTER)
     QUARTER = df.QUARTER
+    assert 1==0
     # print(df[QUARTER == 16])
     # print(QUARTER.max())
     # Filter for quarter 16 and print associated times

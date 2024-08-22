@@ -16,11 +16,10 @@ import glob
 import batman
 
 
-
 #data_directory = 'c:\\Users\\Paige\\Projects\\data\\'
 data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
 k_id = True
-
+table = '2023-05-19_singles.csv'
 
 def update_data_directory(selected_table):
     global data_directory
@@ -34,8 +33,10 @@ def read_table_data(table):
     #file_path = os.path.join(data_directory, '2023-05-19_singles.csv')
     global data_directory
     global K_id
+    global Table
     #folder = table[:-4]
     update_data_directory(table)
+    Table = table
     if (table == '2023-05-19_singles.csv') or (table == '2023-05-15_doubles.csv'):
         K_id = False
     else: 
@@ -82,6 +83,25 @@ def read_table_data(table):
             seen_koi_ids.add(koi_id)
 
     return unique_data
+
+def get_planet_properties_table(koi_id,table):
+    file_path = os.path.join(data_directory, table)
+    planet_data = []
+    with open(file_path, 'r') as csvfile:
+        reader = csv.DictReader(csvfile)
+        
+        for row in reader:
+            if row['koi_id'] == koi_id:
+                row['planet_name'] = row['planet_name']
+                row['period'] = float(row['period'])
+                row['impact'] = row['impact']
+                row['ror'] = row['ror']
+                row['duration'] = (float(row['duration']) / 24) #in days
+                planet_data.append(row) 
+    planet_data.sort(key=lambda x: x['period']) 
+    return planet_data
+
+            
 
 def get_koi_identifiers(file_path, koi_id):
     koi_identifiers = []
@@ -369,15 +389,23 @@ def folded_data(koi_id,planet_num, file_path,overlap):
     #combined_df = combined_df.sort_values(by='TIME', ascending=True)
     fold_time = np.array(combined_df.TIME)
     fold_flux = np.array(combined_df.FLUX)
-    binned_centers, binned_data = bin_data(fold_time, fold_flux, bin_size)
+    if len(fold_time)>1: 
+        binned_centers, binned_data = bin_data(fold_time, fold_flux, bin_size)
 
-    # Create DataFrame for combined binned weighted average data 
-    binned_weighted_avg_combined = pd.DataFrame({
-        'TIME': binned_centers,
-        'FLUX': binned_data
-    })
+        # Create DataFrame for combined binned weighted average data 
+        binned_weighted_avg_combined = pd.DataFrame({
+            'TIME': binned_centers,
+            'FLUX': binned_data
+        })
+    else:
+        binned_centers = [0]
+        binned_data =[0]
+        binned_weighted_avg_combined = pd.DataFrame({
+            'TIME': binned_centers, 
+            'FLUX': binned_data 
+        })
 
-    return fold_data_lc, fold_data_sc, binned_weighted_avg_combined, center_time
+    return fold_data_lc, fold_data_sc, binned_weighted_avg_combined
 
 # Binned weighted average function
 '''

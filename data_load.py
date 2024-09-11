@@ -113,10 +113,10 @@ def get_planet_properties_table(koi_id,table):
                 npl = row['npl']
                 data_post = load_posteriors(file_path_results,n,koi_id)
                 row['period'] = (data_post['P'].median())
-                row['lcit_ratio'] = row['period'] / lcit 
-                row['impact'] = round(data_post[f'IMPACT_{n}'].median(),5)
-                row['ror'] = round(data_post[f'ROR_{n}'].median(),5)
-                row['duration'] = round(data_post[f'DUR14_{n}'].median(),5) 
+                row['lcit_ratio'] = round(row['period'] / lcit,5 )
+                row['impact'] = round(data_post[f'IMPACT_{n}'].median(),4)
+                row['ror'] = round(data_post[f'ROR_{n}'].median(),4)
+                row['duration'] = round(data_post[f'DUR14_{n}'].median(),4) 
                 n+=1
                 # row['period'] = float(row['period'])
                 # row['impact'] = row['impact'] 

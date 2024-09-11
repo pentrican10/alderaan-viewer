@@ -12,9 +12,9 @@ import data_load
 
 
 cadence_type = 'l' # l is long cadence, s is short cadence
-koi_id = 'K00633'
+koi_id = 'K00001'
 planet_num = 1
-table = 'ecc-singles-LC'
+table = 'ecc-singles-LC-2024-08-26'
 file_path_results = f"c:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}\\{koi_id}\\{koi_id}-results.fits"
 file_path = f"C:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}\\{koi_id}\\{koi_id}_{cadence_type}c_filtered.fits"
 
@@ -62,7 +62,7 @@ for planet_num in range(0,4):
             ))
     print(df.QUARTER)
     QUARTER = df.QUARTER
-    assert 1==0
+    
     # print(df[QUARTER == 16])
     # print(QUARTER.max())
     # Filter for quarter 16 and print associated times

@@ -1046,13 +1046,13 @@ def generate_plot_folded_light_curve(koi_id):
                     overlap_mask += np.abs(df_i.ttime - ttj)/ (dur_i + dur_j) < 1.5
         overlap.append(overlap_mask)
 
-    subplot_height=400
+    subplot_height=550
     data_id = data_load.get_koi_identifiers(csv_file_path, koi_id)
     data_id = data_id.sort_values(by='periods') 
     koi_identifiers = data_id.koi_identifiers.values
     periods = data_id.period_title.values
     subplot_titles = []
-    spacing = [0.2,0.15,0.1,0.07,0.05,0.04,0.03]
+    spacing = [0.2,0.13,0.09,0.07,0.05,0.04,0.03]
     for k in range(len(koi_identifiers)):
         subplot_titles.append(f'{koi_identifiers[k]}, {periods[k]}') 
         subplot_titles.append('')

@@ -295,8 +295,16 @@ def single_data(koi_id, line_number, num, ttv_file):
             use_lc = (photometry_data_lc['TIME'] > start_time) & (photometry_data_lc['TIME'] < end_time)
             lc_data = photometry_data_lc[use_lc]
             combined_data = lc_data
-            sc_data = None
-        return lc_data,sc_data, transit_number, center_time
+            sc_data = 0#None
+            #sc_data.TIME = 0
+        else:
+            lc_data = photometry_data_lc
+            lc_data.TIME = 0
+            sc_data = 2
+            transit_number = None
+            center_time = None
+        return lc_data,sc_data, transit_number, center_time 
+    
     elif os.path.isfile(file_path_sc):
         photometry_data_sc = load_photometry_data(file_path_sc)
         index, ttime, model, out_prob, out_flag = load_ttv_data(koi_id, file_path)
@@ -313,7 +321,7 @@ def single_data(koi_id, line_number, num, ttv_file):
             combined_data = sc_data
             lc_data = None
         return lc_data,sc_data, transit_number, center_time
-
+    
 
 def folded_data(koi_id,planet_num, file_path,overlap):
     global K_id

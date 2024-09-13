@@ -662,8 +662,6 @@ def generate_plot_single_transit(koi_id, line_number,planet):
                     ### quarter 
                     quarter = photometry_data_sc.loc[photometry_data_sc['TIME'] == photometry_data_sc.TIME.min(), 'QUARTER']
                     
-
-                    
                 else:
                     ### transit model
                     scit = 1.15e-5
@@ -684,13 +682,13 @@ def generate_plot_single_transit(koi_id, line_number,planet):
                         fig.update_yaxes(title_text="FLUX", row=r, col=c, range=[lc_min, lc_max])
 
 
-            elif os.path.isfile(file_path_lc) and not os.path.isfile(file_path_sc):
+            elif len(photometry_data_lc.TIME) > 1 and (photometry_data_sc) < 1:
                 transit_lc = go.Scatter(x=photometry_data_lc.TIME, y=photometry_data_lc.FLUX, mode='markers',showlegend=False)
                 transit_lc.marker.update(color="blue")
                 fig.add_trace(transit_lc, row=r, col=c)
                 lc_min,lc_max = data_load.get_min_max(koi_id)
                 ### transit model
-                scit = 1.15e-5
+                scit = 1.15e-5 
                 t = np.arange(photometry_data_lc.TIME.min(), photometry_data_lc.TIME.max(),scit)
                 m = batman.TransitModel(theta, t-center_time)    #initializes model
                 flux = m.light_curve(theta)          #calculates light curve
@@ -700,7 +698,20 @@ def generate_plot_single_transit(koi_id, line_number,planet):
                 ### quarter 
                 quarter = photometry_data_lc.loc[photometry_data_lc['TIME'] == photometry_data_lc.TIME.min(), 'QUARTER']
             
+            elif len(photometry_data_lc.TIME) > 1 and (photometry_data_sc) == 2:
                 
+                annotation = go.layout.Annotation(
+                                    x=1,  # Positioning on the far right
+                                    y=1,  # Positioning on the top
+                                    text=f'No more transits', 
+                                    showarrow=False,  # No arrow needed
+                                    font=dict(size=14, color="black"),  # Customize font size and color
+                                    align='center',
+                                    xanchor='center',  # Anchor the text to the right
+                                    yanchor='middle'  # Anchor the text to the top
+                                )
+                fig.add_annotation(annotation, row=r, col=c) 
+
             elif os.path.isfile(file_path_sc) and not os.path.isfile(file_path_lc):
                 transit_sc = go.Scatter(x=photometry_data_sc.TIME, y=photometry_data_sc.FLUX, mode='markers',showlegend=False)
                 transit_sc.marker.update(color="blue")

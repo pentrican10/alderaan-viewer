@@ -42,12 +42,19 @@ app.secret_key = 'super_secret'
 
 @app.route('/')
 def index():
+    """
+    Initializes web app and sends to login screen
+    """
     session.clear()
     return redirect(url_for('login'))
 
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    """
+    Takes username entered into input box on login screen
+    Saves username for session, keeps track of comments made
+    """
     if request.method == 'POST':
         username = request.form.get('username')
         if username:
@@ -57,12 +64,16 @@ def login():
 
 @app.route('/logout',methods=['POST'])
 def logout():
+    """
+        Button that ends session, logs out user
+    """
     session.pop('username',None) #removes username
     return redirect(url_for('login'))
 
 @app.route('/home')
 def display_table_data():
     """
+    Called after user logs in:
     Assigns each html file to their respective locations
     Renders Index Template
     """
@@ -82,6 +93,13 @@ def display_table_data():
     return render_template('index.html',left_content=left_content, right_top_content=right_top_content, right_bottom_content=right_bottom_content)
 
 def update_data_directory(selected_table):
+    """
+    Function adds table name to data directory. 
+    The data directory is then routed to the file containing the selected table and all corresponding data.
+
+    args:
+        selected_table: string of table name. This must be in the form 'table_name.csv'
+    """
     global data_directory
     global table
     data_directory = os.path.join('c:\\Users\\Paige\\Projects\\data\\alderaan_results', selected_table[:-4])
@@ -89,12 +107,32 @@ def update_data_directory(selected_table):
 
 @app.route('/planet_properties/<koi_id>', methods=['GET'])
 def get_planet_properties(koi_id):
+    """
+    Function gets planet properties used in the table on the web app.
+
+    args:
+        koi_id: string in the form "K00000", KOI identification
+
+    returns:
+        jsonify(planet_data): planet properties table data in json passed to html/javascript
+    """
     global table
     planet_data = data_load.get_planet_properties_table(koi_id,table)
     return jsonify(planet_data)
 
 @app.route('/review_status/<koi_id>', methods=['POST'])
 def review_status(koi_id):
+    """
+    Function handling the review status dropdown menu. 
+    Assigns review status chosen to the associated koi_id in the csv table
+
+    args:
+        koi_id: string in the form "K00000" (KOI identification)
+
+    returns: 
+        jsonify({'status': 'success'}): sends a success message to console(see right_top.html) if review status was written to the table
+
+    """
     global data_directory
     global table
     ### get review status from dropdown
@@ -118,21 +156,27 @@ def review_status(koi_id):
 
 @app.route('/table_color/')
 def table_color():
+    """
+    Function that retrieves review status for javascript function to assign colors to table based on review status value.
+    
+    returns:
+        jsonify(review_data): passes review status and koi_id to html
+    """
     global data_directory
     global table
     file_path = os.path.join(data_directory, table)
     
     # Read CSV and prepare review status data
-    table_data = []
+    review_data = []
     with open(file_path, 'r') as file:
         reader = csv.DictReader(file)
         for row in reader:
-            table_data.append({
+            review_data.append({
                 'koi_id': row['koi_id'],
                 'review': row['review']
             })
     
-    return jsonify(table_data)
+    return jsonify(review_data)
 
 
 @app.route('/star/<koi_id>')
@@ -140,7 +184,10 @@ def display_comment_file(koi_id):
     """
     Function to display comment file associated with KOI ID
     args: 
-        koi_id: string, format K00000
+        koi_id: string in the form "K00000" (KOI identification)
+
+    returns:
+        file_content: string, content of comments file for koi_id passed to html to be displayed
     """
     global K_id
     if K_id == False:
@@ -162,6 +209,11 @@ def save_comment(koi_id):
     function saves the comment input by user to the associated comment file
     Saves with username, date, comment
     Returns the function to display the updated comment file
+    args: 
+        koi_id: string in the form "K00000" (KOI identification)
+    
+    returns:
+        Calls display_comment_file() function to display updated comment file
     """
     global K_id
     if K_id==False:
@@ -182,7 +234,14 @@ def save_comment(koi_id):
 @app.route('/star/<koi_id>/edit_file', methods=['POST'])
 def save_file(koi_id):
     """
-    saves the file and displays the updated file or an error message
+    Function saves the comment file and displays the updated file or an error message.
+    A comment file will be created if there is not one in path data_directory/koi_id/koi_id_comments.txt
+
+    args:
+        koi_id: string in the form "K00000" (KOI identification)
+
+    returns:
+        Calls display_comment_file() function or gives error is something went wrong
     """
     global K_id
     if K_id==False:
@@ -204,6 +263,15 @@ def save_file(koi_id):
 
 @app.route('/generate_plot/<koi_id>')
 def generate_plot_Detrended_Light_Curve(koi_id):
+    """
+    Function generates the detrended light curve plot and passes the figure to be displayed on html
+
+    args:
+        koi_id: string in the form "K00000" (KOI identification)
+
+    returns: 
+        jsonify(graph1JSON): figure able to be read and displayed in html
+    """
     global K_id
     if K_id==False:
         star_id = koi_id.replace("K","S")
@@ -657,7 +725,7 @@ def generate_plot_single_transit(koi_id, line_number,planet):
     graphJSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
     response_data = {
         'graphJSON': graphJSON,
-        'transit_number': transit_number
+        'transit_number': str(transit_number) 
     }
     return jsonify(response_data)
     

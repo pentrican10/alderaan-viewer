@@ -8,7 +8,6 @@ import pandas as pd
 import json
 import plotly.utils
 import numpy as np
-import data_load
 import glob
 import plotly.graph_objects as go
 import re
@@ -16,9 +15,8 @@ from scipy.stats import gaussian_kde
 import batman
 from plotly.subplots import make_subplots
 import random
+import data_load
 
-
-#sys.path.append('c:\\Users\\Paige\\Projects\\alderaan\\')
 data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
 K_id = True
 table = '2023-05-19_singles.csv'

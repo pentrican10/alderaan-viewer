@@ -15,7 +15,7 @@ scit = SCIT/3600/24         # Kepler short cadence integration time + readout ti
 #data_directory = 'c:\\Users\\Paige\\Projects\\data\\'
 data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
 k_id = True
-table = '2023-05-19_singles.csv'
+table = 'ecc-all-LC.csv'
 
 def update_data_directory(selected_table):
     global data_directory

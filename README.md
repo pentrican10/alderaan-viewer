@@ -10,6 +10,7 @@ File Structure:
 Data downloaded from Cadence: from '/data/user/gjgilbert/projects/alderaan/Results/<data_run>' to '<data_directory>'
 - substitute 'c:\\' for '/mnt/c/' if using wsl or mac
     - ex: 'rsync -avh paige@cadence.caltech.edu:/data/user/gjgilbert/projects/alderaan/Results/ecc-all-LC /mnt/c/Users/Paige/Projects/data/alderaan_results'
+        - note here that 'ecc-all-LC' is the data_run
 - manually add table to this folder (path for table should be '<data_directory>\\<data_run>\\<data_run.csv>')
     - Make sure to change table name from 'kepler_dr25_gaia_dr2_crossmatch.csv' to '<data_run>.csv'
         - copy paste table 'kepler_dr25_gaia_dr2_crossmatch.csv' and change name

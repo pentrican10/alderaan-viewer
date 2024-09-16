@@ -7,9 +7,12 @@ File Structure:
 - table: default table when app opens:
     - ex: 'ecc-all-LC.csv'
 
-Data downloaded from Cadence: '/data/user/gjgilbert/projects/alderaan/Results/<data_run>' to '<data_directory>'
+Data downloaded from Cadence: from '/data/user/gjgilbert/projects/alderaan/Results/<data_run>' to '<data_directory>'
 - substitute 'c:\\' for '/mnt/c/' if using wsl or mac
+    - ex: 'rsync -avh paige@cadence.caltech.edu:/data/user/gjgilbert/projects/alderaan/Results/ecc-all-LC /mnt/c/Users/Paige/Projects/data/alderaan_results'
 - manually add table to this folder (path for table should be '<data_directory>\\<data_run>\\<data_run.csv>')
+
+
 
 Notes:
 - bug work-arounds (until fixed):

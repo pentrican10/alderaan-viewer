@@ -81,6 +81,16 @@ def read_table_data(table):
     return unique_data
 
 def get_planet_properties_table(koi_id,table):
+    '''
+    Function retrieves relevant planet properties and passes as table info
+
+    args:
+        koi_id: string in the form "K00000" (KOI identification)
+        table: string in form of 'table.csv'
+    
+    returns:
+        planet_data: table with planet properties sorted by ascending period (name, period, lcit ratio, impact, ror, duration)
+    '''
     global K_id
     if K_id==False:
         star_id = koi_id.replace("K","S")
@@ -99,10 +109,8 @@ def get_planet_properties_table(koi_id,table):
         for row in reader:
             
             if row['koi_id'] == koi_id:
-                # row['planet_name'] = row['planet_name']
                 row['planet_name'] = koi_identifier[n]
 
-                npl = row['npl']
                 data_post = load_posteriors(file_path_results,n,koi_id)
                 row['period'] = (data_post['P'].median())
                 row['lcit_ratio'] = round(row['period'] / lcit,5 )
@@ -110,10 +118,6 @@ def get_planet_properties_table(koi_id,table):
                 row['ror'] = round(data_post[f'ROR_{n}'].median(),4)
                 row['duration'] = round(data_post[f'DUR14_{n}'].median(),4) 
                 n+=1
-                # row['period'] = float(row['period'])
-                # row['impact'] = row['impact'] 
-                # row['ror'] = row['ror']
-                # row['duration'] = round((float(row['duration']) / 24),5) # in days
                 planet_data.append(row) 
     planet_data.sort(key=lambda x: x['period']) 
     return planet_data

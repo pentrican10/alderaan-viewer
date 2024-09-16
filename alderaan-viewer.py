@@ -4,31 +4,17 @@ import csv
 from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
-from astropy.io import fits
 import pandas as pd
 import json
 import plotly.utils
 import numpy as np
-import sys
-import lightkurve as lk
-import numpy.polynomial.polynomial as poly
 import data_load
 import glob
 import plotly.graph_objects as go
 import re
 from scipy.stats import gaussian_kde
-from scipy import stats
-from sklearn.neighbors import KernelDensity
-from sklearn.decomposition import PCA
-from scipy.spatial import ConvexHull
 import batman
-import matplotlib.pyplot as plt, mpld3
-import seaborn as sns
-import tempfile
-import base64
-import io
 from plotly.subplots import make_subplots
-from scipy.interpolate import interp1d
 import random
 
 

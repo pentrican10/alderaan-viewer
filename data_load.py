@@ -1,19 +1,11 @@
-from flask import Flask, render_template, jsonify, request, session, redirect, url_for
+#from flask import Flask, render_template, jsonify, request, session, redirect, url_for
 import os
 import csv
-from datetime import datetime
-import plotly.express as px
-import plotly.graph_objects as go
 from astropy.io import fits
 import pandas as pd
-import json
-import plotly.utils
 import numpy as np
-import sys
-import lightkurve as lk
 import numpy.polynomial.polynomial as poly
-import glob
-import batman
+
 
 LCIT = 29.4243885           # Kepler long cadence integration time + readout time [min] 
 SCIT = 58.848777            # Kepler short cadence integration time + readout time [sec]

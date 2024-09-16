@@ -19,7 +19,7 @@ import data_load
 
 data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
 K_id = True
-table = '2023-05-19_singles.csv'
+table = 'ecc-all-LC.csv'
 
 app = Flask(__name__)
 app.secret_key = 'super_secret'
@@ -63,11 +63,11 @@ def display_table_data():
     """
     global K_id
     global table
-    table = request.args.get('table', '2023-05-19_singles.csv')
+    table = request.args.get('table', 'ecc-all-LC.csv')
     update_data_directory(table)
     ### set switch to use K versus S(simulation data) based on table selected
     if (table == '2023-05-19_singles.csv') or (table == '2023-05-15_doubles.csv'):
-        K_id = False
+        K_id = False 
     else: 
         K_id = True
     table_data = data_load.read_table_data(table)

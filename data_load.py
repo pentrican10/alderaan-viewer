@@ -1,25 +1,21 @@
-from flask import Flask, render_template, jsonify, request, session, redirect, url_for
+#from flask import Flask, render_template, jsonify, request, session, redirect, url_for
 import os
 import csv
-from datetime import datetime
-import plotly.express as px
-import plotly.graph_objects as go
 from astropy.io import fits
 import pandas as pd
-import json
-import plotly.utils
 import numpy as np
-import sys
-import lightkurve as lk
 import numpy.polynomial.polynomial as poly
-import glob
-import batman
 
 
+LCIT = 29.4243885           # Kepler long cadence integration time + readout time [min] 
+SCIT = 58.848777            # Kepler short cadence integration time + readout time [sec]
+
+lcit = LCIT/60/24           # Kepler long cadence integration time + readout time [days]
+scit = SCIT/3600/24         # Kepler short cadence integration time + readout time [days]
 #data_directory = 'c:\\Users\\Paige\\Projects\\data\\'
 data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
 k_id = True
-
+table = '2023-05-19_singles.csv'
 
 def update_data_directory(selected_table):
     global data_directory
@@ -33,16 +29,25 @@ def read_table_data(table):
     #file_path = os.path.join(data_directory, '2023-05-19_singles.csv')
     global data_directory
     global K_id
+    global Table
     #folder = table[:-4]
     update_data_directory(table)
+    Table = table
     if (table == '2023-05-19_singles.csv') or (table == '2023-05-15_doubles.csv'):
         K_id = False
     else: 
         K_id = True
     file_path = os.path.join(data_directory, table)
     table_data = []
+    review_column_added = False
     with open(file_path, 'r') as csvfile:
         reader = csv.DictReader(csvfile)
+        ### Check if 'review' column exists, otherwise add it
+        fieldnames = reader.fieldnames
+        if 'review' not in fieldnames:
+            fieldnames.append('review')
+            review_column_added = True
+
         for row in reader:
             #round table values
             row['kep_mag'] = round(float(row['kep_mag']), 2)
@@ -50,7 +55,17 @@ def read_table_data(table):
             row['logrho'] = round(float(row['logrho']), 2)
             row['Teff'] = round(float(row['Teff']))
             row['logg'] = round(float(row['logg']), 2)
+            # Ensure 'review' column exists in each row
+            if 'review' not in row:
+                row['review'] = 'None'
+            elif row['review'] == '':
+                row['review'] = 'None'
             table_data.append(row)
+    if review_column_added==True:
+        with open(file_path, 'w', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(table_data)
             
     ### Remove duplicates based on koi_id
     unique_data = []
@@ -65,35 +80,92 @@ def read_table_data(table):
 
     return unique_data
 
-def get_periods_for_koi_id(file_path, koi_id):
+def get_planet_properties_table(koi_id,table):
+    global K_id
+    if K_id==False:
+        star_id = koi_id.replace("K","S")
+    else:
+        star_id = koi_id
+    file_path_csv = os.path.join(data_directory, table)
+    file_results =star_id + '-results.fits'
+    file_path_results = os.path.join(data_directory, star_id, file_results)
+    data_id = get_koi_identifiers(file_path_csv,koi_id)
+    data_id = data_id.sort_values(by='periods') 
+    koi_identifier = data_id.koi_identifiers.values
+    planet_data = []
+    with open(file_path_csv, 'r') as csvfile:
+        reader = csv.DictReader(csvfile)
+        n=0
+        for row in reader:
+            
+            if row['koi_id'] == koi_id:
+                # row['planet_name'] = row['planet_name']
+                row['planet_name'] = koi_identifier[n]
+
+                npl = row['npl']
+                data_post = load_posteriors(file_path_results,n,koi_id)
+                row['period'] = (data_post['P'].median())
+                row['lcit_ratio'] = round(row['period'] / lcit,5 )
+                row['impact'] = round(data_post[f'IMPACT_{n}'].median(),4)
+                row['ror'] = round(data_post[f'ROR_{n}'].median(),4)
+                row['duration'] = round(data_post[f'DUR14_{n}'].median(),4) 
+                n+=1
+                # row['period'] = float(row['period'])
+                # row['impact'] = row['impact'] 
+                # row['ror'] = row['ror']
+                # row['duration'] = round((float(row['duration']) / 24),5) # in days
+                planet_data.append(row) 
+    planet_data.sort(key=lambda x: x['period']) 
+    return planet_data
+
+            
+
+def get_koi_identifiers(file_path, koi_id):
+    koi_identifiers = []
     periods = []
+    period_title = []
     with open(file_path, 'r') as file:
         reader = csv.DictReader(file)
         
         for row in reader:
             if row['koi_id'] == koi_id:
+                koi_identifier = str(row['planet_name'])
                 period_value = float(row['period'])
                 rounded_period = round(period_value, 1)
                 append = f'Period: {rounded_period} Days'
-                periods.append(str(append))
+                period_title.append(str(append))
+                periods.append(rounded_period)
+                koi_identifiers.append(str(f'{koi_identifier}'))
 
-    return periods if periods else None
+        df = pd.DataFrame(dict(
+            koi_identifiers=koi_identifiers,
+            periods= periods,
+            period_title = period_title
+        ))
 
+    return df if periods else None
+    #return periods,koi_identifiers if periods else None
 
-def read_data_from_fits(file_path):
+               
+def load_photometry_data(file_path):
     with fits.open(file_path) as fits_file:
         time = np.array(fits_file[1].data, dtype=float)
         flux = np.array(fits_file[2].data, dtype=float)
         err = np.array(fits_file[3].data, dtype=float)
+        cadno = np.array(fits_file[4].data, dtype=int)
+        quarter = np.array(fits_file[5].data, dtype=int)
+
         df = pd.DataFrame(dict(
             TIME=time,
             FLUX=flux,
-            ERR = err
+            ERR = err,
+            CADNO = cadno,
+            QUARTER = quarter
         ))
     return df
 
 
-def get_ttv_file(koi_id, file_path):
+def load_ttv_data(koi_id, file_path):
     if os.path.isfile(file_path):
         index =[]
         ttime=[] 
@@ -111,115 +183,15 @@ def get_ttv_file(koi_id, file_path):
                 model.append(columns[2])
                 out_prob.append(columns[3])
                 out_flag.append(columns[4])
+        ### convert to arrays
+        index = np.asarray(index, dtype=np.int64)
+        model = np.asarray(model, dtype=np.float64)
+        ttime = np.asarray(ttime, dtype=np.float64)
+        model = np.asarray(model, dtype=np.float64)
+        out_prob = np.asarray(out_prob, dtype=np.float64)
+        out_flag = np.asarray(out_flag, dtype=np.float64)
         return index, ttime, model, out_prob, out_flag
     
-
-def load_posteriors(f,n,koi_id):
-    global K_id
-    if K_id == False:
-        star_id = koi_id.replace("K","S")
-    else:
-        star_id = koi_id
-    file_name = star_id + f'_0{n}_quick.ttvs'
-    ttv_file = os.path.join(data_directory, star_id, file_name)
-    with fits.open(f) as hduL:
-        data = hduL['SAMPLES'].data
-        C0 = data[f'C0_{n}']
-        C1 = data[f'C1_{n}']
-        ROR = data[f'ROR_{n}']
-        IMPACT = data[f'IMPACT_{n}']
-        DUR14 = data[f'DUR14_{n}']
-        LD_Q1 = data[f'LD_Q1']
-        LD_Q2 = data[f'LD_Q2']
-        LN_WT = data[f'LN_WT']
-        LN_LIKE = data[f'LN_LIKE']
-
-        ### calculate P, T0, U1, U2
-        LD_U1 = 2*np.sqrt(LD_Q1)*LD_Q2
-        LD_U2 = np.sqrt(LD_Q1)*(1-2*LD_Q2)
-
-        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id,ttv_file)
-        Leg0 = _legendre(koi_id,n,0)
-        Leg1 = _legendre(koi_id,n,1)
-        model = np.array(model, dtype='float64')
-        index = np.array(index, dtype='float64')
-
-        ephem = model + np.outer(C0,Leg0) + np.outer(C1, Leg1)
-        T0, P = poly.polyfit(index.flatten(),ephem.T,1)
-
-        data_return = np.vstack([C0, C1, ROR, IMPACT, DUR14, T0, P, LD_Q1, LD_Q2, LD_U1, LD_U2, LN_WT, LN_LIKE]).T
-        labels = f'C0_{n} C1_{n} ROR_{n} IMPACT_{n} DUR14_{n} T0 P LD_Q1 LD_Q2 LD_U1 LD_U2 LN_WT LN_LIKE'.split()
-        df = pd.DataFrame(data_return, columns=labels)
-        return df
-
-def _legendre(koi_id, n, k):
-        global K_id
-        if K_id == False:
-            star_id = koi_id.replace("K","S")
-        else:
-            star_id = koi_id
-        
-        ttv_file_name = star_id + f'_0{n}_quick.ttvs'
-        ttv_file = os.path.join(data_directory, star_id, ttv_file_name)
-        lc_file = star_id + '_lc_filtered.fits'
-        sc_file = star_id + '_sc_filtered.fits'
-        lc_path = os.path.join(data_directory, star_id, lc_file)
-        sc_path = os.path.join(data_directory, star_id, sc_file)
-        index, ttime, model, out_prob, out_flag = get_ttv_file(star_id,ttv_file)
-        data_lc = read_data_from_fits(lc_path)
-        data_sc = read_data_from_fits(sc_path)
-        model= np.array(model, dtype='float64')
-        t = model
-        #t = t.astype(float)
-        if data_lc.TIME.min()< data_sc.TIME.min() and data_lc.TIME.max()> data_sc.TIME.max():
-            x = 2 * (t-data_lc.TIME.min()) / (data_lc.TIME.max() - data_lc.TIME.min()) - 1
-        
-        if k==0:
-            return np.ones_like(x)
-        if k==1:
-            return x
-        else:
-            return ValueError("only configured for 0th and 1st order Legendre polynomials")
-
-
-
-# def single_transit_data(koi_id, line_number, ttv_file):
-#     star_id = koi_id.replace("K","S")
-#     file_name_lc = star_id + '_lc_filtered.fits'
-#     file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
-    
-#     file_name_sc = star_id + '_sc_filtered.fits'
-#     file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
-
-#     file_path = os.path.join(data_directory, star_id, ttv_file)
-
-#     combined_data = None
-#     #get data and create detrended light curve
-#     if os.path.isfile(file_path_lc):
-#         photometry_data_lc = read_data_from_fits(file_path_lc) #descriptive names
-#         index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
-
-#         if line_number < len(index):
-#             center_time = ttime[line_number]
-#             transit_number = index[line_number]
-        
-#             start_time = float(center_time) - 0.25
-#             end_time= float(center_time) + 0.25
-
-#             use_lc = (photometry_data_lc['TIME'] > start_time) & (photometry_data_lc['TIME'] < end_time)
-#             lc_data = photometry_data_lc[use_lc]
-#             combined_data = lc_data
-#     if os.path.isfile(file_path_sc):
-#             photometry_data_sc = read_data_from_fits(file_path_sc)
-#             if combined_data is not None:
-#                 use_sc = (photometry_data_sc['TIME'] > start_time) & (photometry_data_sc['TIME'] < end_time)
-#                 sc_data = photometry_data_sc[use_sc]
-#                 combined_data= pd.concat([combined_data, sc_data],ignore_index=True)
-#             else:
-#                 combined_data = photometry_data_sc
-
-#     return combined_data, transit_number, center_time ############
-
 
 def get_min_max(koi_id):
     global K_id
@@ -234,14 +206,24 @@ def get_min_max(koi_id):
     file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
 
     if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
-        photometry_data_lc = read_data_from_fits(file_path_lc) 
-        photometry_data_sc = read_data_from_fits(file_path_sc)
+        photometry_data_lc = load_photometry_data(file_path_lc) 
+        photometry_data_sc = load_photometry_data(file_path_sc)
         lc_max = photometry_data_lc['FLUX'].max()
         lc_min = photometry_data_lc['FLUX'].min()
 
         sc_max = photometry_data_sc['FLUX'].max()
         sc_min = photometry_data_sc['FLUX'].min()
         return lc_min,lc_max,sc_min,sc_max
+    elif os.path.isfile(file_path_lc) and not os.path.isfile(file_path_sc):
+        photometry_data_lc = load_photometry_data(file_path_lc) 
+        lc_max = photometry_data_lc['FLUX'].max()
+        lc_min = photometry_data_lc['FLUX'].min()
+        return lc_min, lc_max
+    elif os.path.isfile(file_path_sc) and not os.path.isfile(file_path_lc):
+        photometry_data_sc = load_photometry_data(file_path_sc)
+        sc_max = photometry_data_sc['FLUX'].max()
+        sc_min = photometry_data_sc['FLUX'].min()
+        return sc_min, sc_max
 
 
 def single_data(koi_id, line_number, num, ttv_file):
@@ -268,9 +250,9 @@ def single_data(koi_id, line_number, num, ttv_file):
     combined_data = None
     #get data and create detrended light curve
     if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
-        photometry_data_lc = read_data_from_fits(file_path_lc) 
-        photometry_data_sc = read_data_from_fits(file_path_sc)
-        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
+        photometry_data_lc = load_photometry_data(file_path_lc) 
+        photometry_data_sc = load_photometry_data(file_path_sc)
+        index, ttime, model, out_prob, out_flag = load_ttv_data(koi_id, file_path)
 
         if line_number < len(index):
             center_time = ttime[line_number]
@@ -292,8 +274,8 @@ def single_data(koi_id, line_number, num, ttv_file):
         return lc_data, sc_data, transit_number, center_time
         
     elif os.path.isfile(file_path_lc):
-        photometry_data_lc = read_data_from_fits(file_path_lc) #descriptive names
-        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
+        photometry_data_lc = load_photometry_data(file_path_lc) #descriptive names
+        index, ttime, model, out_prob, out_flag = load_ttv_data(koi_id, file_path)
 
         if line_number < len(index):
             center_time = ttime[line_number]
@@ -305,11 +287,19 @@ def single_data(koi_id, line_number, num, ttv_file):
             use_lc = (photometry_data_lc['TIME'] > start_time) & (photometry_data_lc['TIME'] < end_time)
             lc_data = photometry_data_lc[use_lc]
             combined_data = lc_data
-            sc_data = None
-        return lc_data,sc_data, transit_number, center_time
+            sc_data = 0#None
+            #sc_data.TIME = 0
+        else:
+            lc_data = photometry_data_lc
+            lc_data.TIME = 0
+            sc_data = 2
+            transit_number = None
+            center_time = None
+        return lc_data,sc_data, transit_number, center_time 
+    
     elif os.path.isfile(file_path_sc):
-        photometry_data_sc = read_data_from_fits(file_path_sc)
-        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
+        photometry_data_sc = load_photometry_data(file_path_sc)
+        index, ttime, model, out_prob, out_flag = load_ttv_data(koi_id, file_path)
 
         if line_number < len(index):
             center_time = ttime[line_number]
@@ -323,17 +313,15 @@ def single_data(koi_id, line_number, num, ttv_file):
             combined_data = sc_data
             lc_data = None
         return lc_data,sc_data, transit_number, center_time
-
-
     
 
-def folded_data(koi_id,planet_num, file_path):
+def folded_data(koi_id,planet_num, file_path,overlap):
     global K_id
     if K_id == False:
         star_id = koi_id.replace("K","S")
     else:
         star_id = koi_id
-    file_name_lc = star_id + '_lc_detrended.fits'
+    file_name_lc = star_id + '_lc_filtered.fits'
     file_path_lc = os.path.join(data_directory, star_id, file_name_lc)
     
     file_name_sc = star_id + '_sc_filtered.fits'
@@ -343,114 +331,162 @@ def folded_data(koi_id,planet_num, file_path):
     file_path_results = os.path.join(data_directory, star_id, file_results)
     data_post = load_posteriors(file_path_results,planet_num,koi_id)
     ### get max likelihood
-    max_index = data_post['LN_LIKE'].idxmax()
+    data_post = data_post.sort_values(by='LN_LIKE', ascending=False) 
+    row = data_post.iloc[0] # pick row with highest likelihood
     ### mult by 1.5 for correct offset
-    DUR14 = 1.5 * data_post[f'DUR14_{planet_num}'][max_index]
+    DUR14 = row[f'DUR14_{planet_num}']
 
-    fold_data_time = []
-    fold_data_flux = []
-    fold_data_err = []
+    fold_data_time_lc = [] 
+    fold_data_flux_lc = []
+    fold_data_err_lc = []
     fold_data_time_sc = []
     fold_data_flux_sc = []
     fold_data_err_sc = []
     #get data and create detrended light curve
     if os.path.isfile(file_path_lc):
-        photometry_data_lc = read_data_from_fits(file_path_lc)
-        index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
+        photometry_data_lc = load_photometry_data(file_path_lc)
+        # index, ttime, model, out_prob, out_flag = load_ttv_data(koi_id, file_path)
+        # index = index[~overlap]
+        # model = model[~overlap]                        # revisit and ensure using same ttime and model
+        results_data = load_results_model(file_path_results,planet_num)
+        
+        ### revieved error about endian: ValueError: Big-endian buffer not supported on little-endian compiler
+        ### Convert overlap to the correct endianness before applying the mask
+        overlap = overlap.astype(np.bool_).astype(overlap.dtype.newbyteorder('='))
+        ### Convert results_data to native byte order 
+        for col in results_data.columns:
+            if results_data[col].dtype.byteorder == '>':
+                results_data[col] = results_data[col].values.astype(results_data[col].dtype.newbyteorder('='))
+
+        
+        ### mask out overlapping transits
+        results_data = results_data[~overlap]
+        model = np.array(results_data.model)
+        index = np.array(results_data.index) 
         
         for i in range(len(index)):
-            center_time = ttime[i]
+            # center_time = ttime[i]
+            center_time = float(model[i])
         
-            start_time = float(center_time) - DUR14
-            end_time= float(center_time) + DUR14
+            start_time = (center_time) - (DUR14*1.5) 
+            end_time= (center_time) + (DUR14*1.5)
 
             use = (photometry_data_lc['TIME'] > start_time) & (photometry_data_lc['TIME'] < end_time)
             transit_data = photometry_data_lc[use]
 
-            ### Check and ensure that 'TIME' column is of numeric type
-            transit_data['TIME'] = pd.to_numeric(transit_data['TIME'], errors='coerce')
-            
-            ### Check and ensure that center_time is of numeric type
-            center_time = float(center_time)
-
-            norm_time = transit_data['TIME'] - center_time
-            fold_data_time.extend(norm_time)
-            fold_data_flux.extend(transit_data['FLUX'])
-            fold_data_err.extend(transit_data['ERR'])
+            folded_transit_time_lc = transit_data['TIME'] - center_time
+            fold_data_time_lc.extend(folded_transit_time_lc)
+            fold_data_flux_lc.extend(transit_data['FLUX'])
+            fold_data_err_lc.extend(transit_data['ERR'])
 
     if os.path.isfile(file_path_sc):
-        photometry_data_sc = read_data_from_fits(file_path_sc)
+        photometry_data_sc = load_photometry_data(file_path_sc)
         for i in range(len(index)):
-            center_time = ttime[i]
+            center_time = float(model[i])
         
-            start_time = float(center_time) - DUR14
-            end_time= float(center_time) + DUR14
+            start_time = center_time - DUR14
+            end_time= center_time + DUR14
+
             use_sc = (photometry_data_sc['TIME']>start_time) & (photometry_data_sc['TIME']<end_time)
             transit_data_sc = photometry_data_sc[use_sc]
-            transit_data_sc['TIME'] = pd.to_numeric(transit_data_sc['TIME'], errors='coerce')
-            center_time = float(center_time)
-            norm_time_sc = transit_data_sc['TIME'] - center_time
-            fold_data_time_sc.extend(norm_time_sc)
+
+            folded_transit_time_sc = transit_data_sc['TIME'] - center_time
+            fold_data_time_sc.extend(folded_transit_time_sc)
             fold_data_flux_sc.extend(transit_data_sc['FLUX'])
             fold_data_err_sc.extend(transit_data_sc['ERR'])
   
     fold_data_lc = pd.DataFrame({
-        'TIME' : fold_data_time,
-        'FLUX': fold_data_flux,
-        'ERR' : fold_data_err
+        'TIME' : fold_data_time_lc,
+        'FLUX': fold_data_flux_lc,
+        'ERR' : fold_data_err_lc
     })
-    fold_data_lc['TIME'] = fold_data_lc['TIME'] * 24 ### to hours
 
     fold_data_sc = pd.DataFrame({
         'TIME' : fold_data_time_sc,
         'FLUX': fold_data_flux_sc,
         'ERR' : fold_data_err_sc
     })
-    fold_data_sc['TIME'] = fold_data_sc['TIME'] * 24 ### to hours
 
-    bin_size = 0.5
-    combined_time = np.concatenate([fold_data_lc['TIME'], fold_data_sc['TIME']])
-    combined_flux = np.concatenate([fold_data_lc['FLUX'], fold_data_sc['FLUX']])
-    combined_flux_err = np.concatenate([fold_data_lc['ERR'], fold_data_sc['ERR']]) 
+    bin_size = DUR14/11 #0.02
+    ### set so 11 bin points in transit, make sure it transfers to the exp time
+    # DUR / 11
+    combined_df = pd.concat([fold_data_lc, fold_data_sc], ignore_index=True) #EXCEPTION IF SC DATA, CODE NOT WRITTEN
+    #combined_df = combined_df.sort_values(by='TIME', ascending=True)
+    fold_time = np.array(combined_df.TIME)
+    fold_flux = np.array(combined_df.FLUX)
+    if len(fold_time)>1: 
+        binned_centers, binned_data = bin_data(fold_time, fold_flux, bin_size)
 
-    bin_centers_combined, weighted_avg_combined = calculate_binned_weighted_average(combined_time, combined_flux, combined_flux_err, bin_size)
+        # Create DataFrame for combined binned weighted average data 
+        binned_weighted_avg_combined = pd.DataFrame({
+            'TIME': binned_centers,
+            'FLUX': binned_data
+        })
+    else:
+        binned_centers = [0]
+        binned_data =[0]
+        binned_weighted_avg_combined = pd.DataFrame({
+            'TIME': binned_centers, 
+            'FLUX': binned_data 
+        })
 
-    # Create DataFrame for combined binned weighted average data
-    binned_weighted_avg_combined = pd.DataFrame({
-        'TIME': bin_centers_combined,
-        'FLUX': weighted_avg_combined
-    })
+    return fold_data_lc, fold_data_sc, binned_weighted_avg_combined
 
-    return fold_data_lc, fold_data_sc, binned_weighted_avg_combined, center_time
-
-
-########################################################################################
 # Binned weighted average function
+'''
 def calculate_binned_weighted_average(time, flux, flux_err, bin_size):
-    bins = np.arange(time.min(), time.max() + bin_size, bin_size)
-    indices = np.digitize(time, bins)
+    bins = np.arange(time.min(), time.max(), bin_size)
+    indices = np.digitize(time, bins, right=True)
+
+    bin_centers = (bins[1:] + bins[:-1]) / 2
         
     weighted_avg = []
     for i in range(1, len(bins)):
         bin_indices = indices == i
         if any(bin_indices):
-            weighted_avg.append(np.average(flux[bin_indices], weights=1.0 / flux_err[bin_indices]**2))
+            weights = 1.0 / flux_err[bin_indices]#**2
+            weighted_avg.append(np.average(flux[bin_indices], weights=weights))
         else:
-            weighted_avg.append(np.nan)  # or use a different indicator for missing data
+            weighted_avg.append(np.nan)  # or use a different indicator for missing data?
         
-    bin_centers = (bins[1:] + bins[:-1]) / 2
     return bin_centers, weighted_avg
+'''
+
+
+### FIX FOR SC DATA, ACCOUNT FOR ERRORS
+def bin_data(time, data, binsize):
+    """
+    Parameters
+    ----------
+    time : ndarray
+        vector of time values
+    data : ndarray
+        corresponding vector of data values to be binned
+    binsize : float
+        bin size for output data, in same units as time
+        
+    Returns
+    -------
+    bin_centers : ndarray
+        center of each data (i.e. binned time)
+    binned_data : ndarray
+        data binned to selcted binsize
+    """
+    bin_centers = np.hstack([np.arange(time.mean(),time.min()-binsize/2,-binsize),
+                            np.arange(time.mean(),time.max()+binsize/2,binsize)])
+    
+    bin_centers = np.sort(np.unique(bin_centers))
+    binned_data = []
+    
+    for i, t0 in enumerate(bin_centers):
+        binned_data.append(np.mean(data[np.abs(time-t0) < binsize/2]))
+        
+    return bin_centers, np.array(binned_data)
 
 
     
-def OMC_data(koi_id,file_path):
-    index, ttime, model, out_prob, out_flag = get_ttv_file(koi_id, file_path)
-    index = np.asarray(index, dtype=np.int64)
-    model = np.asarray(model, dtype=np.float64)
-    ttime = np.asarray(ttime, dtype=np.float64)
-    model = np.asarray(model, dtype=np.float64)
-    out_prob = np.asarray(out_prob, dtype=np.float64)
-    out_flag = np.asarray(out_flag, dtype=np.float64)
+def load_OMC_data(koi_id,file_path):
+    index, ttime, model, out_prob, out_flag = load_ttv_data(koi_id, file_path)
     t0, period = poly.polyfit(index, model, 1)
     omc_model = model - poly.polyval(index, [t0, period])
     omc_ttime =ttime - poly.polyval(index, [t0, period])
@@ -471,4 +507,106 @@ def OMC_data(koi_id,file_path):
     return OMC_data, OMC_model, out_prob, out_flag
 
 
+def load_posteriors(f,n,koi_id):
+    global K_id
+    if K_id == False:
+        star_id = koi_id.replace("K","S")
+    else:
+        star_id = koi_id
+    file_name = star_id + f'_0{n}_quick.ttvs'
+    ttv_file = os.path.join(data_directory, star_id, file_name)
+    with fits.open(f) as hduL:
+        data = hduL['SAMPLES'].data
+        C0 = data[f'C0_{n}']
+        C1 = data[f'C1_{n}']
+        ROR = data[f'ROR_{n}']
+        IMPACT = data[f'IMPACT_{n}']
+        DUR14 = data[f'DUR14_{n}']
+        LD_Q1 = data[f'LD_Q1']
+        LD_Q2 = data[f'LD_Q2']
+        LN_WT = data[f'LN_WT']
+        LN_LIKE = data[f'LN_LIKE']
+
+        ### calculate P, T0, U1, U2
+        LD_U1 = 2*np.sqrt(LD_Q1)*LD_Q2
+        LD_U2 = np.sqrt(LD_Q1)*(1-2*LD_Q2)
+
+        index, ttime, model, out_prob, out_flag = load_ttv_data(koi_id,ttv_file)
+        # Leg0 = _legendre(koi_id,n,0)
+        # Leg1 = _legendre(koi_id,n,1)
+        model = np.array(model, dtype='float64')
+        index = np.array(index, dtype='float64')
+
+        # ephem = model + np.outer(C0,Leg0) + np.outer(C1, Leg1)
+        # T0, P = poly.polyfit(index.flatten(),ephem.T,1)
+
+        centered_index = (index - index[-1]) // 2
+        LegX = centered_index / (index[-1]/2)
+        Leg0 = np.ones_like(LegX)
+        ephem = model + np.outer(C0, Leg0) + np.outer(C1,LegX)
+        T0, P = poly.polyfit(index.flatten(),ephem.T,1)
+
+
+        data_return = np.vstack([C0, C1, ROR, IMPACT, DUR14, T0, P, LD_Q1, LD_Q2, LD_U1, LD_U2, LN_WT, LN_LIKE]).T
+        labels = f'C0_{n} C1_{n} ROR_{n} IMPACT_{n} DUR14_{n} T0 P LD_Q1 LD_Q2 LD_U1 LD_U2 LN_WT LN_LIKE'.split()
+        df = pd.DataFrame(data_return, columns=labels)
+
+        ### change to unweighted
+        N_samp = 1000
+        LN_WT = df['LN_WT'].values
+        weight = np.exp(LN_WT- LN_WT.max())
+        w = weight/ np.sum(weight)
+        df = df.sample(N_samp, replace=True, ignore_index=True, weights=w)
+
+        return df
+    
+def load_results_model(file_path_results,planet_num):
+    with fits.open(file_path_results) as hdul:
+        hdu2 = hdul[2 + planet_num]
+        data = hdu2.data
+        index = data['INDEX']
+        ttime = data['TTIME']
+        model = data['MODEL']
+        out_prob = data['OUT_PROB']
+        out_flag = data['OUT_FLAG']
+
+    df = pd.DataFrame(dict(
+            index=index,
+            ttime=ttime,
+            model = model,
+            out_prob = out_prob,
+            out_flag = out_flag
+        ))
+    return df
+
+def _legendre(koi_id, n, k):
+        global K_id
+        if K_id == False:
+            star_id = koi_id.replace("K","S")
+        else:
+            star_id = koi_id
+        
+        ttv_file_name = star_id + f'_0{n}_quick.ttvs'
+        ttv_file = os.path.join(data_directory, star_id, ttv_file_name)
+        lc_file = star_id + '_lc_filtered.fits'
+        sc_file = star_id + '_sc_filtered.fits'
+        lc_path = os.path.join(data_directory, star_id, lc_file)
+        sc_path = os.path.join(data_directory, star_id, sc_file)
+        index, ttime, model, out_prob, out_flag = load_ttv_data(star_id,ttv_file)
+        if os.path.isfile(lc_path):
+            data_lc = load_photometry_data(lc_path)
+        if os.path.isfile(sc_path):
+            data_sc = load_photometry_data(sc_path)
+        model= np.array(model, dtype='float64')
+        t = model
+        #t = t.astype(float)
+        #if data_lc.TIME.min()< data_sc.TIME.min() and data_lc.TIME.max()> data_sc.TIME.max():
+        x = 2 * (t-data_lc.TIME.min()) / (data_lc.TIME.max() - data_lc.TIME.min()) - 1 
+        
+        if k==0:
+            return np.ones_like(t)
+        if k==1:
+            return np.zeros_like(t)
+        else:
+            return ValueError("only configured for 0th and 1st order Legendre polynomials")
 

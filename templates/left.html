@@ -1,5 +1,25 @@
 <!DOCTYPE html>
 <html>
+    <head>
+        <style>
+            .koi-row.not-reviewed {
+            background-color: #f9f9f9; /* Light grey */
+            }
+            .koi-row.looks-good {
+                background-color: #d4edda; /* Light green */
+            }
+            .koi-row.minor-issues {
+                background-color: #fbf5a8; /* Light yellow */
+            }
+            .koi-row.major-issues {
+                background-color: #f8d7da; /* Light red */
+            }
+            .koi-row.critical-issues {
+                background-color: #ed3a49; /* Darker red */
+            }
+            
+        </style>
+    </head>
     <body>
         <div id="username-container">
             {% if 'username' in session %}
@@ -15,9 +35,14 @@
     <div>
         <label for="tableSelect">Select Table:</label>
         <select id="tableSelect" onchange="loadTable()">
-            <option value="2023-05-19_singles.csv" {% if request.args.get('table') == '2023-05-19_singles.csv' %}selected{% endif %}>2023-05-19_singles</option>
+            <!-- <option value="2023-05-19_singles.csv" {% if request.args.get('table') == '2023-05-19_singles.csv' %}selected{% endif %}>2023-05-19_singles</option>
             <option value="2023-05-15_doubles.csv" {% if request.args.get('table') == '2023-05-15_doubles.csv' %}selected{% endif %}>2023-05-15_doubles</option>
-            <option value="eccentricity-gap.csv" {% if request.args.get('table') == 'eccentricity-gap.csv' %}selected{% endif %}>Eccentricity Gap</option>
+            <option value="eccentricity-gap.csv" {% if request.args.get('table') == 'eccentricity-gap.csv' %}selected{% endif %}>eccentricity-gap</option> -->
+            <option value="ecc-singles-LC.csv" {% if request.args.get('table') == 'ecc-singles-LC.csv' %}selected{% endif %}>ecc-singles-LC</option>
+            <option value="ecc-multis-LC.csv" {% if request.args.get('table') == 'ecc-multis-LC.csv' %}selected{% endif %}>ecc-multis-LC</option>
+            <option value="ecc-singles-LC-2024-08-26.csv" {% if request.args.get('table') == 'ecc-singles-LC-2024-08-26.csv' %}selected{% endif %}>ecc-singles-LC-2024-08-26</option>
+            <option value="ecc-all-LC.csv" {% if request.args.get('table') == 'ecc-all-LC.csv' %}selected{% endif %}>ecc-all-LC</option>
+            <option value="ecc-all-LC-omc-refit-20240912.csv" {% if request.args.get('table') == 'ecc-all-LC-omc-refit-20240912.csv' %}selected{% endif %}>ecc-all-LC-omc-refit-20240912</option>
         </select>
     
     </div>
@@ -38,15 +63,17 @@
             <th>logrho</th>
             <th>Teff</th>
             <th>logg</th>
+            <th>review</th>
         </tr>
         {% for row in table_data %}
-        <tr class="koi-row">
+        <tr id="row-{{ row['koi_id'] }}" class="koi-row">
             <td class="koi-id-cell"><a href="/star/{{ row['koi_id'] }}">{{ row['koi_id'] }}</a></td>
             <td>{{ row['kep_mag'] }}</td>
             <td>{{ row['Rstar'] }}</td>
             <td>{{ row['logrho'] }}</td>
             <td>{{ row['Teff'] }}</td>
             <td>{{ row['logg'] }}</td>
+            <td class="review-cell">{{ row['review'] }}</td>
         </tr>
         {% endfor %}
     </table>
@@ -69,7 +96,7 @@
             }
         }
 
-
+        
         // Function to handle the search
         function searchKoi() {
             const input = document.getElementById("searchInput");
@@ -105,7 +132,11 @@
         // Event listener for input on the search bar
         const searchInput = document.getElementById("searchInput");
         searchInput.addEventListener("input", searchKoi);
+        // document.addEventListener('DOMContentLoaded', (event) => {
+        //     tableColor();
+        // });
 
+        
     
     </script>
 </html>

@@ -16,16 +16,16 @@
         <input type="checkbox" id="detrendedLCCheckbox" onchange="togglePlotVisibilityDetrendedLightCurve()" checked/> 
         <label for="detrendedLCCheckbox">Detrended Light Curve</label>
 
-        <input type="checkbox" id="foldedLightCurveCheckbox" onchange="togglePlotVisibilityFoldedLightCurve()"/>
+        <input type="checkbox" id="foldedLightCurveCheckbox" onchange="togglePlotVisibilityFoldedLightCurve()" checked/>
         <label for="foldedLightCurveCheckbox">Folded Transit</label>
 
         <input type="checkbox" id="singleTransitCheckbox" onchange="togglePlotVisibilitySingleTransit()"/>
         <label for="singleTransitCheckbox">Single Transit</label>
 
-        <input type="checkbox" id="OMCCheckbox" onchange="togglePlotVisibilityOMC()"/>
+        <input type="checkbox" id="OMCCheckbox" onchange="togglePlotVisibilityOMC()" checked/>
         <label for="OMCCheckbox">TTV</label>
 
-        <input type="checkbox" id="CornerCheckbox" onchange="togglePlotVisibilityCorner()"/>
+        <input type="checkbox" id="CornerCheckbox" onchange="togglePlotVisibilityCorner()" checked/>
         <label for="CornerCheckbox">Corner</label>
     </div>
 
@@ -140,6 +140,7 @@
                 <option value="physical7">Physical 7: P,T0,ROR,IMPACT,DUR14,U1,U2</option>
                 <option value="physical5">Physical 5: P,T0,ROR,IMPACT,DUR14</option>
                 <option value="physical3">Physical 3: ROR,IMPACT,DUR14</option>
+                <option value="ld">Limb Darkening</option>
             </select>
         </div>
 
@@ -148,6 +149,26 @@
         </div>
     </div>
 
+
+
+    <div id="planetPropertiesTitle" style="display:none;">
+        <h3>Planet Properties:</h3>
+        <table id="planetPropertiesTable">
+            <thead>
+                <tr>
+                    <th>Planet Name</th>
+                    <th>Period</th>
+                    <th>Period/lcit</th>
+                    <th>Impact</th>
+                    <th>ROR</th>
+                    <th>DUR14</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Rows will be dynamically inserted here by JavaScript -->
+            </tbody>
+        </table>
+    </div>
 
 
     <script>
@@ -198,7 +219,7 @@
         let planet = '_00_quick.ttvs'
         // move forward and backward buttons
         function movePlotBackward() {
-            lineNumber -= 1;
+            lineNumber -= 9; // because of the 3x3 pannel
             if (lineNumber <0) {
                 lineNumber = 0;
             }
@@ -206,7 +227,7 @@
         }
 
         function movePlotForward() {
-           lineNumber += 1;
+           lineNumber += 9; // because of the 3x3 pannel
            generatePlotSingleTransit(selectedKoiId, lineNumber,planet);
         }
 
@@ -488,6 +509,11 @@
                 document.getElementById(`ROR_${planetNumCorner}`).checked = true;
                 document.getElementById(`IMPACT_${planetNumCorner}`).checked = true;
                 document.getElementById(`DUR14_${planetNumCorner}`).checked = true;
+            } else if (selectedOption === "ld") {
+                document.getElementById("LD_U1").checked = true;
+                document.getElementById("LD_U2").checked = true;
+                document.getElementById("LD_Q1").checked = true;
+                document.getElementById("LD_Q2").checked = true;
             }
 
             // Call columns() function if needed
@@ -536,6 +562,39 @@
                 planetNum.style.display = "none";
             }
 
+        }
+
+
+        function displayPlanetProperties(koiId) {
+            fetch(`/planet_properties/${koiId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const planetPropertiesTitle = document.getElementById("planetPropertiesTitle");
+                    const tableBody = document.querySelector("#planetPropertiesTable tbody");
+
+                    // Clear any existing rows in the table body
+                    tableBody.innerHTML = '';
+
+                    // Populate the table with the fetched data
+                    data.forEach(row => {
+                        const newRow = document.createElement('tr');
+                        newRow.innerHTML = `
+                            <td>${row['planet_name']}</td>
+                            <td>${row['period']}</td>
+                            <td>${row['lcit_ratio']}</td>
+                            <td>${row['impact']}</td>
+                            <td>${row['ror']}</td>
+                            <td>${row['duration']}</td>
+                        `;
+                        tableBody.appendChild(newRow);
+                    });
+
+                    // Show the table section
+                    planetPropertiesTitle.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error fetching planet properties:', error);
+                });
         }
 
 

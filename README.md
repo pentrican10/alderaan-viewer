@@ -9,6 +9,16 @@ $ conda env create -n <ENV_NAME> -f <LOCAL_DIR>/environment.yml
 if <ENV_NAME> is not specified, the conda environment will be named "alderaan-viewer"
 ```
 
+Quickstart guide:
+
+To run the ALDERAAN viewer
+
+1. Set the data directory
+    - Manually change data_directory at top of alderaan_viewer.py and data_load.py
+    - ex: 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
+
+
+-----
 
 File Structure:
 - data_directory: path to data for alderaan-results 

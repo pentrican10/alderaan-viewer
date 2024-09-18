@@ -11,51 +11,43 @@ if <ENV_NAME> is not specified, the conda environment will be named "alderaan-vi
 
 ## Quickstart guide:
 
-To run the ALDERAAN viewer
+To run the ALDERAAN viewer:
 
 1. Set the data directory 
     - Manually change data_directory at top of alderaan_viewer.py and data_load.py
     - ex: 'c:\\Users\\Paige\\Projects\\data\\alderaan_results' (where you store data)
+
+2. Download data from Cadence: from '/data/user/gjgilbert/projects/alderaan/Results/<data_run>' to '<data_directory>'
+    - substitute 'c:\\' for '/mnt/c/' if using wsl or mac
+    - ex: 'rsync -avh paige@cadence.caltech.edu:/data/user/gjgilbert/projects/alderaan/Results/ecc-all-LC /mnt/c/Users/Paige/Projects/data/alderaan_results'
+        - note here that 'ecc-all-LC' is the data_run
   
-2. Ensure necessary files are in the data directory
+3. Ensure necessary files are in the data directory
     - <data_directory>
         - <data_run>
             - <koi_id>
                 - <koi_id>_(n)_quick.ttvs
                 - <koi_id>_lc_filtered.fits
                 - <koi_id>-results.fits
+    - Example: <data_directory>
+        - ecc-all-LC
+            - K00001
+                - K00001_00_quick.ttvs
+                - K00001_lc_filtered.fits
+                - K00001-results.fits
                 
-3. Manually add table to <data_run> folder (path for table should be '<data_directory>\\<data_run>\\<data_run.csv>')
+4. Manually add table to <data_run> folder (path for table should be '<data_directory>\\<data_run>\\<data_run.csv>')
     - Make sure to change table name from 'kepler_dr25_gaia_dr2_crossmatch.csv' to '<data_run>.csv'
         - copy paste table 'kepler_dr25_gaia_dr2_crossmatch.csv' and change name
 
-3. From terminal, run alderaan_viewer.py
+5. From terminal, run alderaan_viewer.py
 
 
 -----
-
-File Structure:
-- data_directory: path to data for alderaan-results 
-    - Manually change data_directory at top of alderaan_viewer.py and data_load.py
-    - ex: 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
-- table: default table when app opens:
-    - ex: 'ecc-all-LC.csv'
-
-Data downloaded from Cadence: from '/data/user/gjgilbert/projects/alderaan/Results/<data_run>' to '<data_directory>'
-- substitute 'c:\\' for '/mnt/c/' if using wsl or mac
-    - ex: 'rsync -avh paige@cadence.caltech.edu:/data/user/gjgilbert/projects/alderaan/Results/ecc-all-LC /mnt/c/Users/Paige/Projects/data/alderaan_results'
-        - note here that 'ecc-all-LC' is the data_run
-- manually add table to this folder (path for table should be '<data_directory>\\<data_run>\\<data_run.csv>')
-    - Make sure to change table name from 'kepler_dr25_gaia_dr2_crossmatch.csv' to '<data_run>.csv'
-        - copy paste table 'kepler_dr25_gaia_dr2_crossmatch.csv' and change name
-
-
-
-Notes:
-- When you leave a comment, a comment file will be created at '<data_directory>\\<data_run>\\<koi_id>\\<koi_id_comments.txt>'
-- bug work-arounds (until fixed):
-    - Make sure to mannually reset the corner plot and single transit to '00' option before changing targets
-    - if OMC says 'error loading plot' when first loading, uncheck and recheck the OMC box at the top of the screen
+## Troubleshooting:
+- Make sure to mannually reset the corner plot and single transit to '00' option before changing targets
+    - If this is not done, reload the page and continue
+- if TTV says 'error loading plot' when first loading, uncheck and recheck the TTV box at the top of the screen
 
 Use:
 - Login with username
@@ -66,3 +58,7 @@ Use:
     - Change planet via planet select dropdown for single transit and posterior plots
         - Make sure to select '00' before changing targets
     - Mark review status and leave any relevant comments
+ 
+Notes:
+- When you leave a comment, a comment file will be created at '<data_directory>\\<data_run>\\<koi_id>\\<koi_id_comments.txt>'
+

@@ -12,6 +12,7 @@ if <ENV_NAME> is not specified, the conda environment will be named "alderaan-vi
 
 File Structure:
 - data_directory: path to data for alderaan-results 
+    - Manually change data_directory at top of alderaan_viewer.py and data_load.py
     - ex: 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
 - table: default table when app opens:
     - ex: 'ecc-all-LC.csv'

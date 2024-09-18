@@ -19,11 +19,11 @@ To run the ALDERAAN viewer
   
 2. Ensure necessary files are in the data directory
     - <data_directory>
-        -> <data_run>
-            -> <KOI_id>
-                -> 
-                -> 
-                -> 
+        - <data_run>
+            - <koi_id>
+                - <koi_id>_<n>_quick.ttvs
+                - <koi_id>_lc_filtered.fits
+                - <koi_id>-results.fits
                 
 3. Manually add table to <data_run> folder (path for table should be '<data_directory>\\<data_run>\\<data_run.csv>')
     - Make sure to change table name from 'kepler_dr25_gaia_dr2_crossmatch.csv' to '<data_run>.csv'

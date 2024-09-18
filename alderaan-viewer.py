@@ -1583,7 +1583,7 @@ def generate_plot_OMC(koi_id):
     data_id = data_id.sort_values(by='periods') 
     koi_identifiers = data_id.koi_identifiers.values
     periods = data_id.period_title.values
-    subplot_height = 500
+    subplot_height = 450
     subplot_titles = []
     spacing = [0.2,0.1,0.05,0.04,0.04,0.04,0.03] 
     for k in range(len(koi_identifiers)):
@@ -1684,7 +1684,7 @@ def generate_plot_OMC(koi_id):
                 )
             )
     )
-    fig_height = 500 * 1.4
+    fig_height = 450 * 1.4
     fig.update_layout(height=fig_height*npl, width=1000)
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
     return jsonify(graphJSON)

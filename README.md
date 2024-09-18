@@ -22,7 +22,7 @@ To run the ALDERAAN viewer:
     - ex: 'rsync -avh paige@cadence.caltech.edu:/data/user/gjgilbert/projects/alderaan/Results/ecc-all-LC /mnt/c/Users/Paige/Projects/data/alderaan_results'
         - note here that 'ecc-all-LC' is the data_run
   
-3. Ensure necessary files are in the data directory
+3. Ensure necessary files are in the data directory (structured after the data produced from ALDERAAN)
     - <data_directory>
         - <data_run>
             - <koi_id>
@@ -49,7 +49,7 @@ To run the ALDERAAN viewer:
     - If this is not done, reload the page and continue
 - if TTV says 'error loading plot' when first loading, uncheck and recheck the TTV box at the top of the screen
 
-Use:
+## Use:
 - Login with username
 - Select table from dropdown on left side
 - Select KOI ID to be viewed
@@ -59,6 +59,6 @@ Use:
         - Make sure to select '00' before changing targets
     - Mark review status and leave any relevant comments
  
-Notes:
+## Notes:
 - When you leave a comment, a comment file will be created at '<data_directory>\\<data_run>\\<koi_id>\\<koi_id_comments.txt>'
 

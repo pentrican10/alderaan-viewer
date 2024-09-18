@@ -1583,20 +1583,26 @@ def generate_plot_OMC(koi_id):
     data_id = data_id.sort_values(by='periods') 
     koi_identifiers = data_id.koi_identifiers.values
     periods = data_id.period_title.values
+    subplot_height = 450
     subplot_titles = []
-    spacing = [0.2,0.15,0.1,0.07,0.05,0.04,0.03]
+    spacing = [0.2,0.1,0.05,0.04,0.04,0.04,0.03] 
     for k in range(len(koi_identifiers)):
         subplot_titles.append(f'{koi_identifiers[k]}, {periods[k]}') 
-    fig = make_subplots(rows=npl, cols=1,
+        subplot_titles.append('')
+    fig = make_subplots(rows=npl*2, cols=1,
                         subplot_titles=subplot_titles,
-                        row_heights=[350]*npl,
+                        row_heights=[subplot_height, subplot_height*0.4]*npl,
                         vertical_spacing=spacing[npl-1]) 
+    r_plot = 1
+    r_residuals = r_plot+1
+    
 
     for i, file_path in enumerate(file_paths):
         omc_data, omc_model, out_prob, out_flag = data_load.load_OMC_data(koi_id, file_path)
         show_outliers = True
+        inds = np.arange(len(omc_data), dtype='int')
 
-        if omc_data is not None:
+        if omc_data is not None: 
             mask = [bool(flag) for flag in out_flag]
             if show_outliers:
                 omc = px.scatter(omc_data,  
@@ -1606,20 +1612,42 @@ def generate_plot_OMC(koi_id):
                                 color_continuous_scale='viridis').data[0]
                 line_trace = px.line(omc_model,x='TIME', y='OMC_MODEL').data[0]
                 line_trace.line.color = 'red'
-                fig.add_trace(omc, row=(i+1), col=1)
-                fig.add_trace(line_trace, row=(i+1), col=1)
+                fig.add_trace(omc, row=(r_plot), col=1)
+                fig.add_trace(line_trace, row=(r_plot), col=1)
 
                 # Add a new scatter trace for outliers with 'x' shape markers
                 scatter_outliers = px.scatter(omc_data[mask], x='TIME', y='OMC').update_traces(
                     marker=dict(symbol='x', color='orange'),
                     line=dict(width=0.7))
 
-                fig.add_trace(scatter_outliers.data[0], row=(i+1), col=1)
+                fig.add_trace(scatter_outliers.data[0], row=(r_plot), col=1)
                 
+                residuals = omc_data.OMC - omc_model.OMC_MODEL[inds]
+                ### plot residuals 
+                omc_residuals = pd.DataFrame({
+                    'TIME' : omc_data.TIME,
+                    'RESIDUALS' : residuals
+                })
+                residuals_plot_omc = px.scatter(omc_residuals,x='TIME', y='RESIDUALS', color=out_prob,color_continuous_scale='viridis').data[0]
+                fig.add_trace(residuals_plot_omc, row=r_residuals, col=1) 
+                # Add horizontal line at 0 in residual plot 
+                fig.add_shape(type="line", x0=omc_data.TIME.min(), x1=omc_data.TIME.max(), y0=0, y1=0,
+                            line=dict(color="Red"), row= r_residuals, col=1)
+                # Add a new scatter trace for outliers with 'x' shape markers
+                scatter_outliers = px.scatter(omc_residuals[mask], x='TIME', y='RESIDUALS').update_traces(
+                    marker=dict(symbol='x', color='orange'), 
+                    line=dict(width=0.7))
+                fig.add_trace(scatter_outliers.data[0], row=(r_residuals), col=1)
+
                 # Update x-axis and y-axis labels for each subplot
-                fig.update_xaxes(title_text="TIME (DAYS)", row=i+1, col=1)
-                fig.update_yaxes(title_text="O-C (MINUTES)", row=i+1, col=1)
+                fig.update_xaxes(title_text="TIME (DAYS)", row=r_residuals, col=1)
+                fig.update_yaxes(title_text="O-C (MINUTES)", row=r_plot, col=1)
+                fig.update_yaxes(title_text="Residuals", row=r_residuals, col=1)
                 fig.update_coloraxes(colorbar_title_text='Out Probability', colorbar_len=0.2)#, row=i+1, col=1)
+
+
+                r_plot = r_residuals + 1
+                r_residuals = r_plot+1
 
             else:
                 mask_arr = np.array(mask)
@@ -1627,12 +1655,17 @@ def generate_plot_OMC(koi_id):
                 # Add a line plot for OMC_MODEL
                 line_trace = px.line(omc_model[~mask_arr], x="TIME", y="OMC_MODEL").data[0]
                 line_trace.line.color = 'red' 
-                fig.add_trace(omc, row=(i+1), col=1)
-                fig.add_trace(line_trace, row=(i+1), col=1)
+                fig.add_trace(omc, row=(r_plot), col=1)
+                fig.add_trace(line_trace, row=(r_plot), col=1)
                 ### update axes and colorbar
-                fig.update_xaxes(title_text="TIME (DAYS)", row=i+1, col=1)
-                fig.update_yaxes(title_text="O-C (MINUTES)", row=i+1, col=1)
+                fig.update_xaxes(title_text="TIME (DAYS)", row=r_plot, col=1)
+                fig.update_yaxes(title_text="O-C (MINUTES)", row=r_plot, col=1)
                 fig.update_coloraxes(colorbar_title_text='Out Probability', colorbar_len=0.2)#, row=i+1, col=1)
+
+                residuals = omc_model[~mask_arr].OMC_MODEL[inds] - omc_data[~mask_arr].OMC
+
+                r_plot = r_residuals + 1
+                r_residuals = r_plot+1
         
         else: 
             error_message = f'No data found for {koi_id}'
@@ -1651,7 +1684,8 @@ def generate_plot_OMC(koi_id):
                 )
             )
     )
-    fig.update_layout(height=350*npl, width=1000)
+    fig_height = 450 * 1.4
+    fig.update_layout(height=fig_height*npl, width=1000)
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
     return jsonify(graphJSON)
 

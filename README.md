@@ -1,6 +1,15 @@
 # alderaan-viewer
 Web app for viewing ALDERAAN pipeline outputs.
 
+Installation Instructions:
+```
+$ git clone https://github.com/pentrican10/alderaan-viewer <LOCAL_DIR>
+$ conda env create -n <ENV_NAME> -f <LOCAL_DIR>/environment.yml
+
+if <ENV_NAME> is not specified, the conda environment will be named "alderaan-viewer"
+```
+
+
 File Structure:
 - data_directory: path to data for alderaan-results 
     - ex: 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'

@@ -13,9 +13,19 @@ if <ENV_NAME> is not specified, the conda environment will be named "alderaan-vi
 
 To run the ALDERAAN viewer
 
-1. Set the data directory
+1. Set the data directory 
     - Manually change data_directory at top of alderaan_viewer.py and data_load.py
-    - ex: 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
+    - ex: 'c:\\Users\\Paige\\Projects\\data\\alderaan_results' (where you store data)
+  
+2. Ensure necessary files are in the data directory
+    - <data_directory>
+        -> <data_run>
+            -> <KOI_id>
+                -> 
+                -> 
+                -> 
+
+3. From terminal, run alderaan_viewer.py
 
 
 -----

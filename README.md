@@ -21,7 +21,7 @@ To run the ALDERAAN viewer
     - <data_directory>
         - <data_run>
             - <koi_id>
-                - <koi_id>_<n>_quick.ttvs
+                - <koi_id>_(n)_quick.ttvs
                 - <koi_id>_lc_filtered.fits
                 - <koi_id>-results.fits
                 

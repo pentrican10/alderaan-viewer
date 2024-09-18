@@ -1,7 +1,7 @@
 # alderaan-viewer
 Web app for viewing ALDERAAN pipeline outputs.
 
-Installation Instructions:
+## Installation Instructions:
 ```
 $ git clone https://github.com/pentrican10/alderaan-viewer <LOCAL_DIR>
 $ conda env create -n <ENV_NAME> -f <LOCAL_DIR>/environment.yml
@@ -9,7 +9,7 @@ $ conda env create -n <ENV_NAME> -f <LOCAL_DIR>/environment.yml
 if <ENV_NAME> is not specified, the conda environment will be named "alderaan-viewer"
 ```
 
-Quickstart guide:
+## Quickstart guide:
 
 To run the ALDERAAN viewer
 

@@ -21,7 +21,7 @@ To run the ALDERAAN viewer:
   
 3. Ensure necessary files are in the data directory (structured after the data produced from ALDERAAN)
     - <data_directory>
-        - <data_run>
+        - <run_id>
             - <koi_id>
                 - <koi_id>_(n)_quick.ttvs
                 - <koi_id>_lc_filtered.fits

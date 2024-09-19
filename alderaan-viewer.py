@@ -1573,7 +1573,8 @@ def generate_plot_OMC(koi_id):
     else:
         star_id = koi_id
     file_name = star_id + '_*_quick.ttvs'
-    file_paths = sorted(glob.glob(os.path.join(data_directory,star_id, file_name)))   ### sort
+    file_paths = (glob.glob(os.path.join(data_directory,star_id, file_name)))   ### sort
+    file_paths = sorted(file_paths, key=lambda x:float(re.findall("(\d+)",x)[0]))
     
     ext = os.path.basename(data_directory) +'.csv'
     csv_file_path = os.path.join(data_directory, ext)

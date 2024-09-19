@@ -17,7 +17,7 @@ To run the ALDERAAN viewer:
     - Manually change data_directory at top of alderaan_viewer.py and data_load.py
     - ex: 'c:\\Users\\Paige\\Projects\\data\\alderaan_results' (where you store data)
 
-2. For California Planet Search members, ALDERAAN data products may be retrieved from the `cadence` server. Eventually these data products will be hosted publicly. Please contact Greg Gilbert (https://github.com/gjgilbert) for assistance. 
+2. For California Planet Search members, ALDERAAN data products may be retrieved from the `cadence` server. Eventually these data products will be hosted publicly.
   
 3. Ensure necessary files are in the data directory (structured after the data produced from ALDERAAN)
     - <data_directory>

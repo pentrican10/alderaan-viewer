@@ -17,7 +17,7 @@ from plotly.subplots import make_subplots
 import random
 import data_load
 
-data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
+default_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
 K_id = True
 table = 'ecc-all-LC.csv'
 
@@ -1573,7 +1573,8 @@ def generate_plot_OMC(koi_id):
     else:
         star_id = koi_id
     file_name = star_id + '_*_quick.ttvs'
-    file_paths = glob.glob(os.path.join(data_directory,star_id, file_name))
+    file_paths = sorted(glob.glob(os.path.join(data_directory,star_id, file_name)))   ### sort
+    
     ext = os.path.basename(data_directory) +'.csv'
     csv_file_path = os.path.join(data_directory, ext)
     ### number of planets from number of ttv files

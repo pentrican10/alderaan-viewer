@@ -57,5 +57,5 @@ To run the ALDERAAN viewer:
     - Mark review status and leave any relevant comments
  
 ## Notes:
-- When you leave a comment, a comment file will be created at '<data_directory>\\<data_run>\\<koi_id>\\<koi_id_comments.txt>'
+- When you leave a comment, a comment file will be created at '<data_directory>\\<run_id>\\<koi_id>\\<koi_id_comments.txt>'
 

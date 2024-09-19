@@ -33,8 +33,8 @@ To run the ALDERAAN viewer:
                 - K00001_lc_filtered.fits
                 - K00001-results.fits
                 
-4. Manually add table to <data_run> folder (path for table should be '<data_directory>\\<data_run>\\<data_run.csv>')
-    - Make sure to change table name from 'kepler_dr25_gaia_dr2_crossmatch.csv' to '<data_run>.csv'
+4. Manually add table to <run_id> folder (path for table should be '<data_directory>\\<run_id>\\<run_id.csv>')
+    - Make sure to change table name from 'kepler_dr25_gaia_dr2_crossmatch.csv' to '<run_id>.csv'
         - copy paste table 'kepler_dr25_gaia_dr2_crossmatch.csv' and change name
 
 5. From terminal, run alderaan_viewer.py

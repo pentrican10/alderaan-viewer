@@ -1,5 +1,5 @@
 # alderaan-viewer
-Web app for viewing ALDERAAN pipeline outputs.
+Web app for viewing ALDERAAN pipeline outputs. The core ALDERAAN pipeline can be found at https://github.com/gjgilbert/alderaan.
 
 ## Installation Instructions:
 ```
@@ -17,10 +17,7 @@ To run the ALDERAAN viewer:
     - Manually change data_directory at top of alderaan_viewer.py and data_load.py
     - ex: 'c:\\Users\\Paige\\Projects\\data\\alderaan_results' (where you store data)
 
-2. Download data from Cadence: from '/data/user/gjgilbert/projects/alderaan/Results/<data_run>' to '<data_directory>'
-    - substitute 'c:\\' for '/mnt/c/' if using wsl or mac
-    - ex: 'rsync -avh paige@cadence.caltech.edu:/data/user/gjgilbert/projects/alderaan/Results/ecc-all-LC /mnt/c/Users/Paige/Projects/data/alderaan_results'
-        - note here that 'ecc-all-LC' is the data_run
+2. For California Planet Search members, ALDERAAN data products may be retrieved from the `cadence` server. Eventually these data products will be hosted publicly. Please contact Greg Gilbert (https://github.com/gjgilbert) for assistance. 
   
 3. Ensure necessary files are in the data directory (structured after the data produced from ALDERAAN)
     - <data_directory>

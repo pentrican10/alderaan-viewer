@@ -250,8 +250,10 @@ def single_data(koi_id, line_number, num, ttv_file):
     file_path_results = os.path.join(data_directory, star_id, file_results)
     data_post = load_posteriors(file_path_results,num,koi_id)
     ### get max likelihood
-    max_index = data_post['LN_LIKE'].idxmax()
-    DUR14 = 1.5* data_post[f'DUR14_{num}'][max_index]
+    data_post = data_post.sort_values(by='LN_LIKE', ascending=False) 
+    row = data_post.iloc[0] # pick row with highest likelihood
+    ### mult by 1.5 for correct offset
+    DUR14 = row[f'DUR14_{num}']
 
     combined_data = None
     #get data and create detrended light curve
@@ -287,8 +289,8 @@ def single_data(koi_id, line_number, num, ttv_file):
             center_time = ttime[line_number]
             transit_number = index[line_number]
         
-            start_time = float(center_time) - 0.25
-            end_time= float(center_time) + 0.25
+            start_time = float(center_time) - (DUR14*1.5) 
+            end_time= float(center_time) + (DUR14*1.5) 
 
             use_lc = (photometry_data_lc['TIME'] > start_time) & (photometry_data_lc['TIME'] < end_time)
             lc_data = photometry_data_lc[use_lc]

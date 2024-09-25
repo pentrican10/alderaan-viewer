@@ -1,17 +1,15 @@
 name: alderaan-viewer
+channels:
+  - conda-forge
+  - defaults
 dependencies: 
   - astropy==5.3.3
-  - csv==1.0
   - flask==3.0.3
-  - json==2.0.9
   - numpy==1.22.4
   - pandas==2.0.3
+  - pip
   - plotly==5.21.0
   - python==3.10.12
-  - re==2.2.1
   - scipy==1.7.3
   - pip:
       - git+https://github.com/gjgilbert/batman
-  
-
-

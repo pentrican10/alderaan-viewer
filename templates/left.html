@@ -35,15 +35,6 @@
     <div>
         <label for="tableSelect">Select Table:</label>
         <select id="tableSelect" onchange="loadTable()">
-            <!-- <option value="2023-05-19_singles.csv" {% if request.args.get('table') == '2023-05-19_singles.csv' %}selected{% endif %}>2023-05-19_singles</option>
-            <option value="2023-05-15_doubles.csv" {% if request.args.get('table') == '2023-05-15_doubles.csv' %}selected{% endif %}>2023-05-15_doubles</option>
-            <option value="eccentricity-gap.csv" {% if request.args.get('table') == 'eccentricity-gap.csv' %}selected{% endif %}>eccentricity-gap</option> -->
-            <!-- <option value="ecc-singles-LC.csv" {% if request.args.get('table') == 'ecc-singles-LC.csv' %}selected{% endif %}>ecc-singles-LC</option>
-            <option value="ecc-multis-LC.csv" {% if request.args.get('table') == 'ecc-multis-LC.csv' %}selected{% endif %}>ecc-multis-LC</option>
-            <option value="ecc-singles-LC-2024-08-26.csv" {% if request.args.get('table') == 'ecc-singles-LC-2024-08-26.csv' %}selected{% endif %}>ecc-singles-LC-2024-08-26</option>
-            <option value="ecc-all-LC.csv" {% if request.args.get('table') == 'ecc-all-LC.csv' %}selected{% endif %}>ecc-all-LC</option>
-            <option value="ecc-all-LC-omc-refit-20240912.csv" {% if request.args.get('table') == 'ecc-all-LC-omc-refit-20240912.csv' %}selected{% endif %}>ecc-all-LC-omc-refit-20240912</option>
-            <option value="ecc-all-LC-omc-refit-20240916.csv" {% if request.args.get('table') == 'ecc-all-LC-omc-refit-20240916.csv' %}selected{% endif %}>ecc-all-LC-omc-refit-20240916</option> -->
             <!-- AUTO POPULATE THESE OPTIONS -->
         </select>
     
@@ -84,31 +75,73 @@
 
     <script>
 
+        // // Function to load dropdown options dynamically
+        // function loadDropdown() {
+        //     fetch('/get_dropdown_options')
+        //         .then(response => response.json())
+        //         .then(data => {
+        //             const dropdown = document.getElementById('tableSelect');
+
+        //             dropdown.innerHTML = '';  // Clear existing options
+
+        //             data.forEach(option => {
+        //                 // Create new option element
+        //                 const opt = document.createElement('option');
+        //                 opt.value = option+'.csv';
+        //                 opt.innerHTML = option;
+
+                        
+        //                 dropdown.appendChild(opt);
+        //             });
+        //         })
+        //         .catch(error => console.error('Error loading dropdown options:', error));
+        // }
+
+
         // Function to load dropdown options dynamically
-        function loadDropdown() {
+        function loadDropdown(currentTable) {
             fetch('/get_dropdown_options')
                 .then(response => response.json())
                 .then(data => {
                     const dropdown = document.getElementById('tableSelect');
-
                     dropdown.innerHTML = '';  // Clear existing options
 
+                    // Dynamically create option elements
                     data.forEach(option => {
-                        // Create new option element
                         const opt = document.createElement('option');
-                        opt.value = option+'.csv';
+                        opt.value = option + '.csv';
                         opt.innerHTML = option;
 
-                        
+                        // Append the new option to the dropdown
                         dropdown.appendChild(opt);
                     });
+
+                    // After populating, set the dropdown to the currently selected table
+                    if (currentTable) {
+                        dropdown.value = currentTable;
+                    }
                 })
                 .catch(error => console.error('Error loading dropdown options:', error));
         }
 
+        // Function to get the currently selected table from the Flask backend
+        function getCurrentTable() {
+            return fetch('/get_selected_table')
+                .then(response => response.json())
+                .then(data => data.selected_table)  // Return the selected table from the server
+                .catch(error => {
+                    console.error('Error getting selected table:', error);
+                    return null;
+                });
+        }
+
+
         // Load the options when the page loads
         window.onload = function() {
-            loadDropdown();
+            getCurrentTable().then(currentTable => {
+                loadDropdown(currentTable);  // Load options and reflect the current table
+            });
+            //loadDropdown();
             tableColor();
         };
 

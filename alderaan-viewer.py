@@ -102,6 +102,15 @@ def get_dropdown_options():
         return jsonify(options)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+@app.route('/get_selected_table', methods=['GET'])
+def get_selected_table():
+    try:
+        # Return the selected table as a JSON response
+        selected_table = {'selected_table': table}
+        return jsonify(selected_table)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/planet_properties/<koi_id>', methods=['GET'])
 def get_planet_properties(koi_id):

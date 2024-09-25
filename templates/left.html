@@ -91,9 +91,6 @@
                 .then(data => {
                     const dropdown = document.getElementById('tableSelect');
 
-                    // Get the current selected value (before the dropdown is repopulated)
-                    const currentSelection = dropdown.value;
-
                     dropdown.innerHTML = '';  // Clear existing options
 
                     data.forEach(option => {
@@ -102,11 +99,7 @@
                         opt.value = option+'.csv';
                         opt.innerHTML = option;
 
-                        // If the option matches the current selection, mark it as selected
-                        if (option === currentSelection) {
-                            opt.selected = true;
-                        }
-
+                        
                         dropdown.appendChild(opt);
                     });
                 })

@@ -29,8 +29,8 @@ file_path = f"C:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}\\{koi_
 data_directory = f'c:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}'
 file_name = koi_id + '_*_quick.ttvs'
 file_paths = (glob.glob(os.path.join(data_directory,koi_id, file_name)))   ### sort
-file_paths = sorted(file_paths, key=lambda  x: int(re.search(r"_(\d+)_", x).group(1)))
-print(file_paths)
+file_path1 = sorted(file_paths, key=lambda  x: int(re.search(r"_(\d+)_", x).group(1)), reverse=True)
+print(file_path1)
 
 
 '''

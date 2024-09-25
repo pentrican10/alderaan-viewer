@@ -42,8 +42,6 @@ To run the ALDERAAN viewer:
 
 -----
 ## Troubleshooting:
-- Make sure to mannually reset the corner plot and single transit to '00' option before changing targets
-    - If this is not done, reload the page and continue
 - if TTV says 'error loading plot' when first loading, uncheck and recheck the TTV box at the top of the screen
 
 ## Use:
@@ -53,7 +51,6 @@ To run the ALDERAAN viewer:
     - Automatically populates detrended light curve, folded light curves, OMC plots, posterior plots, and planet properties table
     - Select Single Transit box to view single transits
     - Change planet via planet select dropdown for single transit and posterior plots
-        - Make sure to select '00' before changing targets
     - Mark review status and leave any relevant comments
  
 ## Notes:

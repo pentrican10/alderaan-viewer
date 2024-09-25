@@ -68,8 +68,8 @@
             <button onclick="movePlotBackward()">&#x2190;</button> <!--previous transit-->
             <button onclick="movePlotForward()">&#x2192;</button> <!--next transit -->
             <br>
-            <button onclick="move10Backward()">&#x2190;10</button>
-            <button onclick="move10Forward()">10&#x2192;</button>
+            <!-- <button onclick="move10Backward()">&#x2190;10</button>
+            <button onclick="move10Forward()">10&#x2192;</button> -->
         </div>
     </div>
 
@@ -536,6 +536,28 @@
 
             // Call columns() function if needed
             columns();
+        }
+
+        // Function to reset planet dropdown when a new koi_id is clicked
+        function resetPlanetDropdownCorner() {
+            const planetSelect = document.getElementById("selectPlanetNumber");
+            
+            // Set the value of the planet number dropdown to "00"
+            planetSelect.value = "00";
+
+            // Set the planet number corner to 0
+            planetNumCorner = 0;
+            selectedColumns = [`C0_${planetNumCorner}`, `C1_${planetNumCorner}`,`ROR_${planetNumCorner}`,`IMPACT_${planetNumCorner}`,`DUR14_${planetNumCorner}`]; // Initial selection
+
+
+            // Update the checkboxes' IDs accordingly (with 0 as planetNumCorner)
+            var checkboxes = document.querySelectorAll("#cornerVarCheckbox input[type=checkbox]");
+            checkboxes.forEach(function(checkbox) {
+                checkbox.id = checkbox.id.replace(/_\d+$/, "_0");
+                checkbox.nextElementSibling.setAttribute("for", checkbox.id);
+            });
+
+            console.log("Dropdown reset to 00 and planetNumCorner reset to 0");
         }
 
 

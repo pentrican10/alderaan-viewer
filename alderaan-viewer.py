@@ -20,7 +20,7 @@ import data_load
 default_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
 K_id = True
 table = 'ecc-all-LC.csv'
-
+data_directory = ''
 app = Flask(__name__)
 app.secret_key = 'super_secret'
 
@@ -85,9 +85,23 @@ def update_data_directory(selected_table):
         selected_table: string of table name. This must be in the form 'table_name.csv'
     """
     global data_directory
-    global table
+    global table 
     data_directory = os.path.join('c:\\Users\\Paige\\Projects\\data\\alderaan_results', selected_table[:-4])
-    table = selected_table
+    #data_directory = os.path.join('c:\\Users\\Paige\\Projects\\data\\alderaan_results', selected_table)
+    table = selected_table 
+
+
+@app.route('/get_dropdown_options')
+def get_dropdown_options():
+    try:
+        global default_directory
+        # List all items (files and folders) in the directory without filtering by extension
+        options = os.listdir(default_directory) 
+        
+        # Return the list of options as a JSON response
+        return jsonify(options)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/planet_properties/<koi_id>', methods=['GET'])
 def get_planet_properties(koi_id):
@@ -244,6 +258,7 @@ def save_file(koi_id):
         return display_comment_file(koi_id)
     except Exception as e:
         return f"An error occurred: {str(e)}"
+
 
 @app.route('/generate_plot/<koi_id>')
 def generate_plot_Detrended_Light_Curve(koi_id):
@@ -420,7 +435,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
             times = data_lc.loc[data_lc['QUARTER'] == quarter, 'TIME']
             start = times.min()
             end = times.max()
-            line_color = get_color(idx)
+            line_color = get_color(quarter)
 
             # Add horizontal lines at the top of the plot
             fig.add_shape(

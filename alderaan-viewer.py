@@ -17,12 +17,20 @@ from plotly.subplots import make_subplots
 import random
 import data_load
 
-default_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
 K_id = True
-table = 'ecc-all-LC.csv'
-data_directory = ''
+table = ''# 'ecc-all-LC.csv' 
 app = Flask(__name__)
 app.secret_key = 'super_secret'
+
+data_directory = ''
+
+### Dynamically determine the root directory of the Flask app
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))  # Root directory of the app
+### Move one level up from the root directory
+PARENT_DIR = os.path.dirname(ROOT_DIR)
+### Set the default directory to the parent directory's 'alderaan/Results' path
+default_directory = os.path.join(PARENT_DIR, 'alderaan', 'Results')
+
 
 @app.route('/')
 def index():
@@ -63,10 +71,13 @@ def display_table_data():
     """
     global K_id
     global table
-    table = request.args.get('table', 'ecc-all-LC.csv')
+    global default_directory
+    ### List all items (files and folders) in the directory 
+    options = os.listdir(default_directory) 
+    table = request.args.get('table', options[0] + '.csv')  # default table option is first folder in directory
     update_data_directory(table)
     ### set switch to use K versus S(simulation data) based on table selected
-    if (table == '2023-05-19_singles.csv') or (table == '2023-05-15_doubles.csv'):
+    if 'SIMULATION' in table:
         K_id = False 
     else: 
         K_id = True
@@ -86,7 +97,7 @@ def update_data_directory(selected_table):
     """
     global data_directory
     global table 
-    data_directory = os.path.join('c:\\Users\\Paige\\Projects\\data\\alderaan_results', selected_table[:-4])
+    data_directory = os.path.join(default_directory, selected_table[:-4])
     #data_directory = os.path.join('c:\\Users\\Paige\\Projects\\data\\alderaan_results', selected_table)
     table = selected_table 
 

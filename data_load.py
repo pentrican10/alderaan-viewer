@@ -15,8 +15,17 @@ scit = SCIT/3600/24         # Kepler short cadence integration time + readout ti
 #data_directory = 'c:\\Users\\Paige\\Projects\\data\\'
 #data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
 k_id = True
-table = 'ecc-all-LC.csv'
-default_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
+table =  ''# 'ecc-all-LC.csv'
+data_directory = ''
+#default_directory = ''  # This will be initialized based on the application's root
+
+# Dynamically determine the root directory of the Flask app
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))  # Root directory of the app
+# Move one level up from the root directory
+PARENT_DIR = os.path.dirname(ROOT_DIR)
+# Set the default directory to the parent directory's 'alderaan/Results' path
+default_directory = os.path.join(PARENT_DIR, 'alderaan', 'Results')
+
 
 def update_data_directory(selected_table):
     global data_directory
@@ -35,8 +44,8 @@ def read_table_data(table):
     #folder = table[:-4]
     update_data_directory(table)
     Table = table
-    if (table == '2023-05-19_singles.csv') or (table == '2023-05-15_doubles.csv'):
-        K_id = False
+    if 'SIMULATION' in table:
+        K_id = False 
     else: 
         K_id = True
     file_path = os.path.join(data_directory, table)

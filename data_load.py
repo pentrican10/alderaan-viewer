@@ -17,7 +17,6 @@ scit = SCIT/3600/24         # Kepler short cadence integration time + readout ti
 k_id = True
 table =  ''# 'ecc-all-LC.csv'
 data_directory = ''
-#default_directory = ''  # This will be initialized based on the application's root
 
 # Dynamically determine the root directory of the Flask app
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))  # Root directory of the app
@@ -28,6 +27,9 @@ default_directory = os.path.join(PARENT_DIR, 'alderaan', 'Results')
 
 
 def update_data_directory(selected_table):
+    """
+    Function 
+    """
     global data_directory
     global default_directory
     data_directory = os.path.join(default_directory, selected_table[:-4])
@@ -37,7 +39,6 @@ def read_table_data(table):
     Reads data for the table on the left side of the web app
     Shows koi_id, kep_mag, Rstar, logrho, Teff, logg
     """
-    #file_path = os.path.join(data_directory, '2023-05-19_singles.csv')
     global data_directory
     global K_id
     global Table

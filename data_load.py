@@ -13,28 +13,40 @@ SCIT = 58.848777            # Kepler short cadence integration time + readout ti
 lcit = LCIT/60/24           # Kepler long cadence integration time + readout time [days]
 scit = SCIT/3600/24         # Kepler short cadence integration time + readout time [days]
 #data_directory = 'c:\\Users\\Paige\\Projects\\data\\'
-data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
+#data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
 k_id = True
-table = 'ecc-all-LC.csv'
+table =  ''# 'ecc-all-LC.csv'
+data_directory = ''
+
+# Dynamically determine the root directory of the Flask app
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))  # Root directory of the app
+# Move one level up from the root directory
+PARENT_DIR = os.path.dirname(ROOT_DIR)
+# Set the default directory to the parent directory's 'alderaan/Results' path
+default_directory = os.path.join(PARENT_DIR, 'alderaan', 'Results')
+
 
 def update_data_directory(selected_table):
+    """
+    Function 
+    """
     global data_directory
-    data_directory = os.path.join('c:\\Users\\Paige\\Projects\\data\\alderaan_results', selected_table[:-4])
+    global default_directory
+    data_directory = os.path.join(default_directory, selected_table[:-4])
 
 def read_table_data(table):
     """
     Reads data for the table on the left side of the web app
     Shows koi_id, kep_mag, Rstar, logrho, Teff, logg
     """
-    #file_path = os.path.join(data_directory, '2023-05-19_singles.csv')
     global data_directory
     global K_id
     global Table
     #folder = table[:-4]
     update_data_directory(table)
     Table = table
-    if (table == '2023-05-19_singles.csv') or (table == '2023-05-15_doubles.csv'):
-        K_id = False
+    if 'SIMULATION' in table:
+        K_id = False 
     else: 
         K_id = True
     file_path = os.path.join(data_directory, table)
@@ -248,8 +260,10 @@ def single_data(koi_id, line_number, num, ttv_file):
     file_path_results = os.path.join(data_directory, star_id, file_results)
     data_post = load_posteriors(file_path_results,num,koi_id)
     ### get max likelihood
-    max_index = data_post['LN_LIKE'].idxmax()
-    DUR14 = 1.5* data_post[f'DUR14_{num}'][max_index]
+    data_post = data_post.sort_values(by='LN_LIKE', ascending=False) 
+    row = data_post.iloc[0] # pick row with highest likelihood
+    ### mult by 1.5 for correct offset
+    DUR14 = row[f'DUR14_{num}']
 
     combined_data = None
     #get data and create detrended light curve
@@ -285,8 +299,8 @@ def single_data(koi_id, line_number, num, ttv_file):
             center_time = ttime[line_number]
             transit_number = index[line_number]
         
-            start_time = float(center_time) - 0.25
-            end_time= float(center_time) + 0.25
+            start_time = float(center_time) - (DUR14*1.5) 
+            end_time= float(center_time) + (DUR14*1.5) 
 
             use_lc = (photometry_data_lc['TIME'] > start_time) & (photometry_data_lc['TIME'] < end_time)
             lc_data = photometry_data_lc[use_lc]

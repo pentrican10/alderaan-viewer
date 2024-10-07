@@ -78,17 +78,24 @@ def read_table_data(table):
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerows(table_data)
+
+    ### list of Koi IDs with data
+    koi_folder_list = [f for f in os.listdir(data_directory) if os.path.isdir(os.path.join(data_directory, f))]
             
     ### Remove duplicates based on koi_id
     unique_data = []
     seen_koi_ids = set()
     for row in table_data:
         koi_id = row['koi_id']
+        
         ### Check if koi_id is not in the set of seen ids
         if koi_id not in seen_koi_ids:
-            ### Add the row to unique_data and the koi_id to the set
-            unique_data.append(row)
-            seen_koi_ids.add(koi_id)
+            ### only add the row to table if there is a file for the Koi ID
+            if koi_id in koi_folder_list:
+                ### Add the row to unique_data and the koi_id to the set
+                unique_data.append(row)
+                seen_koi_ids.add(koi_id)
+
 
     return unique_data
 

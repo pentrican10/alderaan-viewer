@@ -26,11 +26,22 @@ file_path = f"C:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}\\{koi_
 # print(koi_identifier)
 # print(period)
 # assert 1==0
-data_directory = f'c:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}'
-file_name = koi_id + '_*_quick.ttvs'
-file_paths = (glob.glob(os.path.join(data_directory,koi_id, file_name)))   ### sort
-file_path1 = sorted(file_paths, key=lambda  x: int(re.search(r"_(\d+)_", x).group(1)), reverse=True)
-print(file_path1)
+
+
+# data_directory = f'c:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}'
+# file_name = koi_id + '_*_quick.ttvs'
+# file_paths = (glob.glob(os.path.join(data_directory,koi_id, file_name)))   ### sort
+# file_path1 = sorted(file_paths, key=lambda  x: int(re.search(r"_(\d+)_", x).group(1)), reverse=True)
+# print(file_path1)
+
+import os
+
+folder_path =f'c:\\Users\\Paige\\Projects\\alderaan\\Results\\ecc-all-LC'
+
+# List only folders in the directory
+folder_list = [f for f in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, f))]
+
+print(folder_list)
 
 
 '''

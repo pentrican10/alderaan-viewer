@@ -57,7 +57,7 @@ def login():
 @app.route('/logout',methods=['POST'])
 def logout():
     """
-        Button that ends session, logs out user
+    Button that ends session, logs out user
     """
     session.pop('username',None) #removes username
     return redirect(url_for('login'))
@@ -75,6 +75,7 @@ def display_table_data():
     ### List all items (files and folders) in the directory 
     options = os.listdir(default_directory) 
     table = request.args.get('table', options[0] + '.csv')  # default table option is first folder in directory
+   
     update_data_directory(table)
     ### set switch to use K versus S(simulation data) based on table selected
     if 'SIMULATION' in table:
@@ -105,16 +106,20 @@ def update_data_directory(selected_table):
 def get_dropdown_options():
     '''
     Function populates options based on folders in the default directory
+
     Returns:
         jsonify(options): list of options in json-readable format
     '''
     try:
         global default_directory
-        # List all items (files and folders) in the directory without filtering by extension
-        options = os.listdir(default_directory) 
-        
-        # Return the list of options as a JSON response
-        return jsonify(options)
+        ### List all directories in the default directory
+        options = sorted([item for item in os.listdir(default_directory) if os.path.isdir(os.path.join(default_directory, item))])
+        options_with_tables = []
+        for option in options: 
+            if os.path.isfile(os.path.join(default_directory, option, option + '.csv')):
+                options_with_tables.append(option)
+        ### Return the list of options as a JSON response
+        return jsonify(options_with_tables)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
@@ -362,7 +367,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
                 name=f"Quarter {quarter}"
             )
 
-            # Add an invisible scatter trace for hover information
+            ### Add an invisible scatter trace for hover information
             hover_trace = go.Scatter(
                 x=[(start + end) / 2],  # Position the hover text in the middle of the line
                 y=[horizontal_line_y],
@@ -375,7 +380,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
             )
             fig.add_trace(hover_trace)
 
-        # Mark quarters for Short Cadence data
+        ### Mark quarters for Short Cadence data
         unique_quarters_sc = data_sc['QUARTER'].unique()
         for idx, quarter in enumerate(unique_quarters_sc):
             times = data_sc.loc[data_sc['QUARTER'] == quarter, 'TIME']
@@ -383,7 +388,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
             end = times.max()
             line_color = get_color(quarter)
 
-            # Add horizontal lines at the top of the plot
+            ### Add horizontal lines at the top of the plot
             fig.add_shape(
                 type="line",
                 x0=start,
@@ -425,7 +430,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
                 fig.add_trace(c_time, row=1, col=1)
                 
 
-        # Update x-axis label with units
+        ### Update x-axis label with units
         fig.update_traces(showlegend=True, row=1, col=1)
         fig.update_layout(xaxis_title=f"TIME (DAYS)", yaxis_title="FLUX")
         fig.update_layout(title=star_id, title_x=0.5)
@@ -1486,6 +1491,8 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                 
 
                 if i != j:
+                    if labels[j]==f'DUR14_{planet_num}':
+                        x = x*24
                     ### scatter plot for non-diagonal plots
                     fig.add_trace(go.Scatter(
                         x=x, 
@@ -1498,6 +1505,8 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                     
                     
                 else:
+                    if labels[j]==f'DUR14_{planet_num}':
+                        x = x*24 
                     ### plot kde for diagonal plots
                     kde = gaussian_kde(x, weights=data['WEIGHTS']) 
                     max1 = max(x)
@@ -1509,7 +1518,7 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                     fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', line=dict(color='blue'), name=labels[i], showlegend=False), row=j + 1, col=i + 1)
                     if labels[j]==f'IMPACT_{planet_num}':
                         # Add vertical line at x=1
-                        fig.add_trace(go.Scatter(x=[1, 1], y=[0, np.max(y_vals)], mode='lines', line=dict(color='black', dash='dash')), row=j + 1, col=i + 1)
+                        fig.add_trace(go.Scatter(x=[1, 1], y=[0, np.max(y_vals)], mode='lines', line=dict(color='black', dash='dash'),showlegend=False), row=j + 1, col=i + 1)
 
                 ### add labels to x and y axes
                 if (i == 0) and (i != j):

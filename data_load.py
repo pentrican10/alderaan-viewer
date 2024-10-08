@@ -12,10 +12,9 @@ SCIT = 58.848777            # Kepler short cadence integration time + readout ti
 
 lcit = LCIT/60/24           # Kepler long cadence integration time + readout time [days]
 scit = SCIT/3600/24         # Kepler short cadence integration time + readout time [days]
-#data_directory = 'c:\\Users\\Paige\\Projects\\data\\'
-#data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
+
 k_id = True
-table =  ''# 'ecc-all-LC.csv'
+table =  ''
 data_directory = ''
 
 # Dynamically determine the root directory of the Flask app
@@ -42,7 +41,6 @@ def read_table_data(table):
     global data_directory
     global K_id
     global Table
-    #folder = table[:-4]
     update_data_directory(table)
     Table = table
     if 'SIMULATION' in table:
@@ -96,7 +94,6 @@ def read_table_data(table):
                 unique_data.append(row)
                 seen_koi_ids.add(koi_id)
 
-
     return unique_data
 
 def get_planet_properties_table(koi_id,table):
@@ -135,7 +132,7 @@ def get_planet_properties_table(koi_id,table):
                 row['lcit_ratio'] = round(row['period'] / lcit,5 )
                 row['impact'] = round(data_post[f'IMPACT_{n}'].median(),4)
                 row['ror'] = round(data_post[f'ROR_{n}'].median(),4)
-                row['duration'] = round(data_post[f'DUR14_{n}'].median(),4) 
+                row['duration'] = round((data_post[f'DUR14_{n}'].median())*24,4) 
                 n+=1
                 planet_data.append(row) 
     planet_data.sort(key=lambda x: x['period']) 

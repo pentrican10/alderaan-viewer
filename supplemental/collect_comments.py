@@ -1,10 +1,10 @@
 import os
 
 # Directory where data is stored
-base_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results\\ecc-all-LC-omc-refit-20240912'
+base_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results\\ecc-all-LC'
 
 # Output file where combined comments will be stored
-output_file = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results\\ecc-all-LC-omc-refit-20240912\\combined_comments.txt'
+output_file = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results\\ecc-all-LC\\combined_comments.txt'
 
 # Open the output file in append mode
 with open(output_file, 'w') as combined_file:

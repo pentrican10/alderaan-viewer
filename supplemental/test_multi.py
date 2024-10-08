@@ -7,14 +7,14 @@ import pandas as pd
 #from data_load import calculate_binned_weighted_average, folded_data
 import os
 import numpy.polynomial.polynomial as poly
-import data_load
-
-
+#import data_load
+import glob
+import re
 
 cadence_type = 'l' # l is long cadence, s is short cadence
-koi_id = 'K00001'
+koi_id = 'K00072'
 planet_num = 1
-table = 'ecc-singles-LC-2024-08-26'
+table = 'ecc-all-LC'
 file_path_results = f"c:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}\\{koi_id}\\{koi_id}-results.fits"
 file_path = f"C:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}\\{koi_id}\\{koi_id}_{cadence_type}c_filtered.fits"
 
@@ -27,6 +27,24 @@ file_path = f"C:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}\\{koi_
 # print(period)
 # assert 1==0
 
+
+# data_directory = f'c:\\Users\\Paige\\Projects\\data\\alderaan_results\\{table}'
+# file_name = koi_id + '_*_quick.ttvs'
+# file_paths = (glob.glob(os.path.join(data_directory,koi_id, file_name)))   ### sort
+# file_path1 = sorted(file_paths, key=lambda  x: int(re.search(r"_(\d+)_", x).group(1)), reverse=True)
+# print(file_path1)
+
+import os
+
+folder_path =f'c:\\Users\\Paige\\Projects\\alderaan\\Results\\ecc-all-LC'
+
+# List only folders in the directory
+folder_list = [f for f in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, f))]
+
+print(folder_list)
+
+
+'''
 for planet_num in range(0,4):
     # Open the FITS file
     with fits.open(file_path_results) as hdul:
@@ -307,3 +325,4 @@ for planet_num in range(0,4):
 
     plt.tight_layout()  # Adjusts subplots to fit into the figure area.
     plt.show()
+'''

@@ -89,7 +89,7 @@
             .then(data => {
                 console.log('Success:', data);
                 updateTableUI(koiId, reviewStatus);
-                document.getElementById("review_status").value = "None";
+                document.getElementById("review_status").value = reviewStatus;
                 
             })
             .catch((error) => {
@@ -97,6 +97,28 @@
             });
         }
 
+        function updateDropdownForKoi(koiId) {
+            // Find the table row corresponding to the koiId
+            var row = document.getElementById(`row-${koiId}`);
+            
+            if (row) {
+                // Get the review status from the review-cell in the row
+                var reviewStatus = row.querySelector(".review-cell").innerText.trim();
+                
+                // Update the dropdown to reflect the current review status
+                var dropdown = document.getElementById("review_status");
+
+                // Set the value of the dropdown to match the review status
+                // If the review status is not recognized, default to 'None'
+                if (["Looks good", "Minor Issues", "Major Issues", "Critical Issues"].includes(reviewStatus)) {
+                    dropdown.value = reviewStatus;
+                } else {
+                    dropdown.value = "None";  // Default if review status is not found or invalid
+                }
+            } else {
+                console.error("Row not found for koiId:", koiId);
+            }
+        }
 
         function updateTableUI(koiId, reviewStatus) {
             var row = document.getElementById(`row-${koiId}`);

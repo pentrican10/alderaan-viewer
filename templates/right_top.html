@@ -56,7 +56,7 @@
         <div id="transitAdjustment" style="display:none;">
             <div>
                 <label for="planetSelect">Select Planet:</label>
-                <select id="planetSelect" onchange="updatePlot()">
+                <select id="planetSelect" onchange="updatePlotSingle()">
                     <!-- planet options will display here -->
                 </select>
             
@@ -68,8 +68,8 @@
             <button onclick="movePlotBackward()">&#x2190;</button> <!--previous transit-->
             <button onclick="movePlotForward()">&#x2192;</button> <!--next transit -->
             <br>
-            <button onclick="move10Backward()">&#x2190;10</button>
-            <button onclick="move10Forward()">10&#x2192;</button>
+            <!-- <button onclick="move10Backward()">&#x2190;10</button>
+            <button onclick="move10Forward()">10&#x2192;</button> -->
         </div>
     </div>
 
@@ -148,7 +148,6 @@
             <!-- folded light curve will display here -->
         </div>
     </div>
-
 
 
     <div id="planetPropertiesTitle" style="display:none;">
@@ -316,12 +315,26 @@
                 .catch(error => console.error('Error fetching transit file options:', error));
         }
 
-        function updatePlot() {
+        function updatePlotSingle() {
             const planetSelect = document.getElementById("planetSelect");
             planet = planetSelect.value;
             lineNumber=0
             console.log(planet)
             generatePlotSingleTransit(selectedKoiId, lineNumber, planet);
+        }
+
+        // Function to reset planet dropdown when a new koi_id is clicked
+        function resetPlanetDropdownSingle() {
+            const planetSelect = document.getElementById("planetSelect");
+            
+            // Set the dropdown value back to "00"
+            planetSelect.value = '_00_quick.ttvs';
+
+            // Reset planet to default
+            planet = '_00_quick.ttvs';
+            //lineNumber = 0;
+
+            console.log("Dropdown reset to 00 and planet reset to default");
         }
 
         // folded light curve
@@ -536,6 +549,28 @@
 
             // Call columns() function if needed
             columns();
+        }
+
+        // Function to reset planet dropdown when a new koi_id is clicked
+        function resetPlanetDropdownCorner() {
+            const planetSelect = document.getElementById("selectPlanetNumber");
+            
+            // Set the value of the planet number dropdown to "00"
+            planetSelect.value = "00";
+
+            // Set the planet number corner to 0
+            planetNumCorner = 0;
+            selectedColumns = [`C0_${planetNumCorner}`, `C1_${planetNumCorner}`,`ROR_${planetNumCorner}`,`IMPACT_${planetNumCorner}`,`DUR14_${planetNumCorner}`]; // Initial selection
+
+
+            // Update the checkboxes' IDs accordingly (with 0 as planetNumCorner)
+            var checkboxes = document.querySelectorAll("#cornerVarCheckbox input[type=checkbox]");
+            checkboxes.forEach(function(checkbox) {
+                checkbox.id = checkbox.id.replace(/_\d+$/, "_0");
+                checkbox.nextElementSibling.setAttribute("for", checkbox.id);
+            });
+
+            console.log("Dropdown reset to 00 and planetNumCorner reset to 0");
         }
 
 

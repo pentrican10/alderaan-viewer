@@ -17,9 +17,11 @@ from plotly.subplots import make_subplots
 import random
 import data_load
 
-data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
+#data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
+default_directory = '/Users/research/projects/alderaan/Results'
+
 K_id = True
-table = 'ecc-all-LC.csv'
+table = 'ecc-all-LC-omc-refit-20240916.csv'
 
 app = Flask(__name__)
 app.secret_key = 'super_secret'
@@ -86,7 +88,7 @@ def update_data_directory(selected_table):
     """
     global data_directory
     global table
-    data_directory = os.path.join('c:\\Users\\Paige\\Projects\\data\\alderaan_results', selected_table[:-4])
+    data_directory = os.path.join(default_directory, selected_table[:-4])
     table = selected_table
 
 @app.route('/planet_properties/<koi_id>', methods=['GET'])
@@ -271,6 +273,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
 
     file_name = star_id + '_*_quick.ttvs'
     file_paths = glob.glob(os.path.join(data_directory,star_id, file_name))
+    file_paths.sort()
     
 
     ### get data and create detrended light curve

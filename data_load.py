@@ -12,14 +12,16 @@ SCIT = 58.848777            # Kepler short cadence integration time + readout ti
 
 lcit = LCIT/60/24           # Kepler long cadence integration time + readout time [days]
 scit = SCIT/3600/24         # Kepler short cadence integration time + readout time [days]
-#data_directory = 'c:\\Users\\Paige\\Projects\\data\\'
-data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
+
+#default_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
+default_directory = '/Users/research/projects/alderaan/Results'
+
 k_id = True
-table = 'ecc-all-LC.csv'
+table = 'ecc-all-LC-omc-refit-20240916.csv'
 
 def update_data_directory(selected_table):
     global data_directory
-    data_directory = os.path.join('c:\\Users\\Paige\\Projects\\data\\alderaan_results', selected_table[:-4])
+    data_directory = os.path.join(default_directory, selected_table[:-4])
 
 def read_table_data(table):
     """

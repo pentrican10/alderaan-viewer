@@ -1,7 +1,7 @@
 import pandas as pd
 
 ### Load the CSV file into a DataFrame
-csv_path = "c:\\Users\\Paige\\Projects\\data\\alderaan_results\\ecc-all-LC-omc-refit-20240912\\ecc-all-LC-omc-refit-20240912.csv"
+csv_path = "c:\\Users\\Paige\\Projects\\data\\alderaan_results\\ecc-all-LC\\ecc-all-LC.csv"
 df = pd.read_csv(csv_path)
 
 ### Specify the review values

@@ -17,14 +17,18 @@ from plotly.subplots import make_subplots
 import random
 import data_load
 
-#data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
-default_directory = '/Users/research/projects/alderaan/Results'
-
-K_id = True
-table = 'ecc-all-LC-omc-refit-20240916.csv'
-
 app = Flask(__name__)
 app.secret_key = 'super_secret'
+
+data_directory = ''
+
+### Dynamically determine the root directory of the Flask app
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))  # Root directory of the app
+### Move one level up from the root directory
+PARENT_DIR = os.path.dirname(ROOT_DIR)
+### Set the default directory to the parent directory's 'alderaan/Results' path
+default_directory = os.path.join(PARENT_DIR, 'alderaan', 'Results')
+
 
 @app.route('/')
 def index():
@@ -65,10 +69,13 @@ def display_table_data():
     """
     global K_id
     global table
-    table = request.args.get('table', 'ecc-all-LC.csv')
+    global default_directory
+    ### List all items (files and folders) in the directory 
+    options = os.listdir(default_directory) 
+    table = request.args.get('table', options[0] + '.csv')  # default table option is first folder in directory
     update_data_directory(table)
     ### set switch to use K versus S(simulation data) based on table selected
-    if (table == '2023-05-19_singles.csv') or (table == '2023-05-15_doubles.csv'):
+    if 'SIMULATION' in table:
         K_id = False 
     else: 
         K_id = True
@@ -87,9 +94,40 @@ def update_data_directory(selected_table):
         selected_table: string of table name. This must be in the form 'table_name.csv'
     """
     global data_directory
-    global table
+    global table 
     data_directory = os.path.join(default_directory, selected_table[:-4])
-    table = selected_table
+    table = selected_table 
+
+
+@app.route('/get_dropdown_options')
+def get_dropdown_options():
+    '''
+    Function populates options based on folders in the default directory
+    Returns:
+        jsonify(options): list of options in json-readable format
+    '''
+    try:
+        global default_directory
+        # List all items (files and folders) in the directory without filtering by extension
+        options = os.listdir(default_directory) 
+        
+        # Return the list of options as a JSON response
+        return jsonify(options)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/get_selected_table', methods=['GET'])
+def get_selected_table():
+    """
+    Function passes the selected table as JSON response to display
+    """
+    try:
+        ### Return the selected table as a JSON response
+        selected_table = {'selected_table': table}
+        return jsonify(selected_table)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/planet_properties/<koi_id>', methods=['GET'])
 def get_planet_properties(koi_id):
@@ -237,7 +275,7 @@ def save_file(koi_id):
     path_extension = os.path.join(star_id, f'{star_id}_comments.txt')
     file_path = os.path.join(data_directory, path_extension)
     content = request.form.get('content')
-    # Normalize line endings to Unix-style (\n)
+    ### Normalize line endings to Unix-style (\n)
     content = content.replace('\r\n', '\n')
     try:
         with open(file_path, 'w') as file:
@@ -246,6 +284,7 @@ def save_file(koi_id):
         return display_comment_file(koi_id)
     except Exception as e:
         return f"An error occurred: {str(e)}"
+
 
 @app.route('/generate_plot/<koi_id>')
 def generate_plot_Detrended_Light_Curve(koi_id):
@@ -295,18 +334,14 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         fig.add_trace(sc, row=1, col=1)
 
         ### mark quarters 
-        # Define a constant y-value for horizontal lines above the data
+        ### Define a constant y-value for horizontal lines above the data
         horizontal_line_y = max(data_sc['FLUX']) + 0.0001 * max(data_sc['FLUX'])  # Adjust offset as needed
         quarter_colors = ['green','red','blue','orange'] 
-        num_colors = len(quarter_colors)
 
 
         def get_color(quarter):
             # Use modulo 4 to group quarters
             return quarter_colors[quarter % 4]
-
-        # def get_color(quarter_index):
-        #     return quarter_colors[quarter_index % num_colors]
 
         # Mark quarters for Long Cadence data
         unique_quarters_lc = data_lc['QUARTER'].unique()
@@ -359,7 +394,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
                 name=f"Quarter {quarter}"
             )
 
-            # Add an invisible scatter trace for hover information
+            ### Add an invisible scatter trace for hover information
             hover_trace = go.Scatter(
                 x=[(start + end) / 2],  # Position the hover text in the middle of the line
                 y=[horizontal_line_y],
@@ -374,12 +409,12 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         ###################
         colors = ['orange','green','red','orange','green','red','orange','green','red']
 
-        # Iterate through file paths
+        ### Iterate through file paths
         for i, file_path in enumerate(file_paths):
             if os.path.isfile(file_path):
                 index, center_time, model, out_prob, out_flag = data_load.load_ttv_data(koi_id, file_path)
 
-                # Add a dot for each center time
+                ### Add a dot for each center time
                 minimum = data_sc.FLUX.min() -0.00001
                 offset = 0.0001*i
                 y_pts = minimum* np.ones(len(center_time)) + offset
@@ -406,26 +441,22 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         fig.add_trace(lc, row=1, col=1)
 
         ### mark quarters 
-        # Define a constant y-value for horizontal lines above the data
+        ### Define a constant y-value for horizontal lines above the data
         horizontal_line_y = max(data_lc['FLUX']) + 0.0001 * max(data_lc['FLUX'])  # Adjust offset as needed
-        # Use Plotly's predefined color scale 
-        #quarter_colors = px.colors.qualitative.Plotly
         quarter_colors = ['green','red','blue','orange']
-        num_colors = len(quarter_colors)
-
 
         def get_color(quarter):
-            # Use modulo 4 to group quarters
+            ### Use modulo 4 to group quarters
             return quarter_colors[quarter % 4]
-        # Mark quarters for Long Cadence data
+        ### Mark quarters for Long Cadence data
         unique_quarters_lc = data_lc['QUARTER'].unique()
         for idx, quarter in enumerate(unique_quarters_lc):
             times = data_lc.loc[data_lc['QUARTER'] == quarter, 'TIME']
             start = times.min()
             end = times.max()
-            line_color = get_color(idx)
+            line_color = get_color(quarter)
 
-            # Add horizontal lines at the top of the plot
+            ### Add horizontal lines at the top of the plot
             fig.add_shape(
                 type="line",
                 x0=start,
@@ -436,7 +467,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
                 name=f"Quarter {quarter}"
             )
 
-            # Add an invisible scatter trace for hover information
+            ### Add an invisible scatter trace for hover information
             hover_trace = go.Scatter(
                 x=[(start + end) / 2],  # Position the hover text in the middle of the line
                 y=[horizontal_line_y],
@@ -452,7 +483,7 @@ def generate_plot_Detrended_Light_Curve(koi_id):
         ###################
         colors = ['orange','green','red','orange','green','red','orange','green','red']
 
-        # Iterate through file paths
+        ### Iterate through file paths
         for i, file_path in enumerate(file_paths):
             if os.path.isfile(file_path):
                 index, center_time, model, out_prob, out_flag = data_load.load_ttv_data(koi_id, file_path)
@@ -555,6 +586,17 @@ def generate_plot_Detrended_Light_Curve(koi_id):
 
 @app.route('/generate_plot_single_transit/<koi_id>/<int:line_number>/<planet>')
 def generate_plot_single_transit(koi_id, line_number,planet):
+    """
+    Function generates a panel of single transit light curves and passes the figure to be displayed on html
+
+    args:
+        koi_id: string in the form "K00000" (KOI identification)
+        line_number: integer index corresponding with the transit
+        planet: integer planet number 
+
+    returns: 
+        jsonify(response_data): contains figure able to be read and displayed in html and transit number
+    """
     global K_id
     if K_id==False:
         star_id = koi_id.replace("K","S")
@@ -572,7 +614,6 @@ def generate_plot_single_transit(koi_id, line_number,planet):
     planet_num = re.findall(r'\d+', planet)
     num = planet_num[0][1]
     int_num = int(num)
-    #title = period[int_num]
     title = koi_identifier[int_num]
     period= period[int_num]
 
@@ -601,15 +642,15 @@ def generate_plot_single_transit(koi_id, line_number,planet):
     theta.u = [LD_U1, LD_U2]
     theta.limb_dark = 'quadratic'
 
+    ### get next 9 line numbers for panel
     line_number_plots = np.arange(line_number, line_number+9)
     row = [1,1,1,2,2,2,3,3,3]
     col = [1,2,3,1,2,3,1,2,3]
     
     ### initialize figure
-    #fig = make_subplots(rows=1, cols=1)
     fig = make_subplots(rows=3, cols=3) 
 
-    # Loop through the grid positions and corresponding line numbers
+    ### Loop through the grid positions and corresponding line numbers
     for i, line_num in enumerate(line_number_plots):
         r = row[i]
         c = col[i]
@@ -726,321 +767,19 @@ def generate_plot_single_transit(koi_id, line_number,planet):
         'transit_number': str(transit_number) 
     }
     return jsonify(response_data)
-    
-        
-
-'''
-@app.route('/generate_plot_single_transit/<koi_id>/<int:line_number>/<planet>')
-def generate_plot_single_transit(koi_id, line_number,planet):
-    global K_id
-    if K_id==False:
-        star_id = koi_id.replace("K","S")
-    else:
-        star_id = koi_id
-    ttv_file = star_id + planet
-    ext = os.path.basename(data_directory) +'.csv'
-    csv_file_path = os.path.join(data_directory, ext)
-
-    period,koi_identifier = data_load.get_koi_identifiers(csv_file_path, koi_id)
-
-    planet_num = re.findall(r'\d+', planet)
-    num = planet_num[0][1]
-    int_num = int(num)
-    #title = period[int_num]
-    title = koi_identifier[int_num]
-    period= period[int_num]
-
-    file_name_lc = star_id + '_lc_filtered.fits'
-    file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
-    
-    file_name_sc = star_id + '_sc_filtered.fits'
-    file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
-
-    ### posteriors for most likely model
-    file_results =star_id + '-results.fits'
-    file_path_results = os.path.join(data_directory, star_id, file_results)
-    data_post = data_load.load_posteriors(file_path_results,num,koi_id)
-    ### get max likelihood
-    max_index = data_post['LN_LIKE'].idxmax()
-    ### get most likely params {P, t0, Rp/Rs, b, T14, q1, q2}
-    theta = batman.TransitParams()
-    theta.per = data_post[f'P'][max_index]
-    theta.t0 = 0.
-    theta.rp = data_post[f'ROR_{num}'][max_index]
-    theta.b = data_post[f'IMPACT_{num}'][max_index]
-    theta.T14 = data_post[f'DUR14_{num}'][max_index]
-    LD_U1 = data_post[f'LD_U1'][max_index]
-    LD_U2 = data_post[f'LD_U2'][max_index]
-    theta.u = [LD_U1, LD_U2]
-    theta.limb_dark = 'quadratic'
-    
-    ### initialize figure
-    fig = make_subplots(rows=1, cols=1)
-
-    if (data_load.single_data(koi_id, line_number,num,ttv_file)):
-        photometry_data_lc,photometry_data_sc, transit_number, center_time = data_load.single_data(koi_id, line_number, num, ttv_file)
-        center_time = np.asarray(center_time, dtype=np.float64)
-        
-        if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
-            transit_lc = go.Scatter(x=photometry_data_lc.TIME, y=photometry_data_lc.FLUX, mode='markers')
-            transit_lc.marker.update(color="blue")
-            transit_lc.name = "lc data"
-            fig.add_trace(transit_lc, row=1, col=1)
-
-            transit_sc = go.Scatter(x=photometry_data_sc.TIME, y=photometry_data_sc.FLUX, mode='markers')
-            transit_sc.marker.update(color="blue")
-            transit_sc.name="sc data"
-            fig.add_trace(transit_sc,row=1,col=1)
-            lc_min,lc_max,sc_min,sc_max = data_load.get_min_max(koi_id)
-            if len(photometry_data_sc)>0:
-                ### transit model
-                scit = 1.15e-5
-                t = np.arange(photometry_data_sc.TIME.min(), photometry_data_sc.TIME.max(),scit)
-                m = batman.TransitModel(theta, t-center_time)    #initializes model
-                flux = m.light_curve(theta)          #calculates light curve
-                mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
-                mod.name='Model'
-                fig.add_trace(mod,row=1,col=1)
-
-                ### quarter 
-                quarter = photometry_data_sc.loc[photometry_data_sc['TIME'] == photometry_data_sc.TIME.min(), 'QUARTER']
-
-                fig.update_layout(xaxis_title=f"TIME (DAYS)", 
-                            yaxis_title="FLUX",
-                            yaxis=dict(range=[sc_min, sc_max]),
-                            annotations=[
-                                go.layout.Annotation(
-                                    x=1,  # Positioning on the far right
-                                    y=1,  # Positioning on the top
-                                    xref="paper",  # Use paper coordinates (0 to 1)
-                                    yref="paper",  # Use paper coordinates (0 to 1)
-                                    text=f'{period}', 
-                                    showarrow=False,  # No arrow needed
-                                    font=dict(size=14, color="black"),  # Customize font size and color
-                                    align='right',
-                                    xanchor='right',  # Anchor the text to the right
-                                    yanchor='top'  # Anchor the text to the top
-                                ),
-                                go.layout.Annotation(
-                                    x=1,  # Positioning on the far right
-                                    y=0.95,  # Slightly lower than the previous annotation
-                                    xref="paper",  # Use paper coordinates (0 to 1)
-                                    yref="paper",  # Use paper coordinates (0 to 1)
-                                    text=f'Quarter: {quarter.values[0]}',
-                                    showarrow=False,  # No arrow needed
-                                    font=dict(size=14, color="black"),  # Customize font size and color
-                                    align='right',
-                                    xanchor='right',  # Anchor the text to the right
-                                    yanchor='top'  # Anchor the text to the top
-                                )
-                            ],
-                            shapes=[
-                                go.layout.Shape(
-                                    type='rect',
-                                    x0=0.80,  # Adjust x0 to position the left side of the rectangle
-                                    y0=0.85,  # Adjust y0 to position the bottom of the rectangle
-                                    x1=1,  # Adjust x1 to position the right side of the rectangle
-                                    y1=1,  # Adjust y1 to position the top of the rectangle
-                                    xref='paper',
-                                    yref='paper',
-                                    line=dict(color='black', width=2),  # Border color and width
-                                    fillcolor='rgba(255, 255, 255, 0.7)'
-                                )
-                            ]
-                )
-            else:
-                ### transit model
-                scit = 1.15e-5
-                t = np.arange(photometry_data_lc.TIME.min(), photometry_data_lc.TIME.max(),scit)
-                m = batman.TransitModel(theta, t-center_time)    #initializes model
-                flux = m.light_curve(theta)          #calculates light curve
-                mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
-                mod.name='Model'
-                fig.add_trace(mod,row=1,col=1)
-
-                ### quarter 
-                quarter = photometry_data_lc.loc[photometry_data_lc['TIME'] == photometry_data_lc.TIME.min(), 'QUARTER']
-
-                fig.update_layout(xaxis_title=f"TIME (DAYS)", 
-                            yaxis_title="FLUX",
-                            yaxis=dict(range=[lc_min, lc_max]),
-                            annotations=[
-                                go.layout.Annotation(
-                                    x=1,  # Positioning on the far right
-                                    y=1,  # Positioning on the top
-                                    xref="paper",  # Use paper coordinates (0 to 1)
-                                    yref="paper",  # Use paper coordinates (0 to 1)
-                                    text=f'{period}', 
-                                    showarrow=False,  # No arrow needed
-                                    font=dict(size=14, color="black"),  # Customize font size and color
-                                    align='right',
-                                    xanchor='right',  # Anchor the text to the right
-                                    yanchor='top'  # Anchor the text to the top
-                                ),
-                                go.layout.Annotation(
-                                    x=1,  # Positioning on the far right
-                                    y=0.95,  # Slightly lower than the previous annotation
-                                    xref="paper",  # Use paper coordinates (0 to 1)
-                                    yref="paper",  # Use paper coordinates (0 to 1)
-                                    text=f'Quarter: {quarter.values[0]}',
-                                    showarrow=False,  # No arrow needed
-                                    font=dict(size=14, color="black"),  # Customize font size and color
-                                    align='right',
-                                    xanchor='right',  # Anchor the text to the right
-                                    yanchor='top'  # Anchor the text to the top
-                                )
-                            ],
-                            shapes=[
-                                go.layout.Shape(
-                                    type='rect',
-                                    x0=0.80,  # Adjust x0 to position the left side of the rectangle
-                                    y0=0.85,  # Adjust y0 to position the bottom of the rectangle
-                                    x1=1,  # Adjust x1 to position the right side of the rectangle
-                                    y1=1,  # Adjust y1 to position the top of the rectangle
-                                    xref='paper',
-                                    yref='paper',
-                                    line=dict(color='black', width=2),  # Border color and width
-                                    fillcolor='rgba(255, 255, 255, 0.7)'
-                                )
-                            ]
-                )
-        elif os.path.isfile(file_path_lc) and not os.path.isfile(file_path_sc):
-            transit_lc = go.Scatter(x=photometry_data_lc.TIME, y=photometry_data_lc.FLUX, mode='markers')
-            transit_lc.marker.update(color="blue")
-            fig.add_trace(transit_lc, row=1, col=1)
-            lc_min,lc_max = data_load.get_min_max(koi_id)
-            ### transit model
-            scit = 1.15e-5
-            t = np.arange(photometry_data_lc.TIME.min(), photometry_data_lc.TIME.max(),scit)
-            m = batman.TransitModel(theta, t-center_time)    #initializes model
-            flux = m.light_curve(theta)          #calculates light curve
-            mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
-            fig.add_trace(mod,row=1,col=1)
-
-            ### quarter 
-            quarter = photometry_data_lc.loc[photometry_data_lc['TIME'] == photometry_data_lc.TIME.min(), 'QUARTER']
-           
-            fig.update_layout(xaxis_title=f"TIME (DAYS)", 
-                        yaxis_title="FLUX",
-                        yaxis=dict(range=[lc_min, lc_max]),
-                        annotations=[
-                                go.layout.Annotation(
-                                    x=1,  # Positioning on the far right
-                                    y=1,  # Positioning on the top
-                                    xref="paper",  # Use paper coordinates (0 to 1)
-                                    yref="paper",  # Use paper coordinates (0 to 1)
-                                    text=f'{period}', 
-                                    showarrow=False,  # No arrow needed
-                                    font=dict(size=14, color="black"),  # Customize font size and color
-                                    align='right',
-                                    xanchor='right',  # Anchor the text to the right
-                                    yanchor='top'  # Anchor the text to the top
-                                ),
-                                go.layout.Annotation(
-                                    x=1,  # Positioning on the far right
-                                    y=0.95,  # Slightly lower than the previous annotation
-                                    xref="paper",  # Use paper coordinates (0 to 1)
-                                    yref="paper",  # Use paper coordinates (0 to 1)
-                                    text=f'Quarter: {quarter.values[0]}',
-                                    showarrow=False,  # No arrow needed
-                                    font=dict(size=14, color="black"),  # Customize font size and color
-                                    align='right',
-                                    xanchor='right',  # Anchor the text to the right
-                                    yanchor='top'  # Anchor the text to the top
-                                )
-                            ],
-                            shapes=[
-                                go.layout.Shape(
-                                    type='rect',
-                                    x0=0.80,  # Adjust x0 to position the left side of the rectangle
-                                    y0=0.85,  # Adjust y0 to position the bottom of the rectangle
-                                    x1=1,  # Adjust x1 to position the right side of the rectangle
-                                    y1=1,  # Adjust y1 to position the top of the rectangle
-                                    xref='paper',
-                                    yref='paper',
-                                    line=dict(color='black', width=2),  # Border color and width
-                                    fillcolor='rgba(255, 255, 255, 0.7)'
-                                )
-                            ]
-            )
-        elif os.path.isfile(file_path_sc) and not os.path.isfile(file_path_lc):
-            transit_sc = go.Scatter(x=photometry_data_sc.TIME, y=photometry_data_sc.FLUX, mode='markers')
-            transit_sc.marker.update(color="blue")
-            fig.add_trace(transit_sc,row=1,col=1)
-            sc_min,sc_max = data_load.get_min_max(koi_id)
-            ### transit model
-            scit = 1.15e-5
-            t = np.arange(photometry_data_sc.TIME.min(), photometry_data_sc.TIME.max(),scit)
-            m = batman.TransitModel(theta, t-center_time)    #initializes model
-            flux = m.light_curve(theta)          #calculates light curve
-            mod = go.Scatter(x=t, y=flux, mode="lines", line=dict(color='red'))
-            fig.add_trace(mod,row=1,col=1)
-
-            ### quarter 
-            quarter = photometry_data_sc.loc[photometry_data_sc['TIME'] == photometry_data_sc.TIME.min(), 'QUARTER']
-            
-
-            fig.update_layout(xaxis_title=f"TIME (DAYS)", 
-                        yaxis_title="FLUX",
-                        yaxis=dict(range=[sc_min, sc_max]),
-                        annotations=[
-                                go.layout.Annotation(
-                                    x=1,  # Positioning on the far right
-                                    y=1,  # Positioning on the top
-                                    xref="paper",  # Use paper coordinates (0 to 1)
-                                    yref="paper",  # Use paper coordinates (0 to 1)
-                                    text=f'{period}', 
-                                    showarrow=False,  # No arrow needed
-                                    font=dict(size=14, color="black"),  # Customize font size and color
-                                    align='right',
-                                    xanchor='right',  # Anchor the text to the right
-                                    yanchor='top'  # Anchor the text to the top
-                                ),
-                                go.layout.Annotation(
-                                    x=1,  # Positioning on the far right
-                                    y=0.95,  # Slightly lower than the previous annotation
-                                    xref="paper",  # Use paper coordinates (0 to 1)
-                                    yref="paper",  # Use paper coordinates (0 to 1)
-                                    text=f'Quarter: {quarter.values[0]}',
-                                    showarrow=False,  # No arrow needed
-                                    font=dict(size=14, color="black"),  # Customize font size and color
-                                    align='right',
-                                    xanchor='right',  # Anchor the text to the right
-                                    yanchor='top'  # Anchor the text to the top
-                                )
-                            ],
-                            shapes=[
-                                go.layout.Shape(
-                                    type='rect',
-                                    x0=0.80,  # Adjust x0 to position the left side of the rectangle
-                                    y0=0.85,  # Adjust y0 to position the bottom of the rectangle
-                                    x1=1,  # Adjust x1 to position the right side of the rectangle
-                                    y1=1,  # Adjust y1 to position the top of the rectangle
-                                    xref='paper',
-                                    yref='paper',
-                                    line=dict(color='black', width=2),  # Border color and width
-                                    fillcolor='rgba(255, 255, 255, 0.7)'
-                                )
-                            ]
-            )
-       
-        fig.update_layout(title=title, title_x=0.5)
-        
-        graphJSON= json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
-        response_data = {
-            'graphJSON': graphJSON,
-            'transit_number': transit_number
-        }
-        return jsonify(response_data)
-    else:
-        error_message = f'No data found for {koi_id}'
-        return jsonify(error_message=error_message)
-
-'''
 
     
 @app.route('/get_transit_file_options/<koi_id>')
 def planet_options(koi_id):
+    """
+    Function gets planet numbers to auto-populate the dropdown for single transit plot planet options.
+    
+    args:
+        koi_id: string in the form "K00000" (KOI identification)
+
+    returns:
+        jsonify(options): dictionary containing planet number and path value associated with it as JSON response
+    """
     global K_id
     if K_id==False:
         star_id = koi_id.replace("K","S")
@@ -1055,24 +794,18 @@ def planet_options(koi_id):
         options.append(option)
     return jsonify(options)
 
-@app.route('/get_transit_file_options_corner/<koi_id>')
-def planet_options_corner(koi_id):
-    global K_id
-    if K_id==False:
-        star_id = koi_id.replace("K","S")
-    else:
-        star_id = koi_id
-    file_name = star_id + '_*_quick.ttvs'
-    file_paths = glob.glob(os.path.join(data_directory,star_id, file_name))
-    options = []
-    for i in range(len(file_paths)):
-        option_value =  f'{i}'
-        option = {'number': f'{i:02d}', 'value': option_value}
-        options.append(option)
-    return jsonify(options)
 
 @app.route('/generate_plot_folded_light_curve/<koi_id>')
 def generate_plot_folded_light_curve(koi_id):
+    """
+    Function generates folded light curves and passes the figure to be displayed on html
+
+    args:
+        koi_id: string in the form "K00000" (KOI identification) 
+
+    returns: 
+        jsonify(graphJSON): contains figure able to be read and displayed in html
+    """
     global K_id
     if K_id==False:
         star_id = koi_id.replace("K","S")
@@ -1092,6 +825,7 @@ def generate_plot_folded_light_curve(koi_id):
 
     ### number of planets from number of ttv files
     npl = len(file_paths)
+    ### mask out overlapping transits
     overlap = []
     for i in range(npl):
         df_i = data_load.load_results_model(file_path_results,i)
@@ -1100,7 +834,6 @@ def generate_plot_folded_light_curve(koi_id):
         row_i = df_post_i.iloc[0]
         dur_i = row_i[f'DUR14_{i}']
         overlap_mask = np.zeros(len(df_i.ttime), dtype='bool')
-        #overlap.append(np.zeros(len(df_i.ttime), dtype='bool'))
         for j in range(npl):
             if i != j:
                 df_j = data_load.load_results_model(file_path_results,j)
@@ -1118,12 +851,12 @@ def generate_plot_folded_light_curve(koi_id):
     koi_identifiers = data_id.koi_identifiers.values
     periods = data_id.period_title.values
     subplot_titles = []
-    spacing = [0.2,0.13,0.09,0.07,0.05,0.04,0.03]
+    spacing = [0.2,0.13,0.09,0.07,0.05,0.04,0.03] # spacing between plots for different numbers of planets
     for k in range(len(koi_identifiers)):
         subplot_titles.append(f'{koi_identifiers[k]}, {periods[k]}') 
         subplot_titles.append('')
         
-    
+    ### initialize figure
     fig = make_subplots(rows=npl*2, cols=1,
                         subplot_titles = subplot_titles,
                         row_heights=[subplot_height, subplot_height*0.4]*npl,
@@ -1161,7 +894,7 @@ def generate_plot_folded_light_curve(koi_id):
         other_models = []
         num_models = 20
 
-        # Select 20 random samples from the posterior distribution
+        ### Select 20 random samples from the posterior distribution
         random_indices = random.sample(range(len(data_post)), num_models)
         random_samples = data_post.iloc[random_indices]
         
@@ -1335,18 +1068,16 @@ def generate_plot_folded_light_curve(koi_id):
         elif os.path.exists(file_path_lc) and not os.path.exists(file_path_sc):
             if len(fold_data_lc.TIME) < 1:
                 non_overlapping_transit = False
-                # error_message = f'No non-overlapping transits for {koi_identifiers[i]}'
-                # return jsonify(error_message=error_message)
             else:
                 non_overlapping_transit=True
 
             if non_overlapping_transit==True:
                 t_lc = np.array(fold_data_lc.TIME)
                 f_lc = np.array(fold_data_lc.FLUX)
-                m_lc = batman.TransitModel(theta, t_lc, supersample_factor = 29, exp_time = 0.02)    #initializes model for lc times
+                m_lc = batman.TransitModel(theta, t_lc, supersample_factor = 29, exp_time = 0.02)    #initializes model for lc times ##############################################################################
                 flux_m_lc = (m_lc.light_curve(theta))
 
-                # Sort t_lc and flux_m_lc based on t_lc
+                ### Sort t_lc and flux_m_lc based on t_lc
                 sorted_indices = np.argsort(t_lc)
                 t_lc_sorted = t_lc[sorted_indices]
                 flux_m_lc_sorted = flux_m_lc[sorted_indices]
@@ -1357,12 +1088,11 @@ def generate_plot_folded_light_curve(koi_id):
                 fold_time = np.array(fold_data_lc.TIME)
                 bin_centers, residuals_bin = data_load.bin_data(fold_time,residuals_lc, DUR14/11)
             
-                # Collect all residuals
+                ### Collect all residuals
                 all_residuals.extend(residuals_lc) 
                 all_residuals.extend(residuals_bin)
 
-                
-
+                ### thinning data to 1000 points
                 N_samp = 1000
                 inds = np.arange(len(t_lc_sorted), dtype='int')
                 inds = np.random.choice(inds, size=np.min([N_samp,len(inds)]), replace=False)
@@ -1401,8 +1131,8 @@ def generate_plot_folded_light_curve(koi_id):
                     mod_lc.name = "LC Model" 
                     fig.add_trace(mod_lc, row=r_plot, col=1)
 
+                ### plot 20 random model draws
                 for j, row_ in random_samples.iterrows():
-                    #row_ = data_post.iloc[j] # pick row with highest likelihood
                     ### get random params {P, t0, Rp/Rs, b, T14, q1, q2}
                     theta_ = batman.TransitParams()
                     theta_.per = row_[f'P']
@@ -1418,7 +1148,6 @@ def generate_plot_folded_light_curve(koi_id):
                     m_ = batman.TransitModel(theta_, t_lc_sorted, supersample_factor = 29, exp_time = 0.02)    #initializes model
                     flux_ = (m_.light_curve(theta_))        #calculates light curve
                     mod_ = go.Scatter(x=t_lc_sorted*24, y=flux_, mode="lines", showlegend=False, line=dict(color=pink_transparent))
-                    #mod_.name = f'Model {j}' 
                     
                     fig.add_trace(mod_, row=r_plot, col=1)
 
@@ -1431,13 +1160,12 @@ def generate_plot_folded_light_curve(koi_id):
                 residuals_plot_bin.marker.update(symbol="square", size=10, color="orange")
                 fig.add_trace(residuals_plot_bin, row=r_residuals, col=1)
 
-                # Add horizontal line at 0 in residual plot
+                ### Add horizontal line at 0 in residual plot
                 fig.add_shape(type="line", x0=fold_data_lc.TIME.min()*24, x1=fold_data_lc.TIME.max()*24, y0=0, y1=0,
                             line=dict(color="Red"), row= r_residuals, col=1)
 
                 ### plot range
                 residuals_min = np.percentile(all_residuals, 99) 
-                #residuals_max = np.percentile(all_residuals, 99)
                 max_abs_residual =(abs(residuals_min))  
                 fig.update_yaxes(range=[-max_abs_residual,max_abs_residual], row=r_residuals, col=1)
 
@@ -1447,9 +1175,11 @@ def generate_plot_folded_light_curve(koi_id):
                 fig.update_yaxes(title_text="Residuals", row=r_residuals, col=1)
                 fig.update_layout(height=700, width=1000)
 
+                ### update rows
                 r_plot = r_residuals + 1
                 r_residuals = r_plot+1
             else:
+                ### annotation stating there are no non-overlapping transits
                 annotation = go.layout.Annotation(
                                     x=1,  # Positioning on the far right
                                     y=1,  # Positioning on the top
@@ -1526,6 +1256,7 @@ def generate_plot_folded_light_curve(koi_id):
             all_residuals.extend(residuals_sc)
             all_residuals.extend(residuals_bin)
 
+            ### plot residuals
             residuals_plot_sc = go.Scatter(x=fold_data_sc.TIME, y=residuals_sc, mode='markers', showlegend=False)
             residuals_plot_sc.marker.update(symbol="circle", size=4, color="gray")
             fig.add_trace(residuals_plot_sc, row=r_residuals, col=1)
@@ -1538,14 +1269,10 @@ def generate_plot_folded_light_curve(koi_id):
             fig.add_shape(type="line", x0=fold_data_lc.TIME.min(), x1=fold_data_lc.TIME.max(), y0=0, y1=0,
                           line=dict(color="Red"), row=r_residuals, col=1)
 
-            ### Update x-axis and y-axis labels for each subplot
-            # fig.update_xaxes(title_text="TIME (HOURS)", row=i+1, col=1)
-            
             residuals_min = np.percentile(all_residuals, 20)
             residuals_max = np.percentile(all_residuals, 80)
             max_abs_residual = max(abs(residuals_min), abs(residuals_max))
             fig.update_yaxes(range=[-max_abs_residual,max_abs_residual], row=r_residuals, col=1)
-
 
             ### Update x-axis and y-axis labels for each subplot
             fig.update_yaxes(title_text="FLUX", row=r_plot, col=1)
@@ -1553,6 +1280,7 @@ def generate_plot_folded_light_curve(koi_id):
             fig.update_yaxes(title_text="Residuals", row=r_residuals, col=1)
             fig.update_layout(height=700, width=1000) 
 
+            ### update rows
             r_plot = r_residuals+1
             r_residuals = r_plot+1
         
@@ -1570,18 +1298,28 @@ def generate_plot_folded_light_curve(koi_id):
 
 @app.route('/generate_plot_OMC/<koi_id>')
 def generate_plot_OMC(koi_id):
+    """
+    Function generates Observed Minus Calculated (OMC) plots and passes the figure to be displayed on html
+
+    args:
+        koi_id: string in the form "K00000" (KOI identification) 
+
+    returns: 
+        jsonify(graphJSON): contains figure able to be read and displayed in html
+    """
     global K_id
     if K_id==False:
         star_id = koi_id.replace("K","S")
     else:
         star_id = koi_id
     file_name = star_id + '_*_quick.ttvs'
-    file_paths = glob.glob(os.path.join(data_directory,star_id, file_name))
+    file_paths = (glob.glob(os.path.join(data_directory,star_id, file_name)))   
+    file_path_sort = sorted(file_paths, key=lambda  x: int(re.search(r"_(\d+)_", x).group(1))) ### sort
+    
     ext = os.path.basename(data_directory) +'.csv'
     csv_file_path = os.path.join(data_directory, ext)
     ### number of planets from number of ttv files
-    npl = len(file_paths)
-    # titles = data_load.get_koi_identifiers(csv_file_path, koi_id)
+    npl = len(file_path_sort)
     data_id = data_load.get_koi_identifiers(csv_file_path, koi_id)
     data_id = data_id.sort_values(by='periods') 
     koi_identifiers = data_id.koi_identifiers.values
@@ -1589,18 +1327,21 @@ def generate_plot_OMC(koi_id):
     subplot_height = 450
     subplot_titles = []
     spacing = [0.2,0.1,0.05,0.04,0.04,0.04,0.03] 
+    ### create subplot titles
     for k in range(len(koi_identifiers)):
         subplot_titles.append(f'{koi_identifiers[k]}, {periods[k]}') 
-        subplot_titles.append('')
+        subplot_titles.append('') # no title for residual plots
+    ### initialize figure
     fig = make_subplots(rows=npl*2, cols=1,
                         subplot_titles=subplot_titles,
                         row_heights=[subplot_height, subplot_height*0.4]*npl,
                         vertical_spacing=spacing[npl-1]) 
+    ### set rows
     r_plot = 1
     r_residuals = r_plot+1
     
-
-    for i, file_path in enumerate(file_paths):
+    ### create OMC plot for each planet
+    for i, file_path in enumerate(file_path_sort):
         omc_data, omc_model, out_prob, out_flag = data_load.load_OMC_data(koi_id, file_path)
         show_outliers = True
         inds = np.arange(len(omc_data), dtype='int')
@@ -1618,44 +1359,45 @@ def generate_plot_OMC(koi_id):
                 fig.add_trace(omc, row=(r_plot), col=1)
                 fig.add_trace(line_trace, row=(r_plot), col=1)
 
-                # Add a new scatter trace for outliers with 'x' shape markers
+                ### Add scatter trace for outliers with 'x' shape markers
                 scatter_outliers = px.scatter(omc_data[mask], x='TIME', y='OMC').update_traces(
                     marker=dict(symbol='x', color='orange'),
                     line=dict(width=0.7))
 
                 fig.add_trace(scatter_outliers.data[0], row=(r_plot), col=1)
                 
+                ### calculate residuals
                 residuals = omc_data.OMC - omc_model.OMC_MODEL[inds]
-                ### plot residuals 
                 omc_residuals = pd.DataFrame({
                     'TIME' : omc_data.TIME,
                     'RESIDUALS' : residuals
                 })
+                ### plot residuals 
                 residuals_plot_omc = px.scatter(omc_residuals,x='TIME', y='RESIDUALS', color=out_prob,color_continuous_scale='viridis').data[0]
                 fig.add_trace(residuals_plot_omc, row=r_residuals, col=1) 
-                # Add horizontal line at 0 in residual plot 
+                ### Add horizontal line at 0 in residual plot 
                 fig.add_shape(type="line", x0=omc_data.TIME.min(), x1=omc_data.TIME.max(), y0=0, y1=0,
                             line=dict(color="Red"), row= r_residuals, col=1)
-                # Add a new scatter trace for outliers with 'x' shape markers
+                ### Add scatter trace for outliers with 'x' shape markers
                 scatter_outliers = px.scatter(omc_residuals[mask], x='TIME', y='RESIDUALS').update_traces(
                     marker=dict(symbol='x', color='orange'), 
                     line=dict(width=0.7))
                 fig.add_trace(scatter_outliers.data[0], row=(r_residuals), col=1)
 
-                # Update x-axis and y-axis labels for each subplot
+                ### Update x-axis and y-axis labels for each subplot
                 fig.update_xaxes(title_text="TIME (DAYS)", row=r_residuals, col=1)
                 fig.update_yaxes(title_text="O-C (MINUTES)", row=r_plot, col=1)
                 fig.update_yaxes(title_text="Residuals", row=r_residuals, col=1)
-                fig.update_coloraxes(colorbar_title_text='Out Probability', colorbar_len=0.2)#, row=i+1, col=1)
+                fig.update_coloraxes(colorbar_title_text='Out Probability', colorbar_len=0.2)
 
-
+                ### update rows
                 r_plot = r_residuals + 1
                 r_residuals = r_plot+1
 
             else:
                 mask_arr = np.array(mask)
                 omc = px.scatter(omc_data[~mask_arr], x="TIME",y="OMC") 
-                # Add a line plot for OMC_MODEL
+                ### Add a line plot for OMC_MODEL
                 line_trace = px.line(omc_model[~mask_arr], x="TIME", y="OMC_MODEL").data[0]
                 line_trace.line.color = 'red' 
                 fig.add_trace(omc, row=(r_plot), col=1)
@@ -1665,8 +1407,9 @@ def generate_plot_OMC(koi_id):
                 fig.update_yaxes(title_text="O-C (MINUTES)", row=r_plot, col=1)
                 fig.update_coloraxes(colorbar_title_text='Out Probability', colorbar_len=0.2)#, row=i+1, col=1)
 
+                ### calculate residuals
                 residuals = omc_model[~mask_arr].OMC_MODEL[inds] - omc_data[~mask_arr].OMC
-
+                ### update rows
                 r_plot = r_residuals + 1
                 r_residuals = r_plot+1
         
@@ -1674,6 +1417,7 @@ def generate_plot_OMC(koi_id):
             error_message = f'No data found for {koi_id}'
             return jsonify(error_message=error_message)
     
+    ### adjust colorbar
     colorbar_spacing = [1,0.5,0.33,0.25,0.2,0.15,0.1]
     fig.update_layout(
             coloraxis=dict(
@@ -1695,6 +1439,17 @@ def generate_plot_OMC(koi_id):
 
 @app.route('/generate_plot_corner/<koi_id>/<selected_columns>/<planet_num>')
 def generate_plot_corner(koi_id,selected_columns, planet_num):
+    """
+    Function generates posterior corner plots and passes the figure to be displayed on html
+
+    args:
+        koi_id: string in the form "K00000" (KOI identification) 
+        selected_columns: list of strings containing names of variables selected on app
+        planet_num: integer planet number
+
+    returns: 
+        jsonify(graphJSON): contains figure able to be read and displayed in html
+    """
     selected_columns = selected_columns.split(',')
     global K_id
     if K_id==False:
@@ -1709,32 +1464,20 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
 
     data_id = data_load.get_koi_identifiers(csv_file_path, koi_id)
     data_id = data_id.sort_values(by='periods') 
-    koi_identifiers = data_id.koi_identifiers.values
-    periods = data_id.period_title.values
 
     if os.path.isfile(file_path):
         data = data_load.load_posteriors(file_path,planet_num,koi_id)
-        
-        #set target # samples
-        ### commented out because i added this to the load posteriors function
-        # N_samp = 1000
-        # LN_WT = data['LN_WT'].values
-        # weight = np.exp(LN_WT- LN_WT.max())
-        # w = weight/ np.sum(weight)
-
-        # data = data.sample(N_samp, replace=True, ignore_index=True, weights=w)
-        #data = data[selected_columns]
+        ### handle weighting
         LN_WT = data['LN_WT'].values
         weight = np.exp(LN_WT- LN_WT.max())
         w = weight/ np.sum(weight)
         data['WEIGHTS'] = w
 
         labels = data[selected_columns].columns.tolist()
-
+        ### initialize figure
         fig = make_subplots(rows=len(selected_columns), cols=len(selected_columns))
-        tick_values_y_c0 = None
-        plot_range_y_c0 = None
         
+        ### orient corner plot
         for i in range(len(selected_columns)):
             for j in range(i, len(selected_columns)):
                 
@@ -1743,20 +1486,10 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                 
 
                 if i != j:
-                    # Calculate the density of the points
-                    # xy = np.vstack([x, y])
-                    
-                    # z = gaussian_kde(xy)(xy)
-                    # ### plotting threshold
-                    # threshold_p=np.percentile(z,1)
-                    # # Select the top 90th percentile based on density
-                    # threshold_s = np.percentile(z, 10) # scatter threshhold
-                    # mask = (z >= threshold_s) 
-                    # mask_s = (z >= threshold_p) & (z < threshold_s)
-                    #Plot points below the threshold as scatter plot
+                    ### scatter plot for non-diagonal plots
                     fig.add_trace(go.Scatter(
-                        x=x,#[mask_s], 
-                        y=y,#[mask_s], 
+                        x=x, 
+                        y=y,
                         mode='markers', 
                         marker=dict(color='gray', size=1), 
                         showlegend=False
@@ -1765,6 +1498,7 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                     
                     
                 else:
+                    ### plot kde for diagonal plots
                     kde = gaussian_kde(x, weights=data['WEIGHTS']) 
                     max1 = max(x)
                     min1=min(x)
@@ -1859,19 +1593,44 @@ def generate_plot_corner(koi_id,selected_columns, planet_num):
                     fig.update_yaxes(showticklabels=False,tickvals=tick_values_y, row=j + 1, col=i + 1, tickangle=0)
                     fig.update_xaxes(range=plot_range, row=j + 1, col=i + 1)
                     
-
+                ### update axes, outline plots
                 fig.update_layout(plot_bgcolor='#F7FBFF') # match background with the back contour color
                 fig.update_xaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1, tickangle=30)
                 fig.update_yaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=j + 1, col=i + 1, tickangle=0)
         
         
         fig.update_layout(height=800, width=900)
-        #fig.update_layout(title = periods[planet_num])
         graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
         return jsonify(graphJSON)
     else:
         error_message = f'No data found for {koi_id}'
         return jsonify(error_message=error_message)
+
+
+@app.route('/get_transit_file_options_corner/<koi_id>')
+def planet_options_corner(koi_id):
+    """
+    Function gets planet numbers to auto-populate the dropdown for posterior corner plot planet options.
+    
+    args:
+        koi_id: string in the form "K00000" (KOI identification)
+
+    returns:
+        jsonify(options): dictionary containing planet number and path value associated with it as JSON response
+    """
+    global K_id
+    if K_id==False:
+        star_id = koi_id.replace("K","S")
+    else:
+        star_id = koi_id
+    file_name = star_id + '_*_quick.ttvs'
+    file_paths = glob.glob(os.path.join(data_directory,star_id, file_name))
+    options = []
+    for i in range(len(file_paths)):
+        option_value =  f'{i}'
+        option = {'number': f'{i:02d}', 'value': option_value}
+        options.append(option)
+    return jsonify(options)
 
 
 if __name__ == '__main__':

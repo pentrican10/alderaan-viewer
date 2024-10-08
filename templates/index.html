@@ -85,13 +85,17 @@
                 generatePlotDetrendedLightCurve(koiId); 
                 togglePlotVisibilityDetrendedLightCurve();
                 togglePlotVisibilityFoldedLightCurve();
+                resetPlanetDropdownSingle();
                 updatePlanetSelectOptions(koiId);
+                //resetPlanetDropdownSingle();
                 togglePlotVisibilitySingleTransit();
                 togglePlotVisibilityOMC();
+                resetPlanetDropdownCorner();
                 updatePlanetOptionsCorner(koiId);
                 togglePlotVisibilityCorner();
                 
                 displayPlanetProperties(koiId);
+                updateDropdownForKoi(koiId);
                 
             }
         });

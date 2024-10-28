@@ -82,7 +82,10 @@ def display_table_data():
         K_id = False 
     else: 
         K_id = True
-    table_data = data_load.read_table_data(table)
+    if not table.startswith('.'):
+        table_data = data_load.read_table_data(table)
+    else:
+        table_data = 'error'
     left_content = render_template('left.html', table_data=table_data)
     right_top_content = render_template('right_top.html')
     right_bottom_content = render_template('right_bottom.html')
@@ -110,18 +113,16 @@ def get_dropdown_options():
     Returns:
         jsonify(options): list of options in json-readable format
     '''
-    try:
-        global default_directory
-        ### List all directories in the default directory
-        options = sorted([item for item in os.listdir(default_directory) if os.path.isdir(os.path.join(default_directory, item))])
-        options_with_tables = []
-        for option in options: 
-            if os.path.isfile(os.path.join(default_directory, option, option + '.csv')):
-                options_with_tables.append(option)
-        ### Return the list of options as a JSON response
-        return jsonify(options_with_tables)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    global default_directory
+    ### List all directories in the default directory
+    options = sorted([item for item in os.listdir(default_directory) if os.path.isdir(os.path.join(default_directory, item))])
+    options_with_tables = []
+    for option in options: 
+        if os.path.isfile(os.path.join(default_directory, option, option + '.csv')):
+            options_with_tables.append(option)
+    ### Return the list of options as a JSON response
+    return jsonify(options_with_tables)
+    
     
 @app.route('/get_selected_table', methods=['GET'])
 def get_selected_table():
@@ -149,6 +150,22 @@ def get_planet_properties(koi_id):
     global table
     planet_data = data_load.get_planet_properties_table(koi_id,table)
     return jsonify(planet_data)
+
+@app.route('/period_ratios/<koi_id>', methods=['GET'])
+def get_period_ratios(koi_id):
+    """
+    Function gets period ratios used in the table on the web app.
+
+    args:
+        koi_id: string in the form "K00000", KOI identification
+
+    returns:
+        jsonify(ratio_data): period ratio table data in json passed to html/javascript
+    """
+    global table
+    ratio_data = data_load.get_period_ratios_table(koi_id,table)
+    return jsonify(ratio_data)
+
 
 @app.route('/review_status/<koi_id>', methods=['POST'])
 def review_status(koi_id):

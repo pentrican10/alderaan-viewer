@@ -169,6 +169,22 @@
         </table>
     </div>
 
+    <div id="periodRatiosTitle" style="display:none;">
+        <h3>Period Ratios:</h3>
+        <table id="periodRatiosTable">
+            <thead>
+                <tr>
+                    <th>Planet Name</th>
+                    <th>Period</th>
+                    
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Rows will be dynamically inserted here by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
 
     <script>
         function generatePlotDetrendedLightCurve(koiId) {
@@ -620,6 +636,35 @@
                             <td>${row['impact']}</td>
                             <td>${row['ror']}</td>
                             <td>${row['duration']}</td>
+                        `;
+                        tableBody.appendChild(newRow);
+                    });
+
+                    // Show the table section
+                    planetPropertiesTitle.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error fetching planet properties:', error);
+                });
+        }
+
+        function displayPeriodRatios(koiId) {
+            fetch(`/period_ratios/${koiId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const planetPropertiesTitle = document.getElementById("periodRatiosTitle");
+                    const tableBody = document.querySelector("#periodRatiosTable tbody");
+
+                    // Clear any existing rows in the table body
+                    tableBody.innerHTML = '';
+
+                    // Populate the table with the fetched data
+                    data.forEach(row => {
+                        const newRow = document.createElement('tr');
+                        newRow.innerHTML = `
+                            <td>${row['planet_name']}</td>
+                            <td>${row['period']}</td>
+                            
                         `;
                         tableBody.appendChild(newRow);
                     });

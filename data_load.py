@@ -138,6 +138,61 @@ def get_planet_properties_table(koi_id,table):
     planet_data.sort(key=lambda x: x['period']) 
     return planet_data
 
+def get_period_ratios_table(koi_id,table):
+    '''
+    Function retrieves relevant period ratios and passes as table info
+
+    args:
+        koi_id: string in the form "K00000" (KOI identification)
+        table: string in form of 'table.csv'
+    
+    returns:
+        planet_data: table with period ratios sorted by ascending period (name, period)
+    '''
+
+    global K_id
+    if K_id==False:
+        star_id = koi_id.replace("K","S")
+    else:
+        star_id = koi_id
+    file_path_csv = os.path.join(data_directory, table)
+    file_results =star_id + '-results.fits'
+    file_path_results = os.path.join(data_directory, star_id, file_results)
+    data_id = get_koi_identifiers(file_path_csv,koi_id)
+    data_id = data_id.sort_values(by='periods') 
+    koi_identifier = data_id.koi_identifiers.values
+
+    ratio_data = []
+    periods = []
+    with open(file_path_csv, 'r') as csvfile:
+        reader = csv.DictReader(csvfile)
+        n=0
+        for row in reader:
+            
+            if row['koi_id'] == koi_id:
+                row['planet_name'] = koi_identifier[n]
+
+                data_post = load_posteriors(file_path_results,n,koi_id)
+                row['period'] = (data_post['P'].median())
+                
+                n+=1
+                ratio_data.append(row) 
+    ratio_data.sort(key=lambda x: x['period']) 
+
+    for i in range(1, len(ratio_data)):
+        # Calculate ratio of current planet's period to the previous planet's period
+        current_period = ratio_data[i]['period']
+        previous_period = ratio_data[i - 1]['period']
+        
+        period_ratio = current_period / previous_period
+        
+        # Add the period ratio to the current planet's data
+        ratio_data[i]['period_ratio'] = period_ratio
+
+
+    return ratio_data
+   
+
             
 
 def get_koi_identifiers(file_path, koi_id):

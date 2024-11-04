@@ -174,16 +174,17 @@
         <table id="periodRatiosTable">
             <thead>
                 <tr>
-                    <th>Planet Name</th>
-                    <th>Period</th>
-                    
+                    <th>Planets</th>
+                    <th>Periods</th>
+                    <th>Ratio</th>
                 </tr>
             </thead>
             <tbody>
-                <!-- Rows will be dynamically inserted here by JavaScript -->
             </tbody>
         </table>
     </div>
+
+ 
 
 
     <script>
@@ -648,6 +649,65 @@
                 });
         }
 
+        // function displayPeriodRatios(koiId) {
+        //     fetch(`/period_ratios/${koiId}`)
+        //         .then(response => response.json())
+        //         .then(data => {
+        //             const planetPropertiesTitle = document.getElementById("periodRatiosTitle");
+        //             const tableBody = document.querySelector("#periodRatiosTable tbody");
+
+        //             // Clear any existing rows in the table body
+        //             tableBody.innerHTML = '';
+
+        //             // Populate the table with the fetched data
+        //             data.forEach(row => {
+        //                 const newRow = document.createElement('tr');
+        //                 newRow.innerHTML = `
+        //                     <td>${row['planet_name']}</td>
+        //                     <td>${row['period']}</td>
+                            
+        //                 `;
+        //                 tableBody.appendChild(newRow);
+        //             });
+
+        //             // Show the table section
+        //             planetPropertiesTitle.style.display = 'block';
+        //         })
+        //         .catch(error => {
+        //             console.error('Error fetching planet properties:', error);
+        //         });
+        // } 
+        
+        // function displayPeriodRatios(koiId) {
+        //     fetch(`/period_ratios/${koiId}`)
+        //         .then(response => response.json())
+        //         .then(data => {
+        //             const planetPropertiesTitle = document.getElementById("periodRatiosTitle");
+        //             const tableBody = document.querySelector("#periodRatiosTable tbody");
+
+        //             // Clear any existing rows in the table body
+        //             tableBody.innerHTML = '';
+
+        //             // Populate the table with the fetched data
+        //             data.forEach(row => {
+        //                 const newRow = document.createElement('tr');
+        //                 newRow.innerHTML = `
+        //                     <td>${row['planets']}</td>
+        //                     <td>${row['periods']}</td>
+        //                     <td>${row['ratio']}</td>
+        //                 `;
+        //                 tableBody.appendChild(newRow);
+        //             });
+
+        //             // Show the table section
+        //             planetPropertiesTitle.style.display = 'block';
+        //         })
+        //         .catch(error => {
+        //             console.error('Error fetching planet properties:', error);
+        //         });
+        // }
+        
+
         function displayPeriodRatios(koiId) {
             fetch(`/period_ratios/${koiId}`)
                 .then(response => response.json())
@@ -658,19 +718,27 @@
                     // Clear any existing rows in the table body
                     tableBody.innerHTML = '';
 
+                    let hasValidRows = false; // Track if there are any valid rows to display
+
                     // Populate the table with the fetched data
                     data.forEach(row => {
+                        if (row['planets'] === 'Single Planet System') {
+                            // If it's a single planet system, skip this row
+                            return;
+                        }
+
+                        hasValidRows = true; // Mark that there's at least one valid row
                         const newRow = document.createElement('tr');
                         newRow.innerHTML = `
-                            <td>${row['planet_name']}</td>
-                            <td>${row['period']}</td>
-                            
+                            <td>${row['planets']}</td>
+                            <td>${row['periods']}</td>
+                            <td>${row['ratio']}</td>
                         `;
                         tableBody.appendChild(newRow);
                     });
 
-                    // Show the table section
-                    planetPropertiesTitle.style.display = 'block';
+                    // Show or hide the table section based on whether valid rows exist
+                    planetPropertiesTitle.style.display = hasValidRows ? 'block' : 'none';
                 })
                 .catch(error => {
                     console.error('Error fetching planet properties:', error);

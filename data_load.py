@@ -159,38 +159,57 @@ def get_period_ratios_table(koi_id,table):
     file_results =star_id + '-results.fits'
     file_path_results = os.path.join(data_directory, star_id, file_results)
     data_id = get_koi_identifiers(file_path_csv,koi_id)
+    ### sort by period
     data_id = data_id.sort_values(by='periods') 
     koi_identifier = data_id.koi_identifiers.values
 
-    ratio_data = []
     periods = []
+    npl = 1
+    # Retrieve periods for the planets from the CSV file
     with open(file_path_csv, 'r') as csvfile:
         reader = csv.DictReader(csvfile)
-        n=0
+        n = 0
         for row in reader:
-            
             if row['koi_id'] == koi_id:
-                row['planet_name'] = koi_identifier[n]
+                # Load the period for the current planet
+                data_post = load_posteriors(file_path_results, n, koi_id)
+                period = data_post['P'].median()
 
-                data_post = load_posteriors(file_path_results,n,koi_id)
-                row['period'] = (data_post['P'].median())
-                
-                n+=1
-                ratio_data.append(row) 
-    ratio_data.sort(key=lambda x: x['period']) 
+                # Append planet name and period to the list
+                periods.append({'planet_name': row['planet_name'], 'period': period})
+                npl += n
+                n += 1
 
-    for i in range(1, len(ratio_data)):
-        # Calculate ratio of current planet's period to the previous planet's period
-        current_period = ratio_data[i]['period']
-        previous_period = ratio_data[i - 1]['period']
-        
-        period_ratio = current_period / previous_period
-        
-        # Add the period ratio to the current planet's data
-        ratio_data[i]['period_ratio'] = period_ratio
+    # Sort the periods in ascending order
+    periods = sorted(periods, key=lambda x: x['period'])
 
+    if npl > 1:
 
-    return ratio_data
+        # Calculate ratios for consecutive periods
+        ratios = []
+        for i in range(len(periods) - 1):
+            period1 = round(periods[i+1]['period'], 4)
+            period2 = round(periods[i]['period'], 4)
+            ratio = round(periods[i+1]['period'] / periods[i]['period'], 3)
+
+            ratio = {
+                'planets': f"{periods[i+1]['planet_name']} / {periods[i]['planet_name']}",
+                'periods': f"{period1} / {period2}",
+                'ratio': ratio
+            }
+            ratios.append(ratio)
+    else:
+        # Calculate ratios for consecutive periods
+        ratios = []
+        ratio = {
+                'planets': f"Single Planet System",
+                'periods': f"Single Planet System",
+                'ratio': f"Single Planet System"
+            }
+        ratios.append(ratio)
+
+    # Return as a JSON-friendly list of dictionaries
+    return ratios
    
 
             

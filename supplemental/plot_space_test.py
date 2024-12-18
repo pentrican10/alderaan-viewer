@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 
 
 # Create subplots
-rows = 4
+rows = 6
 fig = make_subplots(rows=rows, cols=1)
 
 # Create a dictionary to hold dynamic yaxis settings
@@ -39,8 +39,18 @@ print(domains)
 
 print(yaxis_dict)
 
+traces_dict = {}
+traces_dict[f'trace1'] = go.Scatter(x=[1, 2, 3], y=[4, 5, 6])
+traces_dict[f'trace2'] = go.Scatter(x=[1, 2, 3], y=[6, 5, 4])
+traces_dict[f'trace3'] = go.Scatter(x=[1, 2, 3], y=[7, 8, 9])
+traces_dict[f'trace4'] = go.Scatter(x=[1, 2, 3], y=[9, 8, 7])
+traces_dict[f'trace5'] = go.Scatter(x=[1, 2, 3], y=[9, 10, 11])
+traces_dict[f'trace6'] = go.Scatter(x=[1, 2, 3], y=[11, 10, 9])
+
+
 # Loop to dynamically update layout for each subplot
 for i in range(1, rows+1):
+    fig.add_trace(traces_dict[f'trace{i}'], row=i, col=1)
     fig.update_layout(
         **{
             f'xaxis{i}': dict(domain=[0, 1]),  # Horizontal span: 0 to 1
@@ -48,11 +58,14 @@ for i in range(1, rows+1):
         }
     )
 
-# Add traces to corresponding subplots
-fig.add_trace(go.Scatter(x=[1, 2, 3], y=[4, 5, 6]), row=1, col=1)  
-fig.add_trace(go.Scatter(x=[1, 2, 3], y=[6, 5, 4]), row=2, col=1)  
-fig.add_trace(go.Scatter(x=[1, 2, 3], y=[7, 8, 9]), row=3, col=1)  
-fig.add_trace(go.Scatter(x=[1, 2, 3], y=[9, 8, 7]), row=4, col=1)  
+# # Add traces to corresponding subplots
+# fig.add_trace(go.Scatter(x=[1, 2, 3], y=[4, 5, 6]), row=1, col=1)  
+# fig.add_trace(go.Scatter(x=[1, 2, 3], y=[6, 5, 4]), row=2, col=1)  
+# fig.add_trace(go.Scatter(x=[1, 2, 3], y=[7, 8, 9]), row=3, col=1)  
+# fig.add_trace(go.Scatter(x=[1, 2, 3], y=[9, 8, 7]), row=4, col=1)  
+# fig.add_trace(go.Scatter(x=[1, 2, 3], y=[9, 10, 11]), row=5, col=1)  
+# fig.add_trace(go.Scatter(x=[1, 2, 3], y=[11, 10, 9]), row=6, col=1)  
+
 
 # Update layout
 fig.update_layout(height=800, width=800, title_text="Manual Subplot Positioning")

@@ -12,7 +12,7 @@
 
     .left-section {
         width: 35%; /* Fixed width for the left panel */
-        height: 700px; /* Full height of the flex container */
+        height: 100vh; /* Full height of the flex container */
         overflow-y: scroll; /* Enable vertical scrolling */
         background-color: #f0f0f0; /* Optional background color */
         padding: 10px;
@@ -21,7 +21,7 @@
     
     .right-section {
         flex: 1; /* Takes the remaining space */
-        height: 700px; /* Full height of the flex container */
+        height: 100vh; /* Full height of the flex container */
         overflow-y: scroll; /* Enable vertical scrolling */
         background-color: #ffffff; /* Optional background color */
         padding: 10px;

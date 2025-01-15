@@ -77,4 +77,11 @@ To run the ALDERAAN viewer:
 ## Example Plots:
 - For K00624
 ![image](https://github.com/user-attachments/assets/47e2ee27-fee6-4197-8024-f56888bc2297)
+![image](https://github.com/user-attachments/assets/e2721b9d-5a2b-4bb6-90a7-40b6efff6b0a)
+![image](https://github.com/user-attachments/assets/4d04b5b1-79ea-4a6b-bd1a-a532168255d6)
+![image](https://github.com/user-attachments/assets/f2c08f6b-ba51-4bcd-88b3-63ccbaaefb6c)
+![image](https://github.com/user-attachments/assets/9d0eef31-b6db-4eff-91d0-70f004118089)
+
+
+
 

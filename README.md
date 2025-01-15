@@ -75,7 +75,7 @@ To run the ALDERAAN viewer:
 - When you leave a comment, a comment file will be created at '<LOCAL_DIR>/alderaan/Results/<run_id>/<koi_id>/<koi_id>_comments.txt'
 
 ## Example Plots:
-### For K00624
+### For K00624, a three-planet system
 ![image](https://github.com/user-attachments/assets/47e2ee27-fee6-4197-8024-f56888bc2297)
 ![image](https://github.com/user-attachments/assets/e2721b9d-5a2b-4bb6-90a7-40b6efff6b0a)
 ![image](https://github.com/user-attachments/assets/4d04b5b1-79ea-4a6b-bd1a-a532168255d6)

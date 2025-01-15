@@ -12,10 +12,9 @@ SCIT = 58.848777            # Kepler short cadence integration time + readout ti
 
 lcit = LCIT/60/24           # Kepler long cadence integration time + readout time [days]
 scit = SCIT/3600/24         # Kepler short cadence integration time + readout time [days]
-#data_directory = 'c:\\Users\\Paige\\Projects\\data\\'
-#data_directory = 'c:\\Users\\Paige\\Projects\\data\\alderaan_results'
+
 k_id = True
-table =  ''# 'ecc-all-LC.csv'
+table =  ''
 data_directory = ''
 
 # Dynamically determine the root directory of the Flask app
@@ -42,7 +41,6 @@ def read_table_data(table):
     global data_directory
     global K_id
     global Table
-    #folder = table[:-4]
     update_data_directory(table)
     Table = table
     if 'SIMULATION' in table:
@@ -96,7 +94,6 @@ def read_table_data(table):
                 unique_data.append(row)
                 seen_koi_ids.add(koi_id)
 
-
     return unique_data
 
 def get_planet_properties_table(koi_id,table):
@@ -135,11 +132,85 @@ def get_planet_properties_table(koi_id,table):
                 row['lcit_ratio'] = round(row['period'] / lcit,5 )
                 row['impact'] = round(data_post[f'IMPACT_{n}'].median(),4)
                 row['ror'] = round(data_post[f'ROR_{n}'].median(),4)
-                row['duration'] = round(data_post[f'DUR14_{n}'].median(),4) 
+                row['duration'] = round((data_post[f'DUR14_{n}'].median())*24,4) 
                 n+=1
                 planet_data.append(row) 
     planet_data.sort(key=lambda x: x['period']) 
     return planet_data
+
+def get_period_ratios_table(koi_id,table):
+    '''
+    Function retrieves relevant period ratios and passes as table info
+
+    args:
+        koi_id: string in the form "K00000" (KOI identification)
+        table: string in form of 'table.csv'
+    
+    returns:
+        planet_data: table with period ratios sorted by ascending period (name, period)
+    '''
+
+    global K_id
+    if K_id==False:
+        star_id = koi_id.replace("K","S")
+    else:
+        star_id = koi_id
+    file_path_csv = os.path.join(data_directory, table)
+    file_results =star_id + '-results.fits'
+    file_path_results = os.path.join(data_directory, star_id, file_results)
+    data_id = get_koi_identifiers(file_path_csv,koi_id)
+    ### sort by period
+    data_id = data_id.sort_values(by='periods') 
+    koi_identifier = data_id.koi_identifiers.values
+
+    periods = []
+    npl = 1
+    # Retrieve periods for the planets from the CSV file
+    with open(file_path_csv, 'r') as csvfile:
+        reader = csv.DictReader(csvfile)
+        n = 0
+        for row in reader:
+            if row['koi_id'] == koi_id:
+                # Load the period for the current planet
+                data_post = load_posteriors(file_path_results, n, koi_id)
+                period = data_post['P'].median()
+
+                # Append planet name and period to the list
+                periods.append({'planet_name': row['planet_name'], 'period': period})
+                npl += n
+                n += 1
+
+    # Sort the periods in ascending order
+    periods = sorted(periods, key=lambda x: x['period'])
+
+    if npl > 1:
+
+        # Calculate ratios for consecutive periods
+        ratios = []
+        for i in range(len(periods) - 1):
+            period1 = round(periods[i+1]['period'], 4)
+            period2 = round(periods[i]['period'], 4)
+            ratio = round(periods[i+1]['period'] / periods[i]['period'], 3)
+
+            ratio = {
+                'planets': f"{periods[i+1]['planet_name']} / {periods[i]['planet_name']}",
+                'periods': f"{period1} / {period2}",
+                'ratio': ratio
+            }
+            ratios.append(ratio)
+    else:
+        # Calculate ratios for consecutive periods
+        ratios = []
+        ratio = {
+                'planets': f"Single Planet System",
+                'periods': f"Single Planet System",
+                'ratio': f"Single Planet System"
+            }
+        ratios.append(ratio)
+
+    # Return as a JSON-friendly list of dictionaries
+    return ratios
+   
 
             
 

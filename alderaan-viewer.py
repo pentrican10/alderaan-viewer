@@ -879,12 +879,42 @@ def generate_plot_folded_light_curve(koi_id):
         subplot_titles.append('')
         
     ### initialize figure
-    fig = make_subplots(rows=npl*2, cols=1,
-                        subplot_titles = subplot_titles,
+    rows = npl*2
+    fig = make_subplots(rows=rows, cols=1,
+                        #subplot_titles = subplot_titles,
                         row_heights=[subplot_height, subplot_height*0.4]*npl,
-                        vertical_spacing=spacing[npl-1]
+                        #vertical_spacing=spacing[npl-1]
                         ) 
+    annotations = []
+
     
+
+    # Create a dictionary to hold dynamic yaxis settings
+    yaxis_dict = {}
+    # calculate spacing between plots
+    systems = rows/2
+    space_per_system = 1/systems # system contains the main plot and the residual plot
+    space_above = 0.25 * space_per_system
+    space_between_systems = 0.05 * space_per_system
+    plot_space = 0.60 * space_per_system 
+    residual_space = 0.20 * space_per_system
+    plot_domains = [[0,residual_space]]
+    yaxis_dict[f'yaxis{1}'] = [0, plot_domains[0][1]]
+    for i in range(0,rows-1):
+        if i==rows-2:
+            domain_ = plot_domains[i][1] + space_between_systems + plot_space
+            dom = [plot_domains[i][1] + space_between_systems, 1]
+        elif (i % 2 == 0):
+            domain_ =  plot_domains[i][1] + space_between_systems + plot_space
+            dom = [plot_domains[i][1] + space_between_systems, domain_]
+        else:
+            domain_ = space_above + plot_domains[i][1] + residual_space
+            dom = [plot_domains[i][1] + space_above, domain_]
+        
+        plot_domains.append(dom)
+        # Store the domain in the yaxis_dict dynamically
+        yaxis_dict[f'yaxis{i+2}'] = dom
+        
     r_plot = 1
     r_residuals = r_plot+1
     
@@ -1313,7 +1343,32 @@ def generate_plot_folded_light_curve(koi_id):
     ### return whole fig to page
     if npl>1:
         fig.update_layout(height=npl * subplot_height,legend_tracegroupgap = 240)
+    # Loop to dynamically update layout for each subplot
+    for i in range(1, rows+1):
+        fig.update_layout(
+            **{
+                f'xaxis{i}': dict(domain=[0, 1]),  # Horizontal span: 0 to 1
+                f'yaxis{i}': dict(domain=yaxis_dict[f'yaxis{rows+1-i}'])  # Use dynamic yaxis from dictionary
+            }
+        )
+        if not (i %2 ==0):
+            fig.update_xaxes(showticklabels=False, row=i, col=1)
+    
+    # Add annotations (titles) above each main plot
+    annotations = []
+    for i in range(1, rows+1, 2):  # Loop through odd rows (main plots only)
+        y_position = yaxis_dict[f'yaxis{rows+1-i}'][1] + 0.25*residual_space  # Get the top boundary of the yaxis and add offset
+        annotations.append(dict(
+            x=0.5, y=y_position,  # Centered horizontally
+            xref="paper", yref="paper",
+            text=subplot_titles[i-1],  # Use corresponding title
+            showarrow=False,
+            font=dict(size=18)
+        ))
+
     fig.update_traces(showlegend=True, row=1, col=1)
+    # Update layout to include annotations
+    fig.update_layout(annotations=annotations)
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
     return jsonify(graphJSON)
     
@@ -1346,18 +1401,51 @@ def generate_plot_OMC(koi_id):
     data_id = data_id.sort_values(by='periods') 
     koi_identifiers = data_id.koi_identifiers.values
     periods = data_id.period_title.values
-    subplot_height = 450
+    subplot_height = 400
     subplot_titles = []
     spacing = [0.2,0.1,0.05,0.04,0.04,0.04,0.03] 
     ### create subplot titles
     for k in range(len(koi_identifiers)):
         subplot_titles.append(f'{koi_identifiers[k]}, {periods[k]}') 
-        subplot_titles.append('') # no title for residual plots
+        subplot_titles.append('here') # no title for residual plots
+    
     ### initialize figure
-    fig = make_subplots(rows=npl*2, cols=1,
-                        subplot_titles=subplot_titles,
+    rows = npl*2
+    fig = make_subplots(rows=rows, cols=1,
+                        #subplot_titles=subplot_titles,
                         row_heights=[subplot_height, subplot_height*0.4]*npl,
-                        vertical_spacing=spacing[npl-1]) 
+                        #vertical_spacing=spacing[npl-1]
+                        ) 
+    
+    # Create a dictionary to hold dynamic yaxis settings
+    yaxis_dict = {}
+    # calculate spacing between plots
+    systems = rows/2
+    space_per_system = 1/systems # system contains the main plot and the residual plot
+    space_above = 0.25 * space_per_system
+    space_between_systems = 0.05 * space_per_system
+    plot_space = 0.60 * space_per_system 
+    residual_space = 0.20 * space_per_system
+    plot_domains = [[0,residual_space]]
+    yaxis_dict[f'yaxis{1}'] = [0, plot_domains[0][1]]
+    for i in range(0,rows-1):
+        if i==rows-2:
+            domain_ = plot_domains[i][1] + space_between_systems + plot_space
+            dom = [plot_domains[i][1] + space_between_systems, 1]
+        elif (i % 2 == 0):
+            domain_ =  plot_domains[i][1] + space_between_systems + plot_space
+            dom = [plot_domains[i][1] + space_between_systems, domain_]
+        else:
+            domain_ = space_above + plot_domains[i][1] + residual_space
+            dom = [plot_domains[i][1] + space_above, domain_]
+        
+        plot_domains.append(dom)
+        # Store the domain in the yaxis_dict dynamically
+        yaxis_dict[f'yaxis{i+2}'] = dom
+
+    
+    
+
     ### set rows
     r_plot = 1
     r_residuals = r_plot+1
@@ -1394,12 +1482,15 @@ def generate_plot_OMC(koi_id):
                     'TIME' : omc_data.TIME,
                     'RESIDUALS' : residuals
                 })
+                
                 ### plot residuals 
                 residuals_plot_omc = px.scatter(omc_residuals,x='TIME', y='RESIDUALS', color=out_prob,color_continuous_scale='viridis').data[0]
                 fig.add_trace(residuals_plot_omc, row=r_residuals, col=1) 
+                
                 ### Add horizontal line at 0 in residual plot 
                 fig.add_shape(type="line", x0=omc_data.TIME.min(), x1=omc_data.TIME.max(), y0=0, y1=0,
                             line=dict(color="Red"), row= r_residuals, col=1)
+                
                 ### Add scatter trace for outliers with 'x' shape markers
                 scatter_outliers = px.scatter(omc_residuals[mask], x='TIME', y='RESIDUALS').update_traces(
                     marker=dict(symbol='x', color='orange'), 
@@ -1411,6 +1502,7 @@ def generate_plot_OMC(koi_id):
                 fig.update_yaxes(title_text="O-C (MINUTES)", row=r_plot, col=1)
                 fig.update_yaxes(title_text="Residuals", row=r_residuals, col=1)
                 fig.update_coloraxes(colorbar_title_text='Out Probability', colorbar_len=0.2)
+
 
                 ### update rows
                 r_plot = r_residuals + 1
@@ -1455,6 +1547,31 @@ def generate_plot_OMC(koi_id):
     )
     fig_height = 450 * 1.4
     fig.update_layout(height=fig_height*npl, width=1000)
+    # Loop to dynamically update layout for each subplot
+    for i in range(1, rows+1):
+        fig.update_layout(
+            **{
+                f'xaxis{i}': dict(domain=[0, 1]),  # Horizontal span: 0 to 1
+                f'yaxis{i}': dict(domain=yaxis_dict[f'yaxis{rows+1-i}'])  # Use dynamic yaxis from dictionary
+            }
+        )
+        if not (i %2 ==0):
+            fig.update_xaxes(showticklabels=False, row=i, col=1)
+    
+    # Add annotations (titles) above each main plot
+    annotations = []
+    for i in range(1, rows+1, 2):  # Loop through odd rows (main plots only)
+        y_position = yaxis_dict[f'yaxis{rows+1-i}'][1] + 0.25*residual_space  # Get the top boundary of the yaxis and add offset
+        annotations.append(dict(
+            x=0.5, y=y_position,  # Centered horizontally
+            xref="paper", yref="paper",
+            text=subplot_titles[i-1],  # Use corresponding title
+            showarrow=False,
+            font=dict(size=18)
+        ))
+
+    # Update layout to include annotations
+    fig.update_layout(annotations=annotations)
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder) 
     return jsonify(graphJSON)
 

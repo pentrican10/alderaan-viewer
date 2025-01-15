@@ -74,3 +74,7 @@ To run the ALDERAAN viewer:
 ## Notes:
 - When you leave a comment, a comment file will be created at '<LOCAL_DIR>/alderaan/Results/<run_id>/<koi_id>/<koi_id>_comments.txt'
 
+## Example Plots:
+- For K00624
+![image](https://github.com/user-attachments/assets/47e2ee27-fee6-4197-8024-f56888bc2297)
+

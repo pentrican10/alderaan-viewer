@@ -13,45 +13,42 @@ SCIT = 58.848777            # Kepler short cadence integration time + readout ti
 lcit = LCIT/60/24           # Kepler long cadence integration time + readout time [days]
 scit = SCIT/3600/24         # Kepler short cadence integration time + readout time [days]
 
-k_id = True
-table =  ''
-data_directory = ''
+K_id = True
 
-# Dynamically determine the root directory of the Flask app
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))  # Root directory of the app
-# Move one level up from the root directory
-PARENT_DIR = os.path.dirname(ROOT_DIR)
-# Set the default directory to the parent directory's 'alderaan/Results' path
-default_directory = os.path.join(PARENT_DIR, 'alderaan', 'Results')
+### Dynamically determine the directory structure
+### The viewer app should be placed in "<ROOT_DIR>/alderaan-viewer"
+### Pipeline outputs should be stored in "<ROOT_DIR>/alderaan/Results/<RUN_ID>"
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+VIEWER_DIR = os.path.join(ROOT_DIR, 'alderaan-viewer')
+RESULTS_DIR = os.path.join(ROOT_DIR, 'alderaan', 'Results')
 
 
-def update_data_directory(selected_table):
-    """
-    Function 
-    """
-    global data_directory
-    global default_directory
-    data_directory = os.path.join(default_directory, selected_table[:-4])
+### TODO rather than tracking run_dir and table, simply track run_id
+RUN_DIR = ''
+table = ''
 
-def read_table_data(table):
+
+def read_star_properties_table(table):
     """
     Reads data for the table on the left side of the web app
     Shows koi_id, kep_mag, Rstar, logrho, Teff, logg
     """
-    global data_directory
+    global RUN_DIR
     global K_id
-    global Table
-    update_data_directory(table)
-    Table = table
+    
+    RUN_DIR = os.path.join(RESULTS_DIR, table[:-4])
+    
     if 'SIMULATION' in table:
         K_id = False 
     else: 
         K_id = True
-    file_path = os.path.join(data_directory, table)
+        
+    file_path = os.path.join(RUN_DIR, table)
     table_data = []
     review_column_added = False
     with open(file_path, 'r') as csvfile:
         reader = csv.DictReader(csvfile)
+        
         ### Check if 'review' column exists, otherwise add it
         fieldnames = reader.fieldnames
         if 'review' not in fieldnames:
@@ -59,18 +56,20 @@ def read_table_data(table):
             review_column_added = True
 
         for row in reader:
-            #round table values
+            ### Round stellar property values
             row['kep_mag'] = round(float(row['kep_mag']), 2)
             row['Rstar'] = round(float(row['Rstar']), 2)
             row['logrho'] = round(float(row['logrho']), 2)
             row['Teff'] = round(float(row['Teff']))
             row['logg'] = round(float(row['logg']), 2)
-            # Ensure 'review' column exists in each row
+            
+            ### Ensure 'review' column exists in each row
             if 'review' not in row:
                 row['review'] = 'None'
             elif row['review'] == '':
                 row['review'] = 'None'
             table_data.append(row)
+    
     if review_column_added==True:
         with open(file_path, 'w', newline='') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -78,23 +77,24 @@ def read_table_data(table):
             writer.writerows(table_data)
 
     ### list of Koi IDs with data
-    koi_folder_list = [f for f in os.listdir(data_directory) if os.path.isdir(os.path.join(data_directory, f))]
+    koi_folder_list = [f for f in os.listdir(RUN_DIR) if
+                       os.path.isdir(os.path.join(RUN_DIR, f))
+                      ]
             
     ### Remove duplicates based on koi_id
-    unique_data = []
+    unique_rows = []
     seen_koi_ids = set()
     for row in table_data:
         koi_id = row['koi_id']
         
-        ### Check if koi_id is not in the set of seen ids
         if koi_id not in seen_koi_ids:
-            ### only add the row to table if there is a file for the Koi ID
             if koi_id in koi_folder_list:
-                ### Add the row to unique_data and the koi_id to the set
-                unique_data.append(row)
+                unique_rows.append(row)
                 seen_koi_ids.add(koi_id)
 
-    return unique_data
+    return unique_rows
+
+
 
 def get_planet_properties_table(koi_id,table):
     '''
@@ -112,9 +112,9 @@ def get_planet_properties_table(koi_id,table):
         star_id = koi_id.replace("K","S")
     else:
         star_id = koi_id
-    file_path_csv = os.path.join(data_directory, table)
+    file_path_csv = os.path.join(RUN_DIR, table)
     file_results =star_id + '-results.fits'
-    file_path_results = os.path.join(data_directory, star_id, file_results)
+    file_path_results = os.path.join(RUN_DIR, star_id, file_results)
     data_id = get_koi_identifiers(file_path_csv,koi_id)
     data_id = data_id.sort_values(by='periods') 
     koi_identifier = data_id.koi_identifiers.values
@@ -138,6 +138,7 @@ def get_planet_properties_table(koi_id,table):
     planet_data.sort(key=lambda x: x['period']) 
     return planet_data
 
+
 def get_period_ratios_table(koi_id,table):
     '''
     Function retrieves relevant period ratios and passes as table info
@@ -155,9 +156,9 @@ def get_period_ratios_table(koi_id,table):
         star_id = koi_id.replace("K","S")
     else:
         star_id = koi_id
-    file_path_csv = os.path.join(data_directory, table)
+    file_path_csv = os.path.join(RUN_DIR, table)
     file_results =star_id + '-results.fits'
-    file_path_results = os.path.join(data_directory, star_id, file_results)
+    file_path_results = os.path.join(RUN_DIR, star_id, file_results)
     data_id = get_koi_identifiers(file_path_csv,koi_id)
     ### sort by period
     data_id = data_id.sort_values(by='periods') 
@@ -212,8 +213,6 @@ def get_period_ratios_table(koi_id,table):
     return ratios
    
 
-            
-
 def get_koi_identifiers(file_path, koi_id):
     koi_identifiers = []
     periods = []
@@ -240,7 +239,14 @@ def get_koi_identifiers(file_path, koi_id):
     return df if periods else None
     #return periods,koi_identifiers if periods else None
 
-               
+
+def get_num_planets(file_path_results):
+    with fits.open(file_path_results) as hdul:
+        npl = int(hdul[0].header['NPL'])
+        
+    return npl
+    
+            
 def load_photometry_data(file_path):
     with fits.open(file_path) as fits_file:
         time = np.array(fits_file[1].data, dtype=float)
@@ -287,6 +293,29 @@ def load_ttv_data(koi_id, file_path):
         return index, ttime, model, out_prob, out_flag
     
 
+def load_ttv_data_from_results(file_path_results,planet_num):
+    with fits.open(file_path_results) as hdul:
+        data = hdul[2+planet_num].data
+        index = np.array(data['INDEX'], dtype='int')
+        ttime = np.array(data['TTIME'], dtype='float')
+        model = np.array(data['MODEL'], dtype='float')
+        out_prob = np.array(data['OUT_PROB'], dtype='float')
+        out_flag = np.array(data['OUT_FLAG'], dtype='bool')
+
+    df = pd.DataFrame(dict(
+            index=index,
+            ttime=ttime,
+            model = model,
+            out_prob = out_prob,
+            out_flag = out_flag
+        ))
+    
+    # index field in ALDERAAN.results.fits conflicts with index in pandas.df
+    df.index = index
+    
+    return df
+
+
 def get_min_max(koi_id):
     global K_id
     if K_id == False:
@@ -294,10 +323,10 @@ def get_min_max(koi_id):
     else:
         star_id = koi_id
     file_name_lc = star_id + '_lc_filtered.fits'
-    file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
+    file_path_lc = os.path.join(RUN_DIR,star_id,file_name_lc)
     
     file_name_sc = star_id + '_sc_filtered.fits'
-    file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
+    file_path_sc = os.path.join(RUN_DIR, star_id, file_name_sc)
 
     if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
         photometry_data_lc = load_photometry_data(file_path_lc) 
@@ -327,15 +356,15 @@ def single_data(koi_id, line_number, num, ttv_file):
     else:
         star_id = koi_id
     file_name_lc = star_id + '_lc_filtered.fits'
-    file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
+    file_path_lc = os.path.join(RUN_DIR,star_id,file_name_lc)
     
     file_name_sc = star_id + '_sc_filtered.fits'
-    file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
+    file_path_sc = os.path.join(RUN_DIR, star_id, file_name_sc)
 
-    file_path = os.path.join(data_directory, star_id, ttv_file)
+    file_path = os.path.join(RUN_DIR, star_id, ttv_file)
 
     file_results =star_id + '-results.fits'
-    file_path_results = os.path.join(data_directory, star_id, file_results)
+    file_path_results = os.path.join(RUN_DIR, star_id, file_results)
     data_post = load_posteriors(file_path_results,num,koi_id)
     ### get max likelihood
     data_post = data_post.sort_values(by='LN_LIKE', ascending=False) 
@@ -418,13 +447,13 @@ def folded_data(koi_id,planet_num, file_path,overlap):
     else:
         star_id = koi_id
     file_name_lc = star_id + '_lc_filtered.fits'
-    file_path_lc = os.path.join(data_directory, star_id, file_name_lc)
+    file_path_lc = os.path.join(RUN_DIR, star_id, file_name_lc)
     
     file_name_sc = star_id + '_sc_filtered.fits'
-    file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
+    file_path_sc = os.path.join(RUN_DIR, star_id, file_name_sc)
 
     file_results =star_id + '-results.fits'
-    file_path_results = os.path.join(data_directory, star_id, file_results)
+    file_path_results = os.path.join(RUN_DIR, star_id, file_results)
     data_post = load_posteriors(file_path_results,planet_num,koi_id)
     ### get max likelihood
     data_post = data_post.sort_values(by='LN_LIKE', ascending=False) 
@@ -444,7 +473,7 @@ def folded_data(koi_id,planet_num, file_path,overlap):
         # index, ttime, model, out_prob, out_flag = load_ttv_data(koi_id, file_path)
         # index = index[~overlap]
         # model = model[~overlap]                        # revisit and ensure using same ttime and model
-        results_data = load_results_model(file_path_results,planet_num)
+        results_data = load_ttv_data_from_results(file_path_results,planet_num)
         
         ### revieved error about endian: ValueError: Big-endian buffer not supported on little-endian compiler
         ### Convert overlap to the correct endianness before applying the mask
@@ -610,7 +639,7 @@ def load_posteriors(f,n,koi_id):
     else:
         star_id = koi_id
     file_name = star_id + f'_0{n}_quick.ttvs'
-    ttv_file = os.path.join(data_directory, star_id, file_name)
+    ttv_file = os.path.join(RUN_DIR, star_id, file_name)
     with fits.open(f) as hduL:
         data = hduL['SAMPLES'].data
         C0 = data[f'C0_{n}']
@@ -655,25 +684,55 @@ def load_posteriors(f,n,koi_id):
         df = df.sample(N_samp, replace=True, ignore_index=True, weights=w)
 
         return df
+        
+        
+        
+def load_posteriors_from_results(file_path_results, planet_num):
+    n = planet_num
     
-def load_results_model(file_path_results,planet_num):
     with fits.open(file_path_results) as hdul:
-        hdu2 = hdul[2 + planet_num]
-        data = hdu2.data
-        index = data['INDEX']
-        ttime = data['TTIME']
-        model = data['MODEL']
-        out_prob = data['OUT_PROB']
-        out_flag = data['OUT_FLAG']
+        data = hdul['SAMPLES'].data
+        
+        ### Extract data and sanitize
+        C0 = np.array(data[f'C0_{n}'], dtype='float')
+        C1 = np.array(data[f'C1_{n}'], dtype='float')
+        ROR = np.array(data[f'ROR_{n}'], dtype='float')
+        IMPACT = np.array(data[f'IMPACT_{n}'], dtype='float')
+        DUR14 = np.array(data[f'DUR14_{n}'], dtype='float')
+        LD_Q1 = np.array(data[f'LD_Q1'], dtype='float')
+        LD_Q2 = np.array(data[f'LD_Q2'], dtype='float')
+        LN_WT = np.array(data[f'LN_WT'], dtype='float')
+        LN_Z = np.array(data[f'LN_Z'], dtype='float')
+        LN_LIKE = np.array(data[f'LN_LIKE'], dtype='float')
 
-    df = pd.DataFrame(dict(
-            index=index,
-            ttime=ttime,
-            model = model,
-            out_prob = out_prob,
-            out_flag = out_flag
-        ))
+        ### Calculate u1, u2
+        LD_U1 = 2*np.sqrt(LD_Q1)*LD_Q2
+        LD_U2 = np.sqrt(LD_Q1)*(1-2*LD_Q2)
+
+        ### Calculate P, t0 from transit times
+        ttv_data = load_ttv_data_from_results(file_path_results, n)
+        centered_index = np.array(ttv_data.index - ttv_data.index[-1]) // 2
+        LegX = centered_index / np.array(ttv_data.index[-1]/2)
+        Leg0 = np.ones_like(LegX)
+        ephem = np.array(ttv_data.model) + np.outer(C0, Leg0) + np.outer(C1,LegX)
+        T0, P = poly.polyfit(ttv_data.index, ephem.T, 1)
+
+    data = np.vstack([C0, C1, ROR, IMPACT, DUR14, T0, P, LD_Q1, LD_Q2, LD_U1, LD_U2, LN_WT, LN_Z, LN_LIKE]).T
+    labels = f'C0_{n} C1_{n} ROR_{n} IMPACT_{n} DUR14_{n} T0 P LD_Q1 LD_Q2 LD_U1 LD_U2 LN_WT LN_Z LN_LIKE'.split()
+    df = pd.DataFrame(data, columns=labels)
+
+    ### Resample into unweighted arrays
+    nsamp = 1000
+    wt = np.exp(df['LN_WT'].values - df['LN_Z'].values.max())
+    wt = wt / np.sum(wt)
+    df = df.sample(nsamp, replace=True, ignore_index=True, weights=wt)
+
     return df
+        
+        
+        
+    
+
 
 def _legendre(koi_id, n, k):
         global K_id
@@ -683,11 +742,11 @@ def _legendre(koi_id, n, k):
             star_id = koi_id
         
         ttv_file_name = star_id + f'_0{n}_quick.ttvs'
-        ttv_file = os.path.join(data_directory, star_id, ttv_file_name)
+        ttv_file = os.path.join(RUN_DIR, star_id, ttv_file_name)
         lc_file = star_id + '_lc_filtered.fits'
         sc_file = star_id + '_sc_filtered.fits'
-        lc_path = os.path.join(data_directory, star_id, lc_file)
-        sc_path = os.path.join(data_directory, star_id, sc_file)
+        lc_path = os.path.join(RUN_DIR, star_id, lc_file)
+        sc_path = os.path.join(RUN_DIR, star_id, sc_file)
         index, ttime, model, out_prob, out_flag = load_ttv_data(star_id,ttv_file)
         if os.path.isfile(lc_path):
             data_lc = load_photometry_data(lc_path)

@@ -1,11 +1,9 @@
-#from flask import Flask, render_template, jsonify, request, session, redirect, url_for
 import os
 import csv
 from astropy.io import fits
 import pandas as pd
 import numpy as np
 import numpy.polynomial.polynomial as poly
-
 
 LCIT = 29.4243885           # Kepler long cadence integration time + readout time [min] 
 SCIT = 58.848777            # Kepler short cadence integration time + readout time [sec]
@@ -237,7 +235,6 @@ def get_koi_identifiers(file_path, koi_id):
         ))
 
     return df if periods else None
-    #return periods,koi_identifiers if periods else None
 
 
 def get_num_planets(file_path_results):
@@ -439,174 +436,6 @@ def single_data(koi_id, line_number, num, ttv_file):
             lc_data = None
         return lc_data,sc_data, transit_number, center_time
     
-
-def folded_data(koi_id,planet_num, file_path,overlap):
-    global K_id
-    if K_id == False:
-        star_id = koi_id.replace("K","S")
-    else:
-        star_id = koi_id
-    file_name_lc = star_id + '_lc_filtered.fits'
-    file_path_lc = os.path.join(RUN_DIR, star_id, file_name_lc)
-    
-    file_name_sc = star_id + '_sc_filtered.fits'
-    file_path_sc = os.path.join(RUN_DIR, star_id, file_name_sc)
-
-    file_results =star_id + '-results.fits'
-    file_path_results = os.path.join(RUN_DIR, star_id, file_results)
-    data_post = load_posteriors(file_path_results,planet_num,koi_id)
-    ### get max likelihood
-    data_post = data_post.sort_values(by='LN_LIKE', ascending=False) 
-    row = data_post.iloc[0] # pick row with highest likelihood
-    ### mult by 1.5 for correct offset
-    DUR14 = row[f'DUR14_{planet_num}']
-
-    fold_data_time_lc = [] 
-    fold_data_flux_lc = []
-    fold_data_err_lc = []
-    fold_data_time_sc = []
-    fold_data_flux_sc = []
-    fold_data_err_sc = []
-    #get data and create detrended light curve
-    if os.path.isfile(file_path_lc):
-        photometry_data_lc = load_photometry_data(file_path_lc)
-        # index, ttime, model, out_prob, out_flag = load_ttv_data(koi_id, file_path)
-        # index = index[~overlap]
-        # model = model[~overlap]                        # revisit and ensure using same ttime and model
-        results_data = load_ttv_data_from_results(file_path_results,planet_num)
-        
-        ### revieved error about endian: ValueError: Big-endian buffer not supported on little-endian compiler
-        ### Convert overlap to the correct endianness before applying the mask
-        overlap = overlap.astype(np.bool_).astype(overlap.dtype.newbyteorder('='))
-        ### Convert results_data to native byte order 
-        for col in results_data.columns:
-            if results_data[col].dtype.byteorder == '>':
-                results_data[col] = results_data[col].values.astype(results_data[col].dtype.newbyteorder('='))
-
-        
-        ### mask out overlapping transits
-        results_data = results_data[~overlap]
-        model = np.array(results_data.model)
-        index = np.array(results_data.index) 
-        
-        for i in range(len(index)):
-            # center_time = ttime[i]
-            center_time = float(model[i])
-        
-            start_time = (center_time) - (DUR14*1.5) 
-            end_time= (center_time) + (DUR14*1.5)
-
-            use = (photometry_data_lc['TIME'] > start_time) & (photometry_data_lc['TIME'] < end_time)
-            transit_data = photometry_data_lc[use]
-
-            folded_transit_time_lc = transit_data['TIME'] - center_time
-            fold_data_time_lc.extend(folded_transit_time_lc)
-            fold_data_flux_lc.extend(transit_data['FLUX'])
-            fold_data_err_lc.extend(transit_data['ERR'])
-
-    if os.path.isfile(file_path_sc):
-        photometry_data_sc = load_photometry_data(file_path_sc)
-        for i in range(len(index)):
-            center_time = float(model[i])
-        
-            start_time = center_time - DUR14
-            end_time= center_time + DUR14
-
-            use_sc = (photometry_data_sc['TIME']>start_time) & (photometry_data_sc['TIME']<end_time)
-            transit_data_sc = photometry_data_sc[use_sc]
-
-            folded_transit_time_sc = transit_data_sc['TIME'] - center_time
-            fold_data_time_sc.extend(folded_transit_time_sc)
-            fold_data_flux_sc.extend(transit_data_sc['FLUX'])
-            fold_data_err_sc.extend(transit_data_sc['ERR'])
-  
-    fold_data_lc = pd.DataFrame({
-        'TIME' : fold_data_time_lc,
-        'FLUX': fold_data_flux_lc,
-        'ERR' : fold_data_err_lc
-    })
-
-    fold_data_sc = pd.DataFrame({
-        'TIME' : fold_data_time_sc,
-        'FLUX': fold_data_flux_sc,
-        'ERR' : fold_data_err_sc
-    })
-
-    bin_size = DUR14/11 #0.02
-    ### set so 11 bin points in transit, make sure it transfers to the exp time
-    # DUR / 11
-    combined_df = pd.concat([fold_data_lc, fold_data_sc], ignore_index=True) #EXCEPTION IF SC DATA, CODE NOT WRITTEN
-    #combined_df = combined_df.sort_values(by='TIME', ascending=True)
-    fold_time = np.array(combined_df.TIME)
-    fold_flux = np.array(combined_df.FLUX)
-    if len(fold_time)>1: 
-        binned_centers, binned_data = bin_data(fold_time, fold_flux, bin_size)
-
-        # Create DataFrame for combined binned weighted average data 
-        binned_weighted_avg_combined = pd.DataFrame({
-            'TIME': binned_centers,
-            'FLUX': binned_data
-        })
-    else:
-        binned_centers = [0]
-        binned_data =[0]
-        binned_weighted_avg_combined = pd.DataFrame({
-            'TIME': binned_centers, 
-            'FLUX': binned_data 
-        })
-
-    return fold_data_lc, fold_data_sc, binned_weighted_avg_combined
-
-# Binned weighted average function
-'''
-def calculate_binned_weighted_average(time, flux, flux_err, bin_size):
-    bins = np.arange(time.min(), time.max(), bin_size)
-    indices = np.digitize(time, bins, right=True)
-
-    bin_centers = (bins[1:] + bins[:-1]) / 2
-        
-    weighted_avg = []
-    for i in range(1, len(bins)):
-        bin_indices = indices == i
-        if any(bin_indices):
-            weights = 1.0 / flux_err[bin_indices]#**2
-            weighted_avg.append(np.average(flux[bin_indices], weights=weights))
-        else:
-            weighted_avg.append(np.nan)  # or use a different indicator for missing data?
-        
-    return bin_centers, weighted_avg
-'''
-
-
-### FIX FOR SC DATA, ACCOUNT FOR ERRORS
-def bin_data(time, data, binsize):
-    """
-    Parameters
-    ----------
-    time : ndarray
-        vector of time values
-    data : ndarray
-        corresponding vector of data values to be binned
-    binsize : float
-        bin size for output data, in same units as time
-        
-    Returns
-    -------
-    bin_centers : ndarray
-        center of each data (i.e. binned time)
-    binned_data : ndarray
-        data binned to selcted binsize
-    """
-    bin_centers = np.hstack([np.arange(time.mean(),time.min()-binsize/2,-binsize),
-                            np.arange(time.mean(),time.max()+binsize/2,binsize)])
-    
-    bin_centers = np.sort(np.unique(bin_centers))
-    binned_data = []
-    
-    for i, t0 in enumerate(bin_centers):
-        binned_data.append(np.mean(data[np.abs(time-t0) < binsize/2]))
-        
-    return bin_centers, np.array(binned_data)
 
 
     

@@ -19,6 +19,13 @@ from flask import Flask, render_template, jsonify, request, session, redirect, u
 import data_load
 import utils
 
+LCIT = 29.4243885           # Kepler long cadence integration time + readout time [min] 
+SCIT = 58.848777            # Kepler short cadence integration time + readout time [sec]
+
+lcit = LCIT/60/24           # Kepler long cadence integration time + readout time [days]
+scit = SCIT/3600/24         # Kepler short cadence integration time + readout time [days]
+
+
 K_id = True
 app = Flask(__name__)
 app.secret_key = 'super_secret'
@@ -582,13 +589,13 @@ def plot_folded_lightcurve(koi_id):
         if os.path.exists(file_path_lc) and not os.path.exists(file_path_sc):
             if np.sum(~overlap[n]) > 0:
                 ### Compute residuals
-                m_fold = batman.TransitModel(theta, t_fold, supersample_factor=59, exp_time=0.02)
+                m_fold = batman.TransitModel(theta, t_fold, supersample_factor=59, exp_time=lcit)
                 r_fold = f_fold - m_fold.light_curve(theta)
                 t_bin, r_bin = utils.bin_data(t_fold, r_fold, duration/11)
             
                 ### Calculate maximum likelihood model for plotting purposes
                 t_mod = np.linspace(-1.5*duration,1.5*duration,50)
-                m_mod = batman.TransitModel(theta, t_mod, supersample_factor=59, exp_time=0.02)
+                m_mod = batman.TransitModel(theta, t_mod, supersample_factor=59, exp_time=lcit)
                 f_mod = m_mod.light_curve(theta)
                 
                 ### Indexes to thin data to 1000 points
@@ -654,18 +661,18 @@ def plot_folded_lightcurve(koi_id):
 
             else:
                 ### annotation stating there are no non-overlapping transits
-                annotation = go.layout.Annotation(
-                                    x=1,  # Positioning on the far right
-                                    y=1,  # Positioning on the top
-                                    text=f'No non-overlapping transit for {koi_identifiers[i]}', 
-                                    showarrow=False,  # No arrow needed
-                                    font=dict(size=14, color="black"),  # Customize font size and color
-                                    align='center',
-                                    xanchor='center',  # Anchor the text to the right
-                                    yanchor='middle'  # Anchor the text to the top
-                                )
+                text = f'No non-overlapping transit for {koi_identifiers[i]}'
+                annotation = go.layout.Annotation(x=1,
+                                                  y=1,
+                                                  text=text, 
+                                                  showarrow=False,
+                                                  ont=dict(size=14, color="black"),
+                                                  align='center',
+                                                  xanchor='center',
+                                                  yanchor='middle'
+                                                 )
+                                                 
                 fig.add_annotation(annotation, row=2*n+1, col=1)
-                fig.add_annotation(annotation, row=2*n+2, col=1) 
             
         else:
             error_message = f'No data found for {koi_id}'
@@ -675,7 +682,6 @@ def plot_folded_lightcurve(koi_id):
     ### Update Layout
     if npl>1:
         fig.update_layout(height=npl * subplot_height,legend_tracegroupgap = 240)
-
 
     ### Dynamically set y-axis spacing based on number of planets
     space_each = 1/npl
@@ -773,6 +779,7 @@ def generate_plot_single_transit(koi_id, line_number,planet):
         star_id = koi_id.replace("K","S")
     else:
         star_id = koi_id
+    
     ttv_file = star_id + planet
     ext = os.path.basename(RUN_DIR) +'.csv'
     csv_file_path = os.path.join(RUN_DIR, ext)

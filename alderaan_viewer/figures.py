@@ -26,7 +26,13 @@ def _color(n):
     return COLORS[n % len(COLORS)]
 
 
-def _layout(fig, height, title=None):
+def _layout(fig, height, title=None, shapes=(), notes=()):
+    """
+    Common layout; shapes and notes (plain dicts) are added in one update
+
+    Plotly's add_hline / add_vline / add_vrect / add_annotation with row and col
+    take about 10 ms per call, so figures build the dicts directly.
+    """
     fig.update_layout(
         template="plotly_white",
         height=height,
@@ -34,26 +40,61 @@ def _layout(fig, height, title=None):
         showlegend=False,
         margin={"l": 60, "r": 20, "t": 50, "b": 40},
     )
+    if shapes:
+        fig.update_layout(shapes=list(shapes))
+    if notes:
+        fig.update_layout(annotations=[*fig.layout.annotations, *notes])
     return fig
 
 
-def _corner_note(fig, text, row, corner, color="black"):
+def _axis(row, col=1, cols=1):
+    """Axis id suffix of subplot (row, col) in a make_subplots grid: '', '2', ..."""
+    i = (row - 1) * cols + col
+    return "" if i == 1 else str(i)
+
+
+def _hline(y, line, ax=""):
+    return {
+        "type": "line",
+        "line": line,
+        "x0": 0,
+        "x1": 1,
+        "xref": f"x{ax} domain",
+        "y0": y,
+        "y1": y,
+        "yref": f"y{ax}",
+    }
+
+
+def _vline(x, line, ax=""):
+    return {
+        "type": "line",
+        "line": line,
+        "x0": x,
+        "x1": x,
+        "xref": f"x{ax}",
+        "y0": 0,
+        "y1": 1,
+        "yref": f"y{ax} domain",
+    }
+
+
+def _corner_note(text, row, corner, color="black"):
     x, xanchor = (0.01, "left") if "left" in corner else (0.99, "right")
     y, yanchor = (0.98, "top") if "upper" in corner else (0.02, "bottom")
-    fig.add_annotation(
-        text=text,
-        x=x,
-        y=y,
-        xref="x domain",
-        yref="y domain",
-        xanchor=xanchor,
-        yanchor=yanchor,
-        showarrow=False,
-        bordercolor=color,
-        borderwidth=1 if color != "black" else 0,
-        row=row,
-        col=1,
-    )
+    ax = _axis(row)
+    return {
+        "text": text,
+        "x": x,
+        "y": y,
+        "xref": f"x{ax} domain",
+        "yref": f"y{ax} domain",
+        "xanchor": xanchor,
+        "yanchor": yanchor,
+        "showarrow": False,
+        "bordercolor": color,
+        "borderwidth": 1 if color != "black" else 0,
+    }
 
 
 def lightcurve(lc, ttimes=None):
@@ -98,22 +139,40 @@ def lightcurve(lc, ttimes=None):
                 )
             )
 
+    shapes, notes = [], []
     for i, v in enumerate(np.unique(lc.visit)):
         t = lc.time[lc.visit == v]
-        fig.add_vrect(
-            x0=t.min(),
-            x1=t.max(),
-            fillcolor="lightgrey" if i % 2 else "white",
-            opacity=0.3,
-            line_width=0,
-            layer="below",
-            annotation_text=str(v),
-            annotation_position="top left",
+        shapes.append(
+            {
+                "type": "rect",
+                "fillcolor": "lightgrey" if i % 2 else "white",
+                "opacity": 0.3,
+                "line": {"width": 0},
+                "layer": "below",
+                "x0": t.min(),
+                "x1": t.max(),
+                "xref": "x",
+                "y0": 0,
+                "y1": 1,
+                "yref": "y domain",
+            }
+        )
+        notes.append(
+            {
+                "text": str(v),
+                "x": t.min(),
+                "xref": "x",
+                "xanchor": "left",
+                "y": 1,
+                "yref": "y domain",
+                "yanchor": "top",
+                "showarrow": False,
+            }
         )
 
     fig.update_yaxes(range=[ymin, 1 + yrange], title="Flux")
     fig.update_xaxes(range=[lc.time.min(), lc.time.max()], title="Time [BKJD]")
-    return _layout(fig, 400)
+    return _layout(fig, 400, shapes=shapes, notes=notes)
 
 
 def folded(results, names):
@@ -127,6 +186,7 @@ def folded(results, names):
         vertical_spacing=0.25 / (2 * npl),
         subplot_titles=[t for n in range(npl) for t in (names[n], "")],
     )
+    shapes, notes = [], []
     rng = np.random.default_rng(SEED)
     for n in range(npl):
         d = arrays.folded_planet(results, n, params, ttimes, models)
@@ -213,7 +273,7 @@ def folded(results, names):
             row=bottom,
             col=1,
         )
-        fig.add_hline(y=0, line={"color": "black", "dash": "dash"}, row=bottom, col=1)
+        shapes.append(_hline(0, {"color": "black", "dash": "dash"}, _axis(bottom)))
 
         chi2_red = results.meta.get(f"CHI2RED{n}")
         if chi2_red is None:
@@ -221,11 +281,13 @@ def folded(results, names):
         else:
             chi2_text = f"reduced χ² = {chi2_red:.2f}"
             chi2_color = "red" if chi2_red > 2 else "black"
-        _corner_note(fig, f"N_transit = {d['n_transit']}", top, "upper left")
-        _corner_note(fig, f"P = {d['period']:.2f} d", top, "upper right")
         rms = int(np.std(d["resid"]) * 1e6)
-        _corner_note(fig, f"residual RMS = {rms} ppm", top, "lower right")
-        _corner_note(fig, chi2_text, top, "lower left", chi2_color)
+        notes += [
+            _corner_note(f"N_transit = {d['n_transit']}", top, "upper left"),
+            _corner_note(f"P = {d['period']:.2f} d", top, "upper right"),
+            _corner_note(f"residual RMS = {rms} ppm", top, "lower right"),
+            _corner_note(chi2_text, top, "lower left", chi2_color),
+        ]
 
         xrange = [hrs.min(), hrs.max()]
         fig.update_xaxes(range=xrange, row=top, col=1)
@@ -233,7 +295,7 @@ def folded(results, names):
         fig.update_yaxes(title="Flux [ppm]", row=top, col=1)
         fig.update_yaxes(title="Residuals", row=bottom, col=1)
 
-    return _layout(fig, 450 * npl)
+    return _layout(fig, 450 * npl, shapes=shapes, notes=notes)
 
 
 def single_transits(results, n, start, name):
@@ -313,6 +375,7 @@ def omc(results, names):
         vertical_spacing=0.25 / (2 * npl),
         subplot_titles=[t for n in range(npl) for t in (names[n], "")],
     )
+    shapes, notes = [], []
     for n, tt in enumerate(results.transit_times):
         d = arrays.omc(tt)
         top, bottom = 2 * n + 1, 2 * n + 2
@@ -373,21 +436,22 @@ def omc(results, names):
             row=bottom,
             col=1,
         )
-        fig.add_hline(y=0, line={"color": "black", "dash": "dash"}, row=bottom, col=1)
+        shapes.append(_hline(0, {"color": "black", "dash": "dash"}, _axis(bottom)))
 
-        _corner_note(fig, f"P = {tt.period:.2f} d", top, "upper right")
+        notes.append(_corner_note(f"P = {tt.period:.2f} d", top, "upper right"))
         rms = mad_std(d["resid"]) if len(d["resid"]) else np.nan
-        _corner_note(fig, f"residual RMS = {rms:.1f} min", top, "lower right")
+        notes.append(_corner_note(f"residual RMS = {rms:.1f} min", top, "lower right"))
         if tt.model_name is not None:
-            _corner_note(fig, f"model = {tt.model_name}", top, "upper left")
+            notes.append(_corner_note(f"model = {tt.model_name}", top, "upper left"))
         if d["chi2_red"] is not None:
-            _corner_note(fig, f"reduced χ² = {d['chi2_red']:.2f}", top, "lower left")
+            chi2_text = f"reduced χ² = {d['chi2_red']:.2f}"
+            notes.append(_corner_note(chi2_text, top, "lower left"))
 
         fig.update_yaxes(range=[-yr, yr], title="O-C [min]", row=top, col=1)
         fig.update_yaxes(title="Residuals [min]", row=bottom, col=1)
         fig.update_xaxes(title="Time [BKJD]", row=bottom, col=1)
 
-    return _layout(fig, 400 * npl)
+    return _layout(fig, 400 * npl, shapes=shapes, notes=notes)
 
 
 def _corner_samples(results, n, params):
@@ -424,17 +488,26 @@ def corner(results, n, params, name):
 
     w = results.posteriors.weights()
     x = _corner_samples(results, n, params)
-    ranges = {p: weighted_percentile(x[p], [0.5, 99.5], w=w) for p in params}
+    # one call per param (one sort): axis range, then 15.9 / 50 / 84.1 lines
+    pct = {p: weighted_percentile(x[p], [0.5, 99.5, 15.9, 50, 84.1], w) for p in params}
+    ranges = {p: pct[p][:2] for p in params}
     labels = {p: "DUR14 [hr]" if p == "DUR14" else p for p in params}
 
     k = len(params)
     fig = make_subplots(rows=k, cols=k, horizontal_spacing=0.02, vertical_spacing=0.02)
+    # axis properties and shapes are collected and applied in one layout update
+    axes, shapes = {}, []
+
+    def axis(xy, row, col, **props):
+        axes.setdefault(f"{xy}axis{_axis(row, col, k)}", {}).update(props)
+
     for i, pi in enumerate(params):
         for j, pj in enumerate(params):
             row, col = i + 1, j + 1
+            ax = _axis(row, col, k)
             if j > i:
-                fig.update_xaxes(visible=False, row=row, col=col)
-                fig.update_yaxes(visible=False, row=row, col=col)
+                axis("x", row, col, visible=False)
+                axis("y", row, col, visible=False)
                 continue
             if i == j:
                 h, edges = np.histogram(
@@ -450,11 +523,9 @@ def corner(results, n, params, name):
                     row=row,
                     col=col,
                 )
-                for q in weighted_percentile(x[pi], [15.9, 50, 84.1], w=w):
-                    fig.add_vline(
-                        x=q, line={"color": _color(n), "dash": "dot"}, row=row, col=col
-                    )
-                fig.update_yaxes(showticklabels=False, row=row, col=col)
+                for q in pct[pi][2:]:
+                    shapes.append(_vline(q, {"color": _color(n), "dash": "dot"}, ax))
+                axis("y", row, col, showticklabels=False)
             else:
                 h, xe, ye = np.histogram2d(
                     x[pj],
@@ -483,22 +554,19 @@ def corner(results, n, params, name):
                         col=col,
                     )
                 if pj == "IMPACT":
-                    fig.add_vline(
-                        x=1, line={"color": "grey", "dash": "dash"}, row=row, col=col
-                    )
+                    shapes.append(_vline(1, {"color": "grey", "dash": "dash"}, ax))
                 if pi == "IMPACT":
-                    fig.add_hline(
-                        y=1, line={"color": "grey", "dash": "dash"}, row=row, col=col
-                    )
-                fig.update_yaxes(range=ranges[pi], row=row, col=col)
-            fig.update_xaxes(range=ranges[pj], row=row, col=col)
+                    shapes.append(_hline(1, {"color": "grey", "dash": "dash"}, ax))
+                axis("y", row, col, range=ranges[pi])
+            axis("x", row, col, range=ranges[pj])
             if i == k - 1:
-                fig.update_xaxes(title=labels[pj], row=row, col=col)
+                axis("x", row, col, title={"text": labels[pj]})
             else:
-                fig.update_xaxes(showticklabels=False, row=row, col=col)
+                axis("x", row, col, showticklabels=False)
             if j == 0 and i > 0:
-                fig.update_yaxes(title=labels[pi], row=row, col=col)
+                axis("y", row, col, title={"text": labels[pi]})
             elif j > 0:
-                fig.update_yaxes(showticklabels=False, row=row, col=col)
+                axis("y", row, col, showticklabels=False)
 
-    return _layout(fig, 150 * k + 100, name)
+    fig.update_layout(axes)
+    return _layout(fig, 150 * k + 100, name, shapes=shapes)

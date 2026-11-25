@@ -51,15 +51,19 @@ def folded_planet(results, n, params, ttimes, models):
     lc = results.litecurve
     flux = lc.flux / sibling
 
+    # cadences near each transit (lc.time is sorted): a superset of `use`
+    lo = np.searchsorted(lc.time, ttimes[n] - 3 * T14)
+    hi = np.searchsorted(lc.time, ttimes[n] + 3 * T14)
+
     t, f, m, om = [], [], [], []
     n_transit = 0
-    for tc in ttimes[n]:
-        use = np.abs(lc.time - tc) / T14 < 1.5
+    for tc, i, j in zip(ttimes[n], lo, hi):
+        use = np.abs(lc.time[i:j] - tc) / T14 < 1.5
         n_transit += int(np.any(use))
-        t.append(lc.time[use] - tc)
-        f.append(flux[use])
-        m.append(models[n][use])
-        om.append(lc.obsmode[use])
+        t.append(lc.time[i:j][use] - tc)
+        f.append(flux[i:j][use])
+        m.append(models[n][i:j][use])
+        om.append(lc.obsmode[i:j][use])
     t, f, m, om = (np.hstack(x) for x in (t, f, m, om))
 
     supersample = results.posteriors.supersample

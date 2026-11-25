@@ -1,7 +1,6 @@
 """Planet properties and period ratios, as lists of row dicts"""
 
 import numpy as np
-from alderaan.constants import KEPLER_LCIT
 from alderaan.utils.stats import weighted_percentile
 
 
@@ -14,8 +13,8 @@ def planet_properties(results, catalog_names):
     """
     One row per modeled planet (pipeline order), then catalog planets not modeled
 
-    Posterior medians, as in the pipeline run summary. good/all counts transits
-    with good photometry.
+    Posterior medians, as in the pipeline run summary. n_good counts transits
+    with good photometry; chi2_red is the CHI2RED header card.
     """
     median = results.summary()["median"]
     w = results.posteriors.weights()
@@ -29,13 +28,11 @@ def planet_properties(results, catalog_names):
             {
                 "name": name,
                 "period": p50,
-                "period_lcit": p50 / KEPLER_LCIT,
                 "ror": median[f"ROR_{n}"],
                 "impact": median[f"IMPACT_{n}"],
                 "dur14_hr": median[f"DUR14_{n}"] * 24,
-                "omc_model": tt.model_name,
-                "good_all": f"{int(np.sum(tt.phot_coverage & tt.phot_noise))}"
-                f"/{len(tt.ttime_mod)}",
+                "n_good": int(np.sum(tt.phot_coverage & tt.phot_noise)),
+                "n_transits": len(tt.ttime_mod),
                 "chi2_red": results.meta.get(f"CHI2RED{n}"),
             }
         )

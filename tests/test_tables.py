@@ -37,11 +37,10 @@ def test_properties_match_pipeline_run_summary(sample_dir):
         r"(K\d+\.\d+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)", block
     )
     assert len(expected) == len(rows) == 3
-    for row, (name, p, ror, b, t14, model, good) in zip(rows, expected, strict=True):
+    for row, (name, p, ror, b, t14, _model, good) in zip(rows, expected, strict=True):
         assert row["name"] == name
         assert f"{row['period']:.6f}" == p
         assert f"{row['ror']:.4f}" == ror
         assert f"{row['impact']:.3f}" == b
         assert f"{row['dur14_hr']:.3f}" == t14
-        assert row["omc_model"] == model
-        assert row["good_all"] == good
+        assert f"{row['n_good']}/{row['n_transits']}" == good

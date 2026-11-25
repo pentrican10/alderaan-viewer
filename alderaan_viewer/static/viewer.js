@@ -173,9 +173,11 @@ function addRow(tbody, cells) {
 async function loadTables() {
     const panel = document.getElementById("tablesPanel");
     const props = document.querySelector("#planetPropertiesTable tbody");
+    const quality = document.querySelector("#transitQualityTable tbody");
     const ratios = document.querySelector("#periodRatiosTable tbody");
     const error = document.getElementById("tablesError");
     props.textContent = "";
+    quality.textContent = "";
     ratios.textContent = "";
     error.textContent = "";
     panel.style.display = "block";
@@ -188,18 +190,21 @@ async function loadTables() {
     const data = await r.json();
     for (const p of data.properties) {
         if (p.not_modeled) {
-            addRow(props, [p.name, "not modeled", "", "", "", "", "", "", ""]);
+            addRow(props, [p.name, "not modeled", "", "", ""]);
             continue;
         }
         addRow(props, [
             p.name,
             fmt(p.period, 6),
-            fmt(p.period_lcit, 1),
-            fmt(p.impact, 3),
             fmt(p.ror, 4),
+            fmt(p.impact, 3),
             fmt(p.dur14_hr, 3),
-            p.omc_model === null ? "n/a" : p.omc_model,
-            p.good_all,
+        ]);
+        addRow(quality, [
+            p.name,
+            p.n_good,
+            p.n_transits - p.n_good,
+            p.n_transits,
             fmt(p.chi2_red, 2),
         ]);
     }

@@ -134,3 +134,5 @@ table {
 
 .panel-error { color: #b00; white-space: pre-wrap; }
 #target_banner { padding: 6px; margin: 6px 0; background: #fff3cd; display: none; }
+/* corner figure is narrower than its div (viewer.js squarePlotArea): center it */
+#cornerPlot .svg-container { margin: 0 auto; }

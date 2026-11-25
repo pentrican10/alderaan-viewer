@@ -57,7 +57,7 @@ def folded_planet(results, n, params, ttimes, models):
 
     t, f, m, om = [], [], [], []
     n_transit = 0
-    for tc, i, j in zip(ttimes[n], lo, hi):
+    for tc, i, j in zip(ttimes[n], lo, hi, strict=True):
         use = np.abs(lc.time[i:j] - tc) / T14 < 1.5
         n_transit += int(np.any(use))
         t.append(lc.time[i:j][use] - tc)

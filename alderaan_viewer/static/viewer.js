@@ -46,8 +46,18 @@ async function loadFigure(url, divId) {
     }
     const fig = await r.json();
     div.textContent = "";
+    if (divId === "cornerPlot") squarePlotArea(div, fig.layout);
     await Plotly.react(div, fig.data, fig.layout, { responsive: true });
     return fig;
+}
+
+// Corner panels are square (axis constraints); a square plot area lets them
+// fill it. The figure is 85% of the div width, and its height follows; reload
+// the figure after a resize.
+function squarePlotArea(div, layout) {
+    const m = layout.margin;
+    layout.width = Math.round(0.85 * div.clientWidth);
+    layout.height = layout.width - (m.l + m.r) + (m.t + m.b);
 }
 
 // ---- target selection ----

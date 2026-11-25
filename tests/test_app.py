@@ -85,6 +85,29 @@ def test_detrended_only_target_shows_lightcurve(client):
 
 
 @pytest.mark.slow
+def test_corner_ticks_and_default_ld_inset(client):
+    """Default params add the LD_Q1 / LD_Q2 inset; three distinct ticks per axis"""
+    default = f"{API}/K00137/corner/0?params=C0,C1,ROR,IMPACT,DUR14"
+    other = f"{API}/K00137/corner/0?params=ROR,IMPACT,DUR14"
+    for url, inset in ((default, True), (other, False)):
+        layout = client.get(url).get_json()["layout"]
+        labels = {a["text"] for a in layout["annotations"]}
+        assert ("LD_Q1" in labels) == inset
+        for key, axis in layout.items():
+            if key.startswith(("xaxis", "yaxis")) and "ticktext" in axis:
+                assert len(set(axis["ticktext"])) == 3, key
+
+
+@pytest.mark.slow
+def test_kepler_lightcurve_shows_every_quarter(client):
+    """K00001 is missing quarters; every quarter still has a labeled band"""
+    layout = client.get(f"{API}/K00001/lightcurve").get_json()["layout"]
+    labels = [a["text"] for a in layout["annotations"]]
+    assert labels == [str(q) for q in range(18)]
+    assert len(layout["shapes"]) == 18
+
+
+@pytest.mark.slow
 def test_unknown_run_target_and_params(client):
     assert client.get("/api/nope/K00001/status").status_code == 404
     assert client.get(f"{API}/K99999/status").status_code == 404

@@ -61,7 +61,27 @@ def test_single_transit_paging(client):
         "meta"
     ]
     assert meta["start"] == 9 and meta["count"] == 9 and meta["n_transits"] > 18
+    titles = [
+        a["text"]
+        for a in json.loads(client.get(f"{API}/K00137/transits/0?start=9").data)[
+            "layout"
+        ]["annotations"]
+        if a["text"].startswith("transit ")
+    ]
+    assert titles[0].split()[1] == str(meta["first"])
+    assert titles[-1].split()[1] == str(meta["last"])
     assert client.get(f"{API}/K00137/transits/0?start=100000").status_code == 400
+    # page with a one-point transit window
+    assert client.get(f"{API}/K00001/transits/0?start=234").status_code == 200
+
+    # filled frames on exactly the poor-coverage / noisy panels
+    layout = client.get(f"{API}/K00001/transits/0?start=306").get_json()["layout"]
+    flagged = [
+        a
+        for a in layout["annotations"]
+        if "coverage" in a["text"] or "noisy" in a["text"]
+    ]
+    assert len(flagged) == len(layout["shapes"]) > 0
 
 
 @pytest.mark.slow

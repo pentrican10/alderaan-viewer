@@ -128,7 +128,7 @@ async function loadSingle() {
     page.textContent = "";
     if (fig !== null) {
         const m = fig.layout.meta;
-        page.textContent = `transits ${m.start + 1}-${m.start + m.count} of ${m.n_transits}`;
+        page.textContent = `transits ${m.first}-${m.last} (${m.n_transits} with data)`;
         current.nTransits = m.n_transits;
     }
 }

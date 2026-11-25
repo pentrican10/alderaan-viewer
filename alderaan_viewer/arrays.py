@@ -114,8 +114,8 @@ def single_transit(results, n, i, params, ttimes):
     """
     Photometry (ppt) and median model (ppt) around transit position i of planet n
 
-    As Results.plot_transit: model on a KEPLER_SCIT grid, integrated over the
-    exposure of the transit's obsmode as sampled.
+    As Results.plot_transit: model on a KEPLER_SCIT grid over the 1.5 T14 window,
+    integrated over the exposure of the transit's obsmode as sampled.
     """
     lc = results.litecurve
     tc = ttimes[i]
@@ -123,7 +123,7 @@ def single_transit(results, n, i, params, ttimes):
     use = np.abs(lc.time - tc) / T14 < 1.5
     t_obs = lc.time[use]
     f_obs = (lc.flux[use] - 1.0) * 1000
-    t_mod = np.arange(t_obs.min(), t_obs.max(), KEPLER_SCIT)
+    t_mod = np.arange(tc - 1.5 * T14, tc + 1.5 * T14, KEPLER_SCIT)
     om = lc.obsmode[use][0]
     offsets = exposure_offsets(EXPTIME[om], results.posteriors.supersample[om])
     f_mod = (transit_flux(t_mod - tc, *params, exptime_offsets=offsets) - 1.0) * 1000

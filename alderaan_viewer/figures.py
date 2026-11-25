@@ -409,7 +409,8 @@ def single_transits(results, n, start, name):
     """
     Up to TRANSITS_PER_PAGE transits of planet n with photometry, from position start
 
-    layout.meta = {start, count, n_transits}; positions count transits with data.
+    layout.meta = {start, count, n_transits, first, last}; positions count transits
+    with data; first and last are the transit indices (as in the panel titles).
     """
     params = results.median_transit_params(n)
     ttimes = results.median_transit_times(n)
@@ -419,8 +420,8 @@ def single_transits(results, n, start, name):
         raise ValueError(f"start {start} outside 0..{len(with_data) - 1}")
     page = with_data[start : start + TRANSITS_PER_PAGE]
 
-    titles = []
-    for i in page:
+    titles, boxes = [], []
+    for k, i in enumerate(page):
         flags = [
             label
             for label, ok in (
@@ -433,6 +434,24 @@ def single_transits(results, n, start, name):
         titles.append(
             f"transit {tt.index[i]}" + (f" ({', '.join(flags)})" if flags else "")
         )
+        # pale fill, in the model color, on transits with bad photometry
+        if not (tt.phot_coverage[i] and tt.phot_noise[i]):
+            ax = _axis(k // 3 + 1, k % 3 + 1, cols=3)
+            boxes.append(
+                {
+                    "type": "rect",
+                    "xref": f"x{ax} domain",
+                    "yref": f"y{ax} domain",
+                    "x0": 0,
+                    "x1": 1,
+                    "y0": 0,
+                    "y1": 1,
+                    "fillcolor": _color(n),
+                    "opacity": 0.15,
+                    "line": {"width": 0},
+                    "layer": "below",
+                }
+            )
 
     fig = make_subplots(rows=3, cols=3, subplot_titles=titles, vertical_spacing=0.12)
     f_all, m_min = [], 0.0
@@ -444,7 +463,7 @@ def single_transits(results, n, start, name):
                 x=d["t_obs"],
                 y=d["f_obs"],
                 mode="markers",
-                marker={"size": 7, "color": DATA_COLOR},
+                marker={"size": 11, "color": "dimgrey"},
             ),
             row=row,
             col=col,
@@ -459,8 +478,17 @@ def single_transits(results, n, start, name):
             row=row,
             col=col,
         )
+        # ticks at the window edges and mid-transit; decimals enough to differ
+        tc, half = d["tc"], 1.5 * params[4]
+        ticks = [tc - half, tc, tc + half]
+        dec = 2
+        while len({f"{t:.{dec}f}" for t in ticks}) < 3:
+            dec += 1
         fig.update_xaxes(
-            range=[d["tc"] - 1.55 * params[4], d["tc"] + 1.55 * params[4]],
+            range=[tc - 1.55 * params[4], tc + 1.55 * params[4]],
+            tickmode="array",
+            tickvals=ticks,
+            ticktext=[f"{t:.{dec}f}" for t in ticks],
             row=row,
             col=col,
         )
@@ -473,12 +501,17 @@ def single_transits(results, n, start, name):
     lo = min(lo, m_min)
     pad = 0.1 * (hi - lo)
     fig.update_yaxes(range=[lo - pad, hi + pad])
-    fig.update_xaxes(nticks=4)
     fig.update_xaxes(title="Time [BKJD]", row=3)
     fig.update_yaxes(title="Flux [ppt]", col=1)
-    _layout(fig, 800, f"{name}: P = {params[1]:.2f} d")
+    _layout(fig, 800, f"{name}: P = {params[1]:.2f} d", shapes=boxes)
     fig.update_layout(
-        meta={"start": start, "count": len(page), "n_transits": len(with_data)}
+        meta={
+            "start": start,
+            "count": len(page),
+            "n_transits": len(with_data),
+            "first": int(tt.index[page[0]]),
+            "last": int(tt.index[page[-1]]),
+        }
     )
     return fig
 

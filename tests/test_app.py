@@ -114,8 +114,11 @@ def test_corner_ticks_and_default_ld_inset(client):
         labels = {a["text"] for a in layout["annotations"]}
         assert ("LD_Q1" in labels) == inset
         for key, axis in layout.items():
-            if key.startswith(("xaxis", "yaxis")) and "ticktext" in axis:
-                assert len(set(axis["ticktext"])) == 3, key
+            if not (key.startswith(("xaxis", "yaxis")) and "ticktext" in axis):
+                continue
+            assert len(set(axis["ticktext"])) == 3, key
+            if axis["ticktext"] == ["0", "0.5", "1.0"]:  # IMPACT
+                assert axis["range"][0] == 0 and 1 < axis["range"][1] < 2, key
 
 
 @pytest.mark.slow

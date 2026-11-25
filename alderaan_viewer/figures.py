@@ -17,6 +17,7 @@ from alderaan.constants import KEPLER_LCIT, KEPLER_SCIT, SEED
 from alderaan.utils.stats import weighted_percentile
 from astropy.stats import mad_std
 from plotly.subplots import make_subplots
+from scipy.ndimage import gaussian_filter, gaussian_filter1d
 
 from alderaan_viewer import arrays
 
@@ -24,6 +25,10 @@ COLORS = ("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e3
 MAX_FOLDED_PTS = 20000
 TRANSITS_PER_PAGE = 9
 N_BINS_CORNER = 40
+SMOOTH_BINS = 1.0  # corner Gaussian smoothing sigma, in bins
+# corner contours (as dynesty cornerplot): mass inside 0.5, 1, 1.5, 2 sigma,
+# outermost first
+CONTOUR_MASS = (1 - np.exp(-0.5 * np.array([2.0, 1.5, 1.0, 0.5]) ** 2)).tolist()
 SAMPLED = ("C0", "C1", "ROR", "IMPACT", "DUR14")  # per planet, column <name>_<n>
 CORNER_PARAMS = (*SAMPLED, "LD_Q1", "LD_Q2", "PERIOD", "EPOCH", "LD_U1", "LD_U2")
 
@@ -660,6 +665,24 @@ def _mass_levels(h, fractions):
     return [flat[min(np.searchsorted(cum, f), len(flat) - 1)] for f in fractions]
 
 
+def _smoothed_range(x, w, lo, hi):
+    """
+    0.15% / 99.95% points of the smoothed 1D distribution of x, as drawn
+
+    The histogram has the bin width of (lo, hi) and extends 4 bins past each
+    side, so that the mass smoothing moves outward is kept.
+    """
+    pad = 4 * (hi - lo) / N_BINS_CORNER
+    h, edges = np.histogram(
+        x, bins=N_BINS_CORNER + 8, range=(lo - pad, hi + pad), weights=w
+    )
+    h = gaussian_filter1d(h, sigma=SMOOTH_BINS, mode="constant")
+    # cumulative weight at the bin edges, with the weight below the histogram
+    below = w[x < lo - pad].sum()
+    cum = (below + np.concatenate([[0], np.cumsum(h)])) / w.sum()
+    return np.interp([0.0015, 0.9995], cum, edges).tolist()
+
+
 def _three_ticks(lo, hi):
     """
     Three ticks in (lo, hi), labeled with 2 decimal places, or the fewest more
@@ -678,7 +701,7 @@ def _three_ticks(lo, hi):
 
 def corner(results, n, params, name):
     """
-    Weighted corner plot of planet n: 1D histograms and 39% / 86% mass contours
+    Weighted corner plot of planet n: 1D histograms and 2D mass contours
 
     Posterior weights are applied once. DUR14 is in hours. Every panel is
     square. For the default parameters (SAMPLED), LD_Q1 and LD_Q2 are drawn as
@@ -693,12 +716,27 @@ def corner(results, n, params, name):
 
     w = results.posteriors.weights()
     x = _corner_samples(results, n, every)
-    # one call per param (one sort): axis range, then 15.9 / 50 / 84.1 lines
-    pct = {p: weighted_percentile(x[p], [0.5, 99.5, 15.9, 50, 84.1], w) for p in every}
-    ranges = {p: pct[p][:2] for p in every}
+    # one call per param (one sort): 0.15 / 99.95 (start of the axis range), then
+    # the 15.9 / 50 / 84.1 lines
+    pct = {
+        p: weighted_percentile(x[p], [0.15, 99.95, 15.9, 50, 84.1], w) for p in every
+    }
+    ranges = {p: _smoothed_range(x[p], w, *pct[p][:2]) for p in every}
     labels = {p: "DUR14 [hr]" if p == "DUR14" else p for p in every}
     # C0 and C1 (small offsets about 0) keep plotly's automatic ticks
     ticks = {p: {} if p in ("C0", "C1") else _three_ticks(*ranges[p]) for p in every}
+    # IMPACT: always 0 to 1 + max ROR (grazing limit), fixed ticks. Max ROR is
+    # the 99.95% weighted percentile, as the ROR axis: the raw sample maximum
+    # comes from samples of negligible weight
+    if "IMPACT" in every:
+        ror = _corner_samples(results, n, ["ROR"])["ROR"]
+        ror_max = weighted_percentile(ror, 99.95, w=w)
+        ranges["IMPACT"] = [0.0, 1.0 + ror_max]
+        ticks["IMPACT"] = {
+            "tickmode": "array",
+            "tickvals": [0.0, 0.5, 1.0],
+            "ticktext": ["0", "0.5", "1.0"],
+        }
 
     k = len(params)
     fig = make_subplots(rows=k, cols=k, horizontal_spacing=0.02, vertical_spacing=0.02)
@@ -721,12 +759,13 @@ def corner(results, n, params, name):
             h, edges = np.histogram(
                 x[px], bins=N_BINS_CORNER, range=ranges[px], weights=w
             )
+            h = gaussian_filter1d(h, sigma=SMOOTH_BINS)  # as the 2D panels
             fig.add_trace(
                 go.Scatter(
                     x=0.5 * (edges[1:] + edges[:-1]),
                     y=h,
                     mode="lines",
-                    line={"shape": "hvh", "color": c, "width": 1.5},
+                    line={"shape": "spline", "color": c, "width": 1.5},
                     fill="tozeroy",
                     fillcolor=fill,
                 ),
@@ -745,22 +784,21 @@ def corner(results, n, params, name):
                 range=[ranges[px], ranges[py]],
                 weights=w,
             )
-            lo, hi = _mass_levels(h, [0.86, 0.39])
-            if hi > lo:
+            # Gaussian smoothing over ~1 bin (a binned KDE, as corner.py smooth):
+            # removes the bin-to-bin sampling noise from the contours
+            h = gaussian_filter(h, sigma=SMOOTH_BINS)
+            # as dynesty cornerplot: lines at the 0.5, 1, 1.5, 2-sigma mass
+            # levels, solid fill inside the innermost
+            levels = _mass_levels(h, CONTOUR_MASS)
+            for v, fill_in in zip(levels, [False] * 3 + [True], strict=True):
                 fig.add_trace(
                     go.Contour(
                         x=0.5 * (xe[1:] + xe[:-1]),
                         y=0.5 * (ye[1:] + ye[:-1]),
                         z=h.T,
-                        contours={
-                            "coloring": "lines",
-                            "start": lo,
-                            "end": hi,
-                            "size": hi - lo,
-                        },
-                        # "lines" coloring takes the colorscale, not line.color
-                        colorscale=[[0, c], [1, c]],
-                        line={"width": 2},
+                        contours={"type": "constraint", "operation": "<", "value": v},
+                        fillcolor=c if fill_in else "rgba(0, 0, 0, 0)",
+                        line={"color": c, "width": 1.5},
                         showscale=False,
                     ),
                     row=row,

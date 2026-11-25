@@ -21,14 +21,14 @@
             background-color: #ed3a49; /* Darker red */
         }
 
-        
-        
-        
+
+
+
     </style>
 </head>
 
     <div style="display: flex;">
-        
+
         <div class="left-section">
             <!-- Left section content -->
             {{ left_content | safe }}
@@ -36,12 +36,12 @@
         <div class="right-section">
             <div class="right-top-section">
                 {{ right_top_content | safe }}
-                
+
             </div>
             <div class="right-bottom-section">
                 {{ right_bottom_content | safe }}
             </div>
-            
+
         </div>
     </div>
 
@@ -64,7 +64,7 @@
             // Display the "Edit Comment File" button
             const editButton = document.getElementById("editButton");
             editButton.style.display = "block";
-            
+
         }
 
         // JavaScript code for handling the click event on the left side links
@@ -82,10 +82,10 @@
                 //show checkbox container
                 const checkboxContainer= document.getElementById("checkbox_container");
                 checkboxContainer.style.display= "block";
-            
+
                 //when link clicked, make graph:
                 lineNumber = 0
-                generatePlotDetrendedLightCurve(koiId); 
+                generatePlotDetrendedLightCurve(koiId);
                 togglePlotVisibilityDetrendedLightCurve();
                 togglePlotVisibilityFoldedLightCurve();
                 resetPlanetDropdownSingle();
@@ -96,11 +96,11 @@
                 resetPlanetDropdownCorner();
                 updatePlanetOptionsCorner(koiId);
                 togglePlotVisibilityCorner();
-                
+
                 displayPlanetProperties(koiId);
                 displayPeriodRatios(koiId);
                 updateDropdownForKoi(koiId);
-                
+
             }
         });
 

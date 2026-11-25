@@ -13,7 +13,7 @@
 
     <!--checkboxes -->
     <div id="checkbox_container" style="display:none;">
-        <input type="checkbox" id="detrendedLCCheckbox" onchange="togglePlotVisibilityDetrendedLightCurve()" checked/> 
+        <input type="checkbox" id="detrendedLCCheckbox" onchange="togglePlotVisibilityDetrendedLightCurve()" checked/>
         <label for="detrendedLCCheckbox">Detrended Light Curve</label>
 
         <input type="checkbox" id="foldedLightCurveCheckbox" onchange="togglePlotVisibilityFoldedLightCurve()" checked/>
@@ -59,12 +59,12 @@
                 <select id="planetSelect" onchange="updatePlotSingle()">
                     <!-- planet options will display here -->
                 </select>
-            
+
             </div>
             <div id="currentTransit">
                 <!-- current transit number and center time should appear here-->
             </div>
-            
+
             <button onclick="movePlotBackward()">&#x2190;</button> <!--previous transit-->
             <button onclick="movePlotForward()">&#x2192;</button> <!--next transit -->
             <br>
@@ -84,45 +84,45 @@
     <div id="CornerTitle" style="display:none;">
         <h3>Corner Plot:</h3>
         <div id="cornerVarCheckbox" style="display:none;">
-            <input type="checkbox" id="C0_0" onchange="columns()" checked/> 
+            <input type="checkbox" id="C0_0" onchange="columns()" checked/>
             <label for="C0_0">C0</label>
 
-            <input type="checkbox" id="C1_0" onchange="columns()" checked/> 
+            <input type="checkbox" id="C1_0" onchange="columns()" checked/>
             <label for="C1_0">C1</label>
 
-            <input type="checkbox" id="P" onchange="columns()" /> 
+            <input type="checkbox" id="P" onchange="columns()" />
             <label for="P">P</label>
 
-            <input type="checkbox" id="T0" onchange="columns()" /> 
+            <input type="checkbox" id="T0" onchange="columns()" />
             <label for="T0">T0</label>
 
-            <input type="checkbox" id="ROR_0" onchange="columns()" checked/> 
+            <input type="checkbox" id="ROR_0" onchange="columns()" checked/>
             <label for="ROR_0">ROR</label>
 
-            <input type="checkbox" id="IMPACT_0" onchange="columns()" checked/> 
+            <input type="checkbox" id="IMPACT_0" onchange="columns()" checked/>
             <label for="IMPACT_0">IMPACT</label>
 
-            <input type="checkbox" id="DUR14_0" onchange="columns()" checked/> 
+            <input type="checkbox" id="DUR14_0" onchange="columns()" checked/>
             <label for="DUR14_0">DUR14</label>
 
 
             <br>
 
-            <input type="checkbox" id="LD_Q1" onchange="columns()"/> 
+            <input type="checkbox" id="LD_Q1" onchange="columns()"/>
             <label for="LD_Q1">LD_Q1</label>
 
-            <input type="checkbox" id="LD_Q2" onchange="columns()"/> 
+            <input type="checkbox" id="LD_Q2" onchange="columns()"/>
             <label for="LD_Q2">LD_Q2</label>
 
-            <input type="checkbox" id="LD_U1" onchange="columns()" /> 
+            <input type="checkbox" id="LD_U1" onchange="columns()" />
             <label for="LD_U1">LD_U1</label>
 
-            <input type="checkbox" id="LD_U2" onchange="columns()" /> 
+            <input type="checkbox" id="LD_U2" onchange="columns()" />
             <label for="LD_U2">LD_U2</label>
         </div>
         <br>
 
-        
+
         <div id="planetNum" style="display:none;">
             <div>
                 <label for="selectPlanetNumber">Select Planet:</label>
@@ -184,7 +184,7 @@
         </table>
     </div>
 
- 
+
 
 
     <script>
@@ -194,11 +194,11 @@
                 .then(response => response.json())
                 .then(data => {
                     console.log("Received data:", data); // Log the received data
-                    if(data.error_message){ 
+                    if(data.error_message){
                         // Display the error message in the plot container
                         const plotContainerDetrendedLightCurve = document.getElementById("detrendedLCPlot");
                         plotContainerDetrendedLightCurve.innerHTML = `<p>${data.error_message}</p>`;
-                    } else { 
+                    } else {
                         // Clear any existing error message
                         const plotContainerDetrendedLightCurve = document.getElementById("detrendedLCPlot");
                         plotContainerDetrendedLightCurve.innerHTML = "";
@@ -217,7 +217,7 @@
             const plotContainer = document.getElementById("detrendedLCPlot");
             const plotCheckbox = document.getElementById("detrendedLCCheckbox");
             const plotTitle = document.getElementById("detrendedLCTitle");
-            
+
             if (plotCheckbox.checked) {
                 plotTitle.style.display = "block";
                 plotContainer.style.display = "block";  // Show the plot
@@ -271,11 +271,11 @@
                 .then(response => response.json())
                 .then(data => {
                     console.log("Received data"); // Log the received data
-                    if(data.error_message){ 
+                    if(data.error_message){
                         // Display the error message in the plot container
                         const plotContainer = document.getElementById("singleTransitPlot");
                         plotContainer.innerHTML = `<p>${data.error_message}</p>`;
-                    } else { 
+                    } else {
                         // Clear any existing error message
                         const plotContainer = document.getElementById("singleTransitPlot");
                         plotContainer.innerHTML = "";
@@ -286,7 +286,7 @@
                         const parsedData = JSON.parse(data.graphJSON);
                         Plotly.newPlot(plotContainer, parsedData);
                     }
-                    
+
                 })
                 .catch(error => {
                     plotContainer.innerHTML = "<p>Error loading plot data.</p>";
@@ -309,7 +309,7 @@
                 plotTitle.style.display = "none";
                 plotContainer.style.display = "none";   // Hide the plot
                 transitButtons.style.display = "none";
-                
+
             }
 
         }
@@ -343,7 +343,7 @@
         // Function to reset planet dropdown when a new koi_id is clicked
         function resetPlanetDropdownSingle() {
             const planetSelect = document.getElementById("planetSelect");
-            
+
             // Set the dropdown value back to "00"
             planetSelect.value = '_00_quick.ttvs';
 
@@ -361,11 +361,11 @@
                 .then(response => response.json())
                 .then(data => {
                     console.log("Received data:", data); // Log the received data
-                    if(data.error_message){ 
+                    if(data.error_message){
                         // Display the error message in the plot container
                         const plotContainer = document.getElementById("foldedLightCurvePlot");
                         plotContainer.innerHTML = `<p>${data.error_message}</p>`;
-                    } else { 
+                    } else {
                         // Clear any existing error message
                         const plotContainer = document.getElementById("foldedLightCurvePlot");
                         plotContainer.innerHTML = "";
@@ -385,7 +385,7 @@
             const plotContainer = document.getElementById("foldedLightCurvePlot");
             const plotCheckbox = document.getElementById("foldedLightCurveCheckbox");
             const plotTitle = document.getElementById("foldedLightCurveTitle");
-            
+
             if (plotCheckbox.checked) {
                 plotTitle.style.display = "block";
                 plotContainer.style.display = "block";  // Show the plot
@@ -404,11 +404,11 @@
                 .then(response => response.json())
                 .then(data => {
                     console.log("Received data:", data); // Log the received data
-                    if(data.error_message){ 
+                    if(data.error_message){
                         // Display the error message in the plot container
                         const plotContainer = document.getElementById("OMCPlot");
                         plotContainer.innerHTML = `<p>${data.error_message}</p>`;
-                    } else { 
+                    } else {
                         // Clear any existing error message
                         const plotContainer = document.getElementById("OMCPlot");
                         plotContainer.innerHTML = "";
@@ -428,7 +428,7 @@
             const plotContainer = document.getElementById("OMCPlot");
             const plotCheckbox = document.getElementById("OMCCheckbox");
             const plotTitle = document.getElementById("OMCTitle");
-            
+
             if (plotCheckbox.checked) {
                 plotTitle.style.display = "block";
                 plotContainer.style.display = "block";  // Show the plot
@@ -451,11 +451,11 @@
                 .then(response => response.json())
                 .then(data => {
                     console.log("Received data:", data); // Log the received data
-                    if(data.error_message){ 
+                    if(data.error_message){
                         // Display the error message in the plot container
                         const plotContainer = document.getElementById("CornerPlot");
                         plotContainer.innerHTML = `<p>${data.error_message}</p>`;
-                    } else { 
+                    } else {
                         // Clear any existing error message
                         const plotContainer = document.getElementById("CornerPlot");
                         plotContainer.innerHTML = "";
@@ -471,16 +471,16 @@
                 });
         }
 
-    
+
         function columns() {
             selectedColumns = []; // Clear the array
-            
+
             // Get all checked checkboxes and add their IDs to selectedColumns
             const checkboxes = document.querySelectorAll('#cornerVarCheckbox input[type="checkbox"]:checked');
             checkboxes.forEach(checkbox => {
                 selectedColumns.push(checkbox.id);
             });
-            
+
             // Regenerate the plot with updated selected columns
             generatePlotCorner(selectedKoiId, selectedColumns, planetNumCorner);
         }
@@ -554,7 +554,7 @@
             const planetSelect = document.getElementById("selectPlanetNumber");
             planetNumCorner = parseInt(planetSelect.value);
             console.log(planetNumCorner)
-            
+
             // Loop through checkbox inputs and update their IDs
             var checkboxes = document.querySelectorAll("#cornerVarCheckbox input[type=checkbox]");
             //var extractedNumber = planetNumber.match(/__(\d{2})/)[1];
@@ -571,7 +571,7 @@
         // Function to reset planet dropdown when a new koi_id is clicked
         function resetPlanetDropdownCorner() {
             const planetSelect = document.getElementById("selectPlanetNumber");
-            
+
             // Set the value of the planet number dropdown to "00"
             planetSelect.value = "00";
 
@@ -665,7 +665,7 @@
         //                 newRow.innerHTML = `
         //                     <td>${row['planet_name']}</td>
         //                     <td>${row['period']}</td>
-                            
+
         //                 `;
         //                 tableBody.appendChild(newRow);
         //             });
@@ -676,8 +676,8 @@
         //         .catch(error => {
         //             console.error('Error fetching planet properties:', error);
         //         });
-        // } 
-        
+        // }
+
         // function displayPeriodRatios(koiId) {
         //     fetch(`/period_ratios/${koiId}`)
         //         .then(response => response.json())
@@ -706,7 +706,7 @@
         //             console.error('Error fetching planet properties:', error);
         //         });
         // }
-        
+
 
         function displayPeriodRatios(koiId) {
             fetch(`/period_ratios/${koiId}`)

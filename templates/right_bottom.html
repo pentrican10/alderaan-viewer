@@ -19,7 +19,7 @@
         .koi-row.critical-issues {
             background-color: #ed3a49; /* Darker red */
         }
-        
+
     </style>
 </head>
 <body>
@@ -52,7 +52,7 @@
         <div class="right-pane">
             <h2>Comment Section</h2>
             <!--comment file displayed-->
-            
+
             <div class="comment-content">
                 <div id="file_content_container"></div>
                 <button id="editButton" style="display: none;">Edit Comment File</button>
@@ -67,7 +67,7 @@
 
 
 
-    
+
     <script>
         // Global variable to store the selected KOI_ID
         //let selectedKoiId = null;
@@ -75,9 +75,9 @@
         function handleReviewStatusChange() {
             var reviewStatus = document.getElementById("review_status").value;
 
-            var koiId = selectedKoiId;  
+            var koiId = selectedKoiId;
             console.log(selectedKoiId)
-            
+
             fetch(`/review_status/${koiId}`, {
                 method: 'POST',
                 headers: {
@@ -90,7 +90,7 @@
                 console.log('Success:', data);
                 updateTableUI(koiId, reviewStatus);
                 document.getElementById("review_status").value = reviewStatus;
-                
+
             })
             .catch((error) => {
                 console.error('Error:', error);
@@ -100,11 +100,11 @@
         function updateDropdownForKoi(koiId) {
             // Find the table row corresponding to the koiId
             var row = document.getElementById(`row-${koiId}`);
-            
+
             if (row) {
                 // Get the review status from the review-cell in the row
                 var reviewStatus = row.querySelector(".review-cell").innerText.trim();
-                
+
                 // Update the dropdown to reflect the current review status
                 var dropdown = document.getElementById("review_status");
 
@@ -122,11 +122,11 @@
 
         function updateTableUI(koiId, reviewStatus) {
             var row = document.getElementById(`row-${koiId}`);
-            
+
             if (row) {
                 // Debugging: Log the row's current class list
                 console.log(`Current classes for row-${koiId}: ${row.className}`);
-                
+
                 // Remove existing classes first
                 row.classList.remove('not-reviewed', 'looks-good', 'minor-issues', 'major-issues', 'critical-issues');
                 console.log(`Removing classes: not-reviewed, looks-good, minor-issues, major-issues, critical-issues`);
@@ -151,7 +151,7 @@
 
                 // Debugging: Log the row's updated class list
                 console.log(`Updated classes for row-${koiId}: ${row.className}`);
-                
+
                 // Find the cell in the review column and update its text
                 var reviewCell = row.querySelector('.review-cell');
                 if (reviewCell) {
@@ -200,7 +200,7 @@
                             row.classList.add('critical-issues');
                             console.log('Adding class: critical-issues');
                         }
-                        
+
                     });
                 })
                 .catch(error => {
@@ -208,7 +208,7 @@
                 });
         }
 
-  
+
 
         //function to set action value
         function setAction(action) {
@@ -217,7 +217,7 @@
                 actionInput.value="overwrite";
             }else {
                 actionInput.value=action;
-    
+
             }
         }
 
@@ -257,14 +257,14 @@
                         .catch(error => {
                             console.error("Error adding comment:", error);
                         });
-                    
+
                 } else {
                     alert("Please enter a comment before submitting");
                 }
 
-                
+
             }
-            
+
         }
 
         // Event listener for submitting the comment
@@ -308,7 +308,7 @@
 
 
             const formData = new FormData();
-            formData.append("content", newFileContent); 
+            formData.append("content", newFileContent);
             formData.append("action", "overwrite"); // Always overwrite the entire file
 
             fetch(`/star/${selectedKoiId}/edit_file`, {
@@ -320,7 +320,7 @@
                     // Display the updated content in the container
                     const fileContentContainer = document.getElementById("file_content_container");
                     fileContentContainer.innerHTML = `<pre>${newFileContent}</pre>`;
-                
+
                     // Hide the textarea and "Save Changes" button
                     const editTextarea = document.getElementById("editTextarea");
                     const saveChangesButton = document.getElementById("saveChangesButton");
@@ -342,12 +342,11 @@
         saveChangesButton.addEventListener("click", handleSaveChangesButtonClick);
 
 
-        
 
-        
+
+
 
 
     </script>
 </body>
 </html>
-

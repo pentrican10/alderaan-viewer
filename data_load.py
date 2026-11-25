@@ -7,7 +7,7 @@ import numpy as np
 import numpy.polynomial.polynomial as poly
 
 
-LCIT = 29.4243885           # Kepler long cadence integration time + readout time [min] 
+LCIT = 29.4243885           # Kepler long cadence integration time + readout time [min]
 SCIT = 58.848777            # Kepler short cadence integration time + readout time [sec]
 
 lcit = LCIT/60/24           # Kepler long cadence integration time + readout time [days]
@@ -27,7 +27,7 @@ default_directory = os.path.join(PARENT_DIR, 'alderaan', 'Results')
 
 def update_data_directory(selected_table):
     """
-    Function 
+    Function
     """
     global data_directory
     global default_directory
@@ -44,8 +44,8 @@ def read_table_data(table):
     update_data_directory(table)
     Table = table
     if 'SIMULATION' in table:
-        K_id = False 
-    else: 
+        K_id = False
+    else:
         K_id = True
     file_path = os.path.join(data_directory, table)
     table_data = []
@@ -79,13 +79,13 @@ def read_table_data(table):
 
     ### list of Koi IDs with data
     koi_folder_list = [f for f in os.listdir(data_directory) if os.path.isdir(os.path.join(data_directory, f))]
-            
+
     ### Remove duplicates based on koi_id
     unique_data = []
     seen_koi_ids = set()
     for row in table_data:
         koi_id = row['koi_id']
-        
+
         ### Check if koi_id is not in the set of seen ids
         if koi_id not in seen_koi_ids:
             ### only add the row to table if there is a file for the Koi ID
@@ -103,7 +103,7 @@ def get_planet_properties_table(koi_id,table):
     args:
         koi_id: string in the form "K00000" (KOI identification)
         table: string in form of 'table.csv'
-    
+
     returns:
         planet_data: table with planet properties sorted by ascending period (name, period, lcit ratio, impact, ror, duration)
     '''
@@ -116,14 +116,14 @@ def get_planet_properties_table(koi_id,table):
     file_results =star_id + '-results.fits'
     file_path_results = os.path.join(data_directory, star_id, file_results)
     data_id = get_koi_identifiers(file_path_csv,koi_id)
-    data_id = data_id.sort_values(by='periods') 
+    data_id = data_id.sort_values(by='periods')
     koi_identifier = data_id.koi_identifiers.values
     planet_data = []
     with open(file_path_csv, 'r') as csvfile:
         reader = csv.DictReader(csvfile)
         n=0
         for row in reader:
-            
+
             if row['koi_id'] == koi_id:
                 row['planet_name'] = koi_identifier[n]
 
@@ -132,10 +132,10 @@ def get_planet_properties_table(koi_id,table):
                 row['lcit_ratio'] = round(row['period'] / lcit,5 )
                 row['impact'] = round(data_post[f'IMPACT_{n}'].median(),4)
                 row['ror'] = round(data_post[f'ROR_{n}'].median(),4)
-                row['duration'] = round((data_post[f'DUR14_{n}'].median())*24,4) 
+                row['duration'] = round((data_post[f'DUR14_{n}'].median())*24,4)
                 n+=1
-                planet_data.append(row) 
-    planet_data.sort(key=lambda x: x['period']) 
+                planet_data.append(row)
+    planet_data.sort(key=lambda x: x['period'])
     return planet_data
 
 def get_period_ratios_table(koi_id,table):
@@ -145,7 +145,7 @@ def get_period_ratios_table(koi_id,table):
     args:
         koi_id: string in the form "K00000" (KOI identification)
         table: string in form of 'table.csv'
-    
+
     returns:
         planet_data: table with period ratios sorted by ascending period (name, period)
     '''
@@ -160,7 +160,7 @@ def get_period_ratios_table(koi_id,table):
     file_path_results = os.path.join(data_directory, star_id, file_results)
     data_id = get_koi_identifiers(file_path_csv,koi_id)
     ### sort by period
-    data_id = data_id.sort_values(by='periods') 
+    data_id = data_id.sort_values(by='periods')
     koi_identifier = data_id.koi_identifiers.values
 
     periods = []
@@ -210,9 +210,9 @@ def get_period_ratios_table(koi_id,table):
 
     # Return as a JSON-friendly list of dictionaries
     return ratios
-   
 
-            
+
+
 
 def get_koi_identifiers(file_path, koi_id):
     koi_identifiers = []
@@ -220,7 +220,7 @@ def get_koi_identifiers(file_path, koi_id):
     period_title = []
     with open(file_path, 'r') as file:
         reader = csv.DictReader(file)
-        
+
         for row in reader:
             if row['koi_id'] == koi_id:
                 koi_identifier = str(row['planet_name'])
@@ -240,7 +240,7 @@ def get_koi_identifiers(file_path, koi_id):
     return df if periods else None
     #return periods,koi_identifiers if periods else None
 
-               
+
 def load_photometry_data(file_path):
     with fits.open(file_path) as fits_file:
         time = np.array(fits_file[1].data, dtype=float)
@@ -262,7 +262,7 @@ def load_photometry_data(file_path):
 def load_ttv_data(koi_id, file_path):
     if os.path.isfile(file_path):
         index =[]
-        ttime=[] 
+        ttime=[]
         model = []
         out_prob = []
         out_flag = []
@@ -285,7 +285,7 @@ def load_ttv_data(koi_id, file_path):
         out_prob = np.asarray(out_prob, dtype=np.float64)
         out_flag = np.asarray(out_flag, dtype=np.float64)
         return index, ttime, model, out_prob, out_flag
-    
+
 
 def get_min_max(koi_id):
     global K_id
@@ -295,12 +295,12 @@ def get_min_max(koi_id):
         star_id = koi_id
     file_name_lc = star_id + '_lc_filtered.fits'
     file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
-    
+
     file_name_sc = star_id + '_sc_filtered.fits'
     file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
 
     if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
-        photometry_data_lc = load_photometry_data(file_path_lc) 
+        photometry_data_lc = load_photometry_data(file_path_lc)
         photometry_data_sc = load_photometry_data(file_path_sc)
         lc_max = photometry_data_lc['FLUX'].max()
         lc_min = photometry_data_lc['FLUX'].min()
@@ -309,7 +309,7 @@ def get_min_max(koi_id):
         sc_min = photometry_data_sc['FLUX'].min()
         return lc_min,lc_max,sc_min,sc_max
     elif os.path.isfile(file_path_lc) and not os.path.isfile(file_path_sc):
-        photometry_data_lc = load_photometry_data(file_path_lc) 
+        photometry_data_lc = load_photometry_data(file_path_lc)
         lc_max = photometry_data_lc['FLUX'].max()
         lc_min = photometry_data_lc['FLUX'].min()
         return lc_min, lc_max
@@ -328,7 +328,7 @@ def single_data(koi_id, line_number, num, ttv_file):
         star_id = koi_id
     file_name_lc = star_id + '_lc_filtered.fits'
     file_path_lc = os.path.join(data_directory,star_id,file_name_lc)
-    
+
     file_name_sc = star_id + '_sc_filtered.fits'
     file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
 
@@ -338,7 +338,7 @@ def single_data(koi_id, line_number, num, ttv_file):
     file_path_results = os.path.join(data_directory, star_id, file_results)
     data_post = load_posteriors(file_path_results,num,koi_id)
     ### get max likelihood
-    data_post = data_post.sort_values(by='LN_LIKE', ascending=False) 
+    data_post = data_post.sort_values(by='LN_LIKE', ascending=False)
     row = data_post.iloc[0] # pick row with highest likelihood
     ### mult by 1.5 for correct offset
     DUR14 = row[f'DUR14_{num}']
@@ -346,14 +346,14 @@ def single_data(koi_id, line_number, num, ttv_file):
     combined_data = None
     #get data and create detrended light curve
     if os.path.isfile(file_path_lc) and os.path.isfile(file_path_sc):
-        photometry_data_lc = load_photometry_data(file_path_lc) 
+        photometry_data_lc = load_photometry_data(file_path_lc)
         photometry_data_sc = load_photometry_data(file_path_sc)
         index, ttime, model, out_prob, out_flag = load_ttv_data(koi_id, file_path)
 
         if line_number < len(index):
             center_time = ttime[line_number]
             transit_number = index[line_number]
-        
+
             # start_time = float(center_time) - 0.25
             # end_time= float(center_time) + 0.25
             start_time = float(center_time) - DUR14
@@ -368,7 +368,7 @@ def single_data(koi_id, line_number, num, ttv_file):
 
             combined_data= pd.concat([combined_data, sc_data],ignore_index=True)
         return lc_data, sc_data, transit_number, center_time
-        
+
     elif os.path.isfile(file_path_lc):
         photometry_data_lc = load_photometry_data(file_path_lc) #descriptive names
         index, ttime, model, out_prob, out_flag = load_ttv_data(koi_id, file_path)
@@ -376,9 +376,9 @@ def single_data(koi_id, line_number, num, ttv_file):
         if line_number < len(index):
             center_time = ttime[line_number]
             transit_number = index[line_number]
-        
-            start_time = float(center_time) - (DUR14*1.5) 
-            end_time= float(center_time) + (DUR14*1.5) 
+
+            start_time = float(center_time) - (DUR14*1.5)
+            end_time= float(center_time) + (DUR14*1.5)
 
             use_lc = (photometry_data_lc['TIME'] > start_time) & (photometry_data_lc['TIME'] < end_time)
             lc_data = photometry_data_lc[use_lc]
@@ -391,8 +391,8 @@ def single_data(koi_id, line_number, num, ttv_file):
             sc_data = 2
             transit_number = None
             center_time = None
-        return lc_data,sc_data, transit_number, center_time 
-    
+        return lc_data,sc_data, transit_number, center_time
+
     elif os.path.isfile(file_path_sc):
         photometry_data_sc = load_photometry_data(file_path_sc)
         index, ttime, model, out_prob, out_flag = load_ttv_data(koi_id, file_path)
@@ -400,7 +400,7 @@ def single_data(koi_id, line_number, num, ttv_file):
         if line_number < len(index):
             center_time = ttime[line_number]
             transit_number = index[line_number]
-        
+
             start_time = float(center_time) - 0.25
             end_time= float(center_time) + 0.25
 
@@ -409,7 +409,7 @@ def single_data(koi_id, line_number, num, ttv_file):
             combined_data = sc_data
             lc_data = None
         return lc_data,sc_data, transit_number, center_time
-    
+
 
 def folded_data(koi_id,planet_num, file_path,overlap):
     global K_id
@@ -419,7 +419,7 @@ def folded_data(koi_id,planet_num, file_path,overlap):
         star_id = koi_id
     file_name_lc = star_id + '_lc_filtered.fits'
     file_path_lc = os.path.join(data_directory, star_id, file_name_lc)
-    
+
     file_name_sc = star_id + '_sc_filtered.fits'
     file_path_sc = os.path.join(data_directory, star_id, file_name_sc)
 
@@ -427,12 +427,12 @@ def folded_data(koi_id,planet_num, file_path,overlap):
     file_path_results = os.path.join(data_directory, star_id, file_results)
     data_post = load_posteriors(file_path_results,planet_num,koi_id)
     ### get max likelihood
-    data_post = data_post.sort_values(by='LN_LIKE', ascending=False) 
+    data_post = data_post.sort_values(by='LN_LIKE', ascending=False)
     row = data_post.iloc[0] # pick row with highest likelihood
     ### mult by 1.5 for correct offset
     DUR14 = row[f'DUR14_{planet_num}']
 
-    fold_data_time_lc = [] 
+    fold_data_time_lc = []
     fold_data_flux_lc = []
     fold_data_err_lc = []
     fold_data_time_sc = []
@@ -445,26 +445,26 @@ def folded_data(koi_id,planet_num, file_path,overlap):
         # index = index[~overlap]
         # model = model[~overlap]                        # revisit and ensure using same ttime and model
         results_data = load_results_model(file_path_results,planet_num)
-        
+
         ### revieved error about endian: ValueError: Big-endian buffer not supported on little-endian compiler
         ### Convert overlap to the correct endianness before applying the mask
         overlap = overlap.astype(np.bool_).astype(overlap.dtype.newbyteorder('='))
-        ### Convert results_data to native byte order 
+        ### Convert results_data to native byte order
         for col in results_data.columns:
             if results_data[col].dtype.byteorder == '>':
                 results_data[col] = results_data[col].values.astype(results_data[col].dtype.newbyteorder('='))
 
-        
+
         ### mask out overlapping transits
         results_data = results_data[~overlap]
         model = np.array(results_data.model)
-        index = np.array(results_data.index) 
-        
+        index = np.array(results_data.index)
+
         for i in range(len(index)):
             # center_time = ttime[i]
             center_time = float(model[i])
-        
-            start_time = (center_time) - (DUR14*1.5) 
+
+            start_time = (center_time) - (DUR14*1.5)
             end_time= (center_time) + (DUR14*1.5)
 
             use = (photometry_data_lc['TIME'] > start_time) & (photometry_data_lc['TIME'] < end_time)
@@ -479,7 +479,7 @@ def folded_data(koi_id,planet_num, file_path,overlap):
         photometry_data_sc = load_photometry_data(file_path_sc)
         for i in range(len(index)):
             center_time = float(model[i])
-        
+
             start_time = center_time - DUR14
             end_time= center_time + DUR14
 
@@ -490,7 +490,7 @@ def folded_data(koi_id,planet_num, file_path,overlap):
             fold_data_time_sc.extend(folded_transit_time_sc)
             fold_data_flux_sc.extend(transit_data_sc['FLUX'])
             fold_data_err_sc.extend(transit_data_sc['ERR'])
-  
+
     fold_data_lc = pd.DataFrame({
         'TIME' : fold_data_time_lc,
         'FLUX': fold_data_flux_lc,
@@ -510,10 +510,10 @@ def folded_data(koi_id,planet_num, file_path,overlap):
     #combined_df = combined_df.sort_values(by='TIME', ascending=True)
     fold_time = np.array(combined_df.TIME)
     fold_flux = np.array(combined_df.FLUX)
-    if len(fold_time)>1: 
+    if len(fold_time)>1:
         binned_centers, binned_data = bin_data(fold_time, fold_flux, bin_size)
 
-        # Create DataFrame for combined binned weighted average data 
+        # Create DataFrame for combined binned weighted average data
         binned_weighted_avg_combined = pd.DataFrame({
             'TIME': binned_centers,
             'FLUX': binned_data
@@ -522,8 +522,8 @@ def folded_data(koi_id,planet_num, file_path,overlap):
         binned_centers = [0]
         binned_data =[0]
         binned_weighted_avg_combined = pd.DataFrame({
-            'TIME': binned_centers, 
-            'FLUX': binned_data 
+            'TIME': binned_centers,
+            'FLUX': binned_data
         })
 
     return fold_data_lc, fold_data_sc, binned_weighted_avg_combined
@@ -535,7 +535,7 @@ def calculate_binned_weighted_average(time, flux, flux_err, bin_size):
     indices = np.digitize(time, bins, right=True)
 
     bin_centers = (bins[1:] + bins[:-1]) / 2
-        
+
     weighted_avg = []
     for i in range(1, len(bins)):
         bin_indices = indices == i
@@ -544,7 +544,7 @@ def calculate_binned_weighted_average(time, flux, flux_err, bin_size):
             weighted_avg.append(np.average(flux[bin_indices], weights=weights))
         else:
             weighted_avg.append(np.nan)  # or use a different indicator for missing data?
-        
+
     return bin_centers, weighted_avg
 '''
 
@@ -560,7 +560,7 @@ def bin_data(time, data, binsize):
         corresponding vector of data values to be binned
     binsize : float
         bin size for output data, in same units as time
-        
+
     Returns
     -------
     bin_centers : ndarray
@@ -570,17 +570,17 @@ def bin_data(time, data, binsize):
     """
     bin_centers = np.hstack([np.arange(time.mean(),time.min()-binsize/2,-binsize),
                             np.arange(time.mean(),time.max()+binsize/2,binsize)])
-    
+
     bin_centers = np.sort(np.unique(bin_centers))
     binned_data = []
-    
+
     for i, t0 in enumerate(bin_centers):
         binned_data.append(np.mean(data[np.abs(time-t0) < binsize/2]))
-        
+
     return bin_centers, np.array(binned_data)
 
 
-    
+
 def load_OMC_data(koi_id,file_path):
     index, ttime, model, out_prob, out_flag = load_ttv_data(koi_id, file_path)
     t0, period = poly.polyfit(index, model, 1)
@@ -655,7 +655,7 @@ def load_posteriors(f,n,koi_id):
         df = df.sample(N_samp, replace=True, ignore_index=True, weights=w)
 
         return df
-    
+
 def load_results_model(file_path_results,planet_num):
     with fits.open(file_path_results) as hdul:
         hdu2 = hdul[2 + planet_num]
@@ -681,7 +681,7 @@ def _legendre(koi_id, n, k):
             star_id = koi_id.replace("K","S")
         else:
             star_id = koi_id
-        
+
         ttv_file_name = star_id + f'_0{n}_quick.ttvs'
         ttv_file = os.path.join(data_directory, star_id, ttv_file_name)
         lc_file = star_id + '_lc_filtered.fits'
@@ -697,12 +697,11 @@ def _legendre(koi_id, n, k):
         t = model
         #t = t.astype(float)
         #if data_lc.TIME.min()< data_sc.TIME.min() and data_lc.TIME.max()> data_sc.TIME.max():
-        x = 2 * (t-data_lc.TIME.min()) / (data_lc.TIME.max() - data_lc.TIME.min()) - 1 
-        
+        x = 2 * (t-data_lc.TIME.min()) / (data_lc.TIME.max() - data_lc.TIME.min()) - 1
+
         if k==0:
             return np.ones_like(t)
         if k==1:
             return np.zeros_like(t)
         else:
             return ValueError("only configured for 0th and 1st order Legendre polynomials")
-

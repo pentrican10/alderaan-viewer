@@ -18,7 +18,7 @@
         padding: 10px;
         box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1); /* Optional shadow for separation */
     }
-    
+
     .right-section {
         flex: 1; /* Takes the remaining space */
         height: 100vh; /* Full height of the flex container */
@@ -66,7 +66,7 @@
         overflow-y: auto;
     } */
 
-    
+
 
     .right-top-section {
         /* Add styles for the top section on the right side */
@@ -108,23 +108,23 @@ table {
     border-collapse: collapse;
     width: 100%;
   }
-  
+
   table, th, td {
     border: 1px solid #ccc;
   }
-  
+
   th, td {
     padding: 8px;
   }
-  
+
   tr:nth-child(even) {
     background-color: #f2f2f2;
   }
-  
+
   th {
     background-color: #f0f0f0;
   }
-/*   
+/*
     .not-reviewed {
         background-color: #ffffff; /* white background for not reviewed */
     /* }

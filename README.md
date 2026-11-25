@@ -4,10 +4,11 @@ Web app for viewing ALDERAAN pipeline outputs. The core ALDERAAN pipeline can be
 ## Installation Instructions:
 ```
 $ git clone https://github.com/pentrican10/alderaan-viewer <LOCAL_DIR>/alderaan-viewer
-$ conda env create -n <ENV_NAME> -f <LOCAL_DIR>/alderaan-viewer/environment.yml
-
-if <ENV_NAME> is not specified, the conda environment will be named "alderaan-viewer"
 ```
+
+The viewer runs in the `alderaan` conda environment. Create it from the ALDERAAN repo
+(https://github.com/gjgilbert/alderaan) with `conda env create -f environment.yml`, or
+add the viewer dependencies to an existing install with `pip install -e ".[viewer]"`.
 
 ## Quickstart guide:
 
@@ -44,17 +45,13 @@ For California Planet Search members, ALDERAAN data products may be retrieved fr
 
 To run the ALDERAAN viewer:
 
-1. Ensure that all files are placed in the correct location 
-  
-2. Manually copy the csv input table to <LOCAL_DIR>/alderaan/Results/<run_id>/ folder
-    - Change table name from 'kepler_dr25_gaia_dr2_crossmatch.csv' to '<run_id>.csv'
-    - Future versions of ALDERAAN will updated to generate these tables automatically
+1. Ensure that all files are placed in the correct location
 
-3. Activate the conda environment
+2. Activate the conda environment
 
-    ```$ conda activate alderaan-viewer```
+    ```$ conda activate alderaan```
 
-4. From the terminal, navigate into <LOCAL_DIR>/alderaan-viewer/ and run the app
+3. From the terminal, navigate into <LOCAL_DIR>/alderaan-viewer/ and run the app
 
     ```$ python alderaan-viewer.py```
 
@@ -70,7 +67,7 @@ To run the ALDERAAN viewer:
     - Select Single Transit box to view single transits
     - Change planet via planet select dropdown for single transit and posterior plots
     - Mark review status and leave any relevant comments
- 
+
 ## Notes:
 - When you leave a comment, a comment file will be created at '<LOCAL_DIR>/alderaan/Results/<run_id>/<koi_id>/<koi_id>_comments.txt'
 
@@ -81,7 +78,3 @@ To run the ALDERAAN viewer:
 ![image](https://github.com/user-attachments/assets/4d04b5b1-79ea-4a6b-bd1a-a532168255d6)
 ![image](https://github.com/user-attachments/assets/f2c08f6b-ba51-4bcd-88b3-63ccbaaefb6c)
 ![image](https://github.com/user-attachments/assets/9d0eef31-b6db-4eff-91d0-70f004118089)
-
-
-
-

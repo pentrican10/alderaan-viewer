@@ -1,14 +1,14 @@
 <div class="split-container" id="reviewContainer" style="display:none;">
-    <div class="left-pane">
-        <div class="dropdown-menu">
-            <label for="review_status">Review Status:</label>
-            <select id="review_status">
-                {% for s in statuses %}
-                <option value="{{ s }}">{{ 'Not Reviewed' if s == 'None' else s }}</option>
-                {% endfor %}
-            </select>
-        </div>
+    <div class="dropdown-menu">
+        <label for="review_status">Review Status:</label>
+        <select id="review_status">
+            {% for s in statuses %}
+            <option value="{{ s }}">{{ 'Not Reviewed' if s == 'None' else s }}</option>
+            {% endfor %}
+        </select>
+    </div>
 
+    <div class="left-pane">
         <h2>Add Comments:</h2>
         <form id="comment_form">
             <textarea id="commentInput" rows="4" cols="50" placeholder="Type your comment here..."></textarea>
@@ -18,10 +18,10 @@
     </div>
 
     <div class="right-pane">
-        <h2>Comment Section</h2>
+        <h2>Edit Comments:</h2>
         <div class="comment-content">
-            <pre id="file_content_container"></pre>
             <button id="editButton">Edit Comment File</button>
+            <pre id="file_content_container"></pre>
             <textarea id="editTextarea" style="display: none;" rows="20" cols="35"></textarea>
             <button id="saveChangesButton" style="display: none;">Save Changes</button>
         </div>

@@ -69,9 +69,9 @@ async function selectTarget(koi) {
 
     current = { koi: koi, state: row.dataset.state, planets: [] };
     document.getElementById("koi_id_container").textContent = "";
-    const h2 = document.createElement("h2");
-    h2.textContent = `Selected koi_id: ${koi}`;
-    document.getElementById("koi_id_container").appendChild(h2);
+    const h1 = document.createElement("h1");
+    h1.textContent = `Target: ${koi}`;
+    document.getElementById("koi_id_container").appendChild(h1);
 
     const r = await fetch(api("status"));
     const banner = document.getElementById("target_banner");

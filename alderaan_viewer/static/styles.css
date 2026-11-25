@@ -136,4 +136,10 @@ table {
 #target_banner { padding: 6px; margin: 6px 0; background: #fff3cd; display: none; }
 /* corner figure is narrower than its div (viewer.js squarePlotArea): center it */
 #cornerPlot .svg-container { margin: 0 auto; }
-#planetPropertiesTable, #transitQualityTable, #periodRatiosTable { width: auto; }
+#planetPropertiesTable, #transitQualityTable, #periodRatiosTable { width: auto; margin-left: 2em; }
+th math { font-size: 1.4em; }
+/* comment area: review status above two aligned columns */
+#reviewContainer { flex-wrap: wrap; column-gap: 30px; }
+#reviewContainer .dropdown-menu { flex-basis: 100%; }
+#reviewContainer .right-pane { padding: 0; }
+#commentInput { box-sizing: border-box; width: 400px; height: 110px; margin: 0 0 4px; }

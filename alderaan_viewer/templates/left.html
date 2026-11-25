@@ -1,0 +1,47 @@
+<div id="username-container">
+    Logged in as: {{ session['username'] }}
+    <form action="{{ url_for('logout') }}" method="POST">
+        <input type="submit" value="Logout" class="logout-button">
+    </form>
+</div>
+<h1>Targets</h1>
+
+<div>
+    <label for="runSelect">Select Run:</label>
+    <select id="runSelect">
+        {% for r in run_ids %}
+        <option value="{{ r }}" {% if r == run_id %}selected{% endif %}>{{ r }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<div>
+    <h3>Search KOI ID:</h3>
+    <input type="text" id="searchInput" placeholder="Enter KOI ID">
+</div>
+
+<table id="targetTable">
+    <tr>
+        <th>koi_id</th>
+        <th>kep_mag</th>
+        <th>Rstar</th>
+        <th>logrho</th>
+        <th>Teff</th>
+        <th>logg</th>
+        <th>pipeline</th>
+        <th>review</th>
+    </tr>
+    {% for row in targets %}
+    <tr id="row-{{ row['koi_id'] }}" class="koi-row {{ row['review'] | lower | replace(' ', '-') }}"
+        data-koi-id="{{ row['koi_id'] }}" data-state="{{ row['state'] }}">
+        <td class="koi-id-cell"><a href="#">{{ row['koi_id'] }}</a></td>
+        <td>{{ '%.3f' | format(row['kep_mag']) }}</td>
+        <td>{{ '%.3f' | format(row['Rstar']) }}</td>
+        <td>{{ '%.3f' | format(row['logrho']) }}</td>
+        <td>{{ '%.0f' | format(row['Teff']) }}</td>
+        <td>{{ '%.3f' | format(row['logg']) }}</td>
+        <td>{{ row['state'] }}</td>
+        <td class="review-cell">{{ row['review'] }}</td>
+    </tr>
+    {% endfor %}
+</table>

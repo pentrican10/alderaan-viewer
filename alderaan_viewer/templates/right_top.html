@@ -1,0 +1,102 @@
+<h1>Star Information Display</h1>
+<div id="koi_id_container"></div>
+<div id="target_banner"></div>
+
+<div id="checkbox_container" style="display:none;">
+    <input type="checkbox" id="lightcurveCheckbox" data-panel="lightcurve" checked/>
+    <label for="lightcurveCheckbox">Detrended Light Curve</label>
+
+    <input type="checkbox" id="foldedCheckbox" data-panel="folded" checked/>
+    <label for="foldedCheckbox">Folded Transit</label>
+
+    <input type="checkbox" id="singleCheckbox" data-panel="single"/>
+    <label for="singleCheckbox">Single Transit</label>
+
+    <input type="checkbox" id="omcCheckbox" data-panel="omc" checked/>
+    <label for="omcCheckbox">TTV</label>
+
+    <input type="checkbox" id="cornerCheckbox" data-panel="corner" checked/>
+    <label for="cornerCheckbox">Corner</label>
+</div>
+
+<div id="lightcurvePanel" class="panel" style="display:none;">
+    <h3>Detrended Light Curve:</h3>
+    <div id="lightcurvePlot"></div>
+</div>
+
+<div id="foldedPanel" class="panel" style="display:none;">
+    <h3>Folded Light Curve:</h3>
+    <div id="foldedPlot"></div>
+</div>
+
+<div id="singlePanel" class="panel" style="display:none;">
+    <h3>Single Transit:</h3>
+    <div>
+        <label for="singlePlanetSelect">Select Planet:</label>
+        <select id="singlePlanetSelect" class="planet-select"></select>
+        <button id="singleBack">&#x2190;</button>
+        <button id="singleForward">&#x2192;</button>
+        <span id="singlePage"></span>
+    </div>
+    <div id="singlePlot"></div>
+</div>
+
+<div id="omcPanel" class="panel" style="display:none;">
+    <h3>O-C Curve:</h3>
+    <div id="omcPlot"></div>
+</div>
+
+<div id="cornerPanel" class="panel" style="display:none;">
+    <h3>Corner Plot:</h3>
+    <div id="cornerParams">
+        {% for p in corner_params %}
+        <input type="checkbox" id="corner_{{ p }}" value="{{ p }}"/>
+        <label for="corner_{{ p }}">{{ p }}</label>
+        {% endfor %}
+    </div>
+    <div>
+        <label for="cornerPlanetSelect">Select Planet:</label>
+        <select id="cornerPlanetSelect" class="planet-select"></select>
+        <label for="cornerPreset">Quick Params:</label>
+        <select id="cornerPreset">
+            <option value="default">Default: C0,C1,ROR,IMPACT,DUR14</option>
+            <option value="physical7">Physical 7: PERIOD,EPOCH,ROR,IMPACT,DUR14,LD_U1,LD_U2</option>
+            <option value="physical5">Physical 5: PERIOD,EPOCH,ROR,IMPACT,DUR14</option>
+            <option value="physical3">Physical 3: ROR,IMPACT,DUR14</option>
+            <option value="ld">Limb Darkening: LD_Q1,LD_Q2,LD_U1,LD_U2</option>
+        </select>
+    </div>
+    <div id="cornerPlot"></div>
+</div>
+
+<div id="tablesPanel" style="display:none;">
+    <h3>Planet Properties:</h3>
+    <table id="planetPropertiesTable">
+        <thead>
+            <tr>
+                <th>Planet Name</th>
+                <th>Period [d]</th>
+                <th>Period/lcit</th>
+                <th>Impact</th>
+                <th>ROR</th>
+                <th>DUR14 [hr]</th>
+                <th>OMC model</th>
+                <th>good/all transits</th>
+                <th>reduced &chi;&sup2;</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <h3>Period Ratios:</h3>
+    <table id="periodRatiosTable">
+        <thead>
+            <tr>
+                <th>Planets</th>
+                <th>Periods</th>
+                <th>Ratio</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <div id="tablesError" class="panel-error"></div>
+</div>

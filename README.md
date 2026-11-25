@@ -12,64 +12,44 @@ add the viewer dependencies to an existing install with `pip install -e ".[viewe
 
 ## Quickstart guide:
 
-ALDERAAN-viewer expects the following files and directory structure:
+ALDERAAN-viewer reads the output directory of an ALDERAAN batch run (ALDERAAN 0.3.0):
 
-   - <LOCAL_DIR>
-        - alderaan-viewer/
-            - alderaan-viewer.py
-            - data_load.py
-            - static/
-            - templates/
-        - alderaan/
-            - Results/
-                - <run_ID>
-                    - <koi_id>
-                        - <koi_id>_(n)_quick.ttvs
-                        - <koi_id>_lc_filtered.fits
-                        - <koi_id>_sc_filtered.fits
-                        - <koi_id>-results.fits
+    <data_dir>/
+        <run_id>/
+            alderaan_batch_<run_id>.csv
+            results/<koi_id>/<koi_id>_detrended.fits
+            results/<koi_id>/<koi_id>_results.fits
+            logs/alderaan_<koi_id>_<run_id>.log
 
-The "alderaan-viewer" folder should contain a clone of this repository, while the "alderaan" folder will be used to store outputs from the ALDERAAN pipeline. For example the outputs for the three-planet system KOI-137 during ALDERAAN run with the identifier "ttv-active" would be placed in <LOCAL_DIR>/alderaan/Results/ttv-active/K00137/ and would expect the following files:
-
-- K00137_00_quick.ttvs
-- K00137_01_quick.ttvs
-- K00137_02_quick.ttvs
-- K00137_lc_filtered.fits
-- K00137_sc_filtered.fits
-- K00137-results.fits
-
-These data products are generated automatically by the ALDERAAN pipeline with the expected file structure. The K00137_sc_filtered.fits file will only exist for targets which have been observed in short cadence mode.
+Each subdirectory of `<data_dir>` that contains its `alderaan_batch_<run_id>.csv` is a run.
+The viewer writes only its review status and comments into each run directory, beside
+`alderaan_batch_<run_id>.csv`.
 
 For California Planet Search members, ALDERAAN data products may be retrieved from the Caltech cadence server. Eventually these data products will be hosted publicly.
 
+To run the ALDERAAN viewer, from the root of this repository:
 
-To run the ALDERAAN viewer:
+    $ conda activate alderaan
+    $ python -m alderaan_viewer --data_dir <data_dir>
 
-1. Ensure that all files are placed in the correct location
+then open http://127.0.0.1:5000. The server listens on localhost only.
 
-2. Activate the conda environment
-
-    ```$ conda activate alderaan```
-
-3. From the terminal, navigate into <LOCAL_DIR>/alderaan-viewer/ and run the app
-
-    ```$ python alderaan-viewer.py```
+To run the tests: `python -m pytest` (tests that read `sample_output/` skip when it is absent).
 
 -----
-## Troubleshooting:
-- if TTV says 'error loading plot' when first loading, uncheck and recheck the TTV box at the top of the screen
-
 ## Use:
 - Login with username
-- Select table from dropdown on left side
-- Select KOI ID to be viewed
-    - Automatically populates detrended light curve, folded light curves, OMC plots, posterior plots, and planet properties table
-    - Select Single Transit box to view single transits
-    - Change planet via planet select dropdown for single transit and posterior plots
+- Select a run from the dropdown on the left side
+- Select a KOI ID to view
+    - Shows the detrended light curve, folded transits, O-C plots, corner plot, planet properties and period ratios
+    - Select the Single Transit box to view single transits; use the arrows to page
+    - Change planet via the planet select dropdowns for single transit and corner plots
     - Mark review status and leave any relevant comments
+- Targets that the pipeline did not process, or did not finish, show the reason from the pipeline log
 
 ## Notes:
-- When you leave a comment, a comment file will be created at '<LOCAL_DIR>/alderaan/Results/<run_id>/<koi_id>/<koi_id>_comments.txt'
+- Review status: `<data_dir>/<run_id>/review_status.csv` (one row per change; the latest row wins)
+- Comments: `<data_dir>/<run_id>/comments/<koi_id>.txt`
 
 ## Example Plots:
 ### For K00624, a three-planet system

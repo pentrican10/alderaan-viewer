@@ -124,13 +124,13 @@ table {
   th {
     background-color: #f0f0f0;
   }
-/*
-    .not-reviewed {
-        background-color: #ffffff; /* white background for not reviewed */
-    /* }
-    .looks-good {
-        background-color: #c3e6cb; /* light green background for looks good */
-    /* }
-    .revisit {
-        background-color: #f5c6cb; /* light red background for revisit */
-    /* } */
+/* review status colours (class = status lower-cased, spaces to hyphens) */
+.koi-row.none { background-color: #f9f9f9; }
+.koi-row.looks-good { background-color: #d4edda; }
+.koi-row.minor-issues { background-color: #fbf5a8; }
+.koi-row.major-issues { background-color: #f8d7da; }
+.koi-row.critical-issues { background-color: #ed3a49; }
+.koi-row.selected td { font-weight: bold; }
+
+.panel-error { color: #b00; white-space: pre-wrap; }
+#target_banner { padding: 6px; margin: 6px 0; background: #fff3cd; display: none; }

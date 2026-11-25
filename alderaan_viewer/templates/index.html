@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ALDERAAN viewer: {{ run_id }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="{{ url_for('plotly_js') }}"></script>
+</head>
+<body data-run-id="{{ run_id }}">
+    <div style="display: flex;">
+        <div class="left-section">
+            {% include "left.html" %}
+        </div>
+        <div class="right-section">
+            <div class="right-top-section">
+                {% include "right_top.html" %}
+            </div>
+            <div class="right-bottom-section">
+                {% include "right_bottom.html" %}
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='viewer.js') }}"></script>
+</body>
+</html>

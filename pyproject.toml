@@ -1,6 +1,13 @@
 # Tool configuration only. Dependencies are the `viewer` optional group of the
 # alderaan package; run in the `alderaan` conda environment.
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# repo root on sys.path so tests import alderaan_viewer without an install
+pythonpath = ["."]
+addopts = "-q --no-header --tb=short -rxX"
+xfail_strict = true
+
 # Ruff is the unified formatter + linter; enforced via .pre-commit-config.yaml.
 [tool.ruff]
 line-length = 88

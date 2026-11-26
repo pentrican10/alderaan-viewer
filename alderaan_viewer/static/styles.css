@@ -143,3 +143,5 @@ th math { font-size: 1.4em; }
 #reviewContainer .dropdown-menu { flex-basis: 100%; }
 #reviewContainer .right-pane { padding: 0; }
 #commentInput { box-sizing: border-box; width: 400px; height: 110px; margin: 0 0 4px; }
+#reviewFilter { margin: 8px 0; }
+#reviewFilter label { margin-right: 12px; white-space: nowrap; }

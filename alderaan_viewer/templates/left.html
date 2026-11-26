@@ -18,6 +18,12 @@
     <input type="text" id="searchInput" placeholder="Enter KOI ID">
 </div>
 
+<div id="reviewFilter">
+    {% for s in statuses %}
+    <label><input type="checkbox" value="{{ s }}" checked>{{ 'Not Reviewed' if s == 'None' else s }}</label>
+    {% endfor %}
+</div>
+
 <table id="targetTable">
     <tr>
         <th>koi_id</th>

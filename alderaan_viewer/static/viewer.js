@@ -231,6 +231,7 @@ async function setReviewStatus(status) {
     const row = document.getElementById(`row-${current.koi}`);
     row.className = `koi-row selected ${status.toLowerCase().replace(/ /g, "-")}`;
     row.querySelector(".review-cell").textContent = status;
+    filterRows();
 }
 
 async function showComments(r) {
@@ -261,12 +262,20 @@ document.getElementById("runSelect").addEventListener("change", e => {
     window.location.href = `/home?run=${encodeURIComponent(e.target.value)}`;
 });
 
-document.getElementById("searchInput").addEventListener("input", e => {
-    const q = e.target.value.trim().toUpperCase();
+// show the rows that match the KOI ID search and have a checked review status
+function filterRows() {
+    const q = document.getElementById("searchInput").value.trim().toUpperCase();
+    const shown = new Set(
+        [...document.querySelectorAll("#reviewFilter input:checked")].map(b => b.value)
+    );
     document.querySelectorAll(".koi-row").forEach(row => {
-        row.style.display = row.dataset.koiId.includes(q) ? "" : "none";
+        const status = row.querySelector(".review-cell").textContent.trim();
+        row.style.display = row.dataset.koiId.includes(q) && shown.has(status) ? "" : "none";
     });
-});
+}
+
+document.getElementById("searchInput").addEventListener("input", filterRows);
+document.querySelectorAll("#reviewFilter input").forEach(box => box.addEventListener("change", filterRows));
 
 document.querySelectorAll(".koi-id-cell a").forEach(a => {
     a.addEventListener("click", e => {

@@ -177,7 +177,7 @@ def _corner_note(text, row, corner, color="black"):
         "yanchor": yanchor,
         "showarrow": False,
         "bordercolor": color,
-        "borderwidth": 1 if color != "black" else 0,
+        "borderwidth": 3 if color != "black" else 0,
     }
 
 
@@ -627,7 +627,8 @@ def omc(results, names):
             notes.append(_corner_note(f"model = {tt.model_name}", top, "upper left"))
         if d["chi2_red"] is not None:
             chi2_text = f"reduced χ² = {d['chi2_red']:.2f}"
-            notes.append(_corner_note(chi2_text, top, "lower left"))
+            chi2_color = "red" if not 0.5 <= d["chi2_red"] <= 2 else "black"
+            notes.append(_corner_note(chi2_text, top, "lower left", chi2_color))
 
         # residuals on the O-C scale, so the two panels compare directly
         xrange = [t0 - 0.02 * span, t1 + 0.08 * span]

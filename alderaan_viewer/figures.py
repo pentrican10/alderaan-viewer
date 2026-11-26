@@ -177,7 +177,7 @@ def _corner_note(text, row, corner, color="black"):
         "yanchor": yanchor,
         "showarrow": False,
         "bordercolor": color,
-        "borderwidth": 3 if color != "black" else 0,
+        "borderwidth": 2 if color != "black" else 0,
     }
 
 
